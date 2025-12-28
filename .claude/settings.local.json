@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx -y create-vite:*)",
+      "Bash(npx tsc:*)",
+      "Bash(PGPASSWORD='6eMmeCxaATl8z7be3ReaGodvN7HpcOpt' psql -h 217.21.78.155 -p 57777 -U postgres -d postgres -c \"SELECT version\\(\\);\")",
+      "mcp__zai-mcp-server__extract_text_from_screenshot"
+    ]
+  }
+}
