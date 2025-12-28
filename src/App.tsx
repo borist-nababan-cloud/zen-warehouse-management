@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { ProductPage } from '@/pages/ProductPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -51,6 +52,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Product Page - Master Data */}
+          <Route
+            path="/product"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <ProductPage />
               </ProtectedRoute>
             }
           />

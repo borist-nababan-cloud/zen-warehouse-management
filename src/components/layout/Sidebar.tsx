@@ -5,6 +5,7 @@
  * Shows different navigation options based on user's role (RoleId 1-9).
  *
  * UPDATED: Now uses RoleId (1-9) system
+ * UPDATED: Added Master Data group with Product, Price, Inventory submenus
  */
 
 import { useState } from 'react'
@@ -21,6 +22,10 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  ChevronDown,
+  ChevronUp,
+  Tag,
+  Boxes,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -33,10 +38,20 @@ import { toast } from 'sonner'
 
 interface NavItem {
   title: string
-  path: string
+  path?: string
   icon: React.ElementType
   roleIds: RoleId[]  // Changed from 'roles' to 'roleIds'
   badge?: string
+  children?: NavItem[]  // For nested menu items
+  defaultOpen?: boolean // For accordion groups
+}
+
+interface NavGroup {
+  title: string
+  icon: React.ElementType
+  roleIds: RoleId[]
+  defaultOpen?: boolean
+  children: NavItem[]
 }
 
 // ============================================
@@ -96,6 +111,46 @@ const navItems: NavItem[] = [
   },
 ]
 
+/**
+ * Master Data Navigation Groups
+ * Product management and related master data
+ */
+const masterDataGroups: NavGroup[] = [
+  {
+    title: 'Master Data',
+    icon: Boxes,
+    roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
+    defaultOpen: true,
+    children: [
+      {
+        title: 'Product',
+        path: '/product',
+        icon: Tag,
+        roleIds: [1, 5, 6, 8],  // Same as parent
+      },
+      // Future submenus (placeholders)
+      // {
+      //   title: 'Price',
+      //   path: '/price',
+      //   icon: DollarSign,
+      //   roleIds: [1, 5, 8],
+      // },
+      // {
+      //   title: 'Inventory',  // This is for inventory master data, not transactions
+      //   path: '/inventory-master',
+      //   icon: Package,
+      //   roleIds: [1, 2, 6, 7, 8],
+      // },
+    ],
+  },
+]
+
+// Combine flat items and groups
+const allNavItems: (NavItem | NavGroup)[] = [
+  ...navItems,
+  ...masterDataGroups,
+]
+
 // ============================================
 // COMPONENTS
 // ============================================
@@ -106,13 +161,14 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const location = useLocation()
   const { user } = useAuthUser()
   const signOut = useSignOut()
 
   // Filter nav items based on user role
   const availableItems = user
-    ? navItems.filter((item) => {
+    ? allNavItems.filter((item) => {
         // SUPERUSER (8) sees everything
         if (user.user_role === 8) return true
         // Check if user's role is in the allowed roles for this item
@@ -124,6 +180,13 @@ export function Sidebar({ className }: SidebarProps) {
     return location.pathname === path || location.pathname.startsWith(path + '/')
   }
 
+  const toggleGroup = (title: string) => {
+    setOpenGroups((prev) => ({
+      ...prev,
+      [title]: !prev[title],
+    }))
+  }
+
   const handleSignOut = async () => {
     const result = await signOut.mutateAsync()
     if (result.isSuccess) {
@@ -131,6 +194,11 @@ export function Sidebar({ className }: SidebarProps) {
     } else {
       toast.error(result.error || 'Failed to sign out')
     }
+  }
+
+  // Check if item is a NavGroup
+  const isNavGroup = (item: NavItem | NavGroup): item is NavGroup => {
+    return 'children' in item
   }
 
   return (
@@ -168,12 +236,74 @@ export function Sidebar({ className }: SidebarProps) {
         <ul className="space-y-1">
           {availableItems.map((item) => {
             const Icon = item.icon
-            const active = isActivePath(item.path)
+
+            // Handle NavGroup (Master Data with submenus)
+            if (isNavGroup(item)) {
+              const isOpen = openGroups[item.title] ?? item.defaultOpen ?? false
+              const hasActiveChild = item.children.some((child) =>
+                child.path ? isActivePath(child.path) : false
+              )
+
+              return (
+                <li key={item.title}>
+                  {/* Group Header */}
+                  <button
+                    onClick={() => toggleGroup(item.title)}
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      hasActiveChild && 'bg-accent text-accent-foreground'
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {!isCollapsed && (
+                      <>
+                        <span className="flex-1 text-left font-medium">{item.title}</span>
+                        {isOpen ? (
+                          <ChevronUp className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 shrink-0" />
+                        )}
+                      </>
+                    )}
+                  </button>
+
+                  {/* Group Children */}
+                  {!isCollapsed && isOpen && (
+                    <ul className="ml-6 mt-1 space-y-1">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon
+                        const active = child.path ? isActivePath(child.path) : false
+
+                        return (
+                          <li key={child.title}>
+                            <Link
+                              to={child.path || '#'}
+                              className={cn(
+                                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                                'hover:bg-accent hover:text-accent-foreground',
+                                active && 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              )}
+                            >
+                              <ChildIcon className="h-4 w-4 shrink-0" />
+                              <span>{child.title}</span>
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </li>
+              )
+            }
+
+            // Handle regular NavItem
+            const active = item.path ? isActivePath(item.path) : false
 
             return (
               <li key={item.path}>
                 <Link
-                  to={item.path}
+                  to={item.path || '#'}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                     'hover:bg-accent hover:text-accent-foreground',

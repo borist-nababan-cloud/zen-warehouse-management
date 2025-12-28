@@ -105,7 +105,42 @@ export interface MasterOutlet {
  */
 export interface GroupOutlet {
   group_id: number
+  group_name: string
   created_at: string
+}
+
+/**
+ * master_type table - Product type/category master data
+ */
+export interface MasterType {
+  id: number                    // Auto-increment primary key
+  nama_type: string             // Type/category name
+  description: string | null    // Type description
+  created_at: string
+}
+
+/**
+ * master_barang table - Product/item master data
+ * NOTE: Composite primary key (kode_outlet, id)
+ */
+export interface MasterBarang {
+  id: number                    // Auto-increment, part of composite PK
+  sku: string | null            // Product SKU/code
+  created_at: string
+  id_type: number | null        // References master_type.id
+  kode_outlet: string           // References master_outlet.kode_outlet, part of composite PK
+  name: string | null           // Product name
+  deleted: boolean              // Soft delete flag
+  image1_url: string | null     // Product image 1
+  iamge2_url: string | null     // Product image 2 (note: column typo in database)
+}
+
+/**
+ * MasterBarang with relations joined
+ */
+export interface MasterBarangWithType extends MasterBarang {
+  master_type: MasterType | null
+  master_outlet: MasterOutlet | null
 }
 
 // ============================================
@@ -151,6 +186,8 @@ export type DatabaseRow = {
   users_profile: UserProfile
   master_outlet: MasterOutlet
   group_outlet: GroupOutlet
+  master_type: MasterType
+  master_barang: MasterBarang
 
   // Legacy schema
   locations: Location
@@ -196,12 +233,12 @@ export const ROLE_LABELS: Record<RoleId, string> = {
  * Role 9 (UNASSIGNED) has no access
  */
 export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
-  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users'],      // admin_holding
+  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product'],      // admin_holding
   2: ['dashboard', 'inventory', 'purchase-orders'],                           // staff_holding
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance'],                                                // finance
-  6: ['dashboard', 'inventory'],                                              // outlet_admin
+  5: ['dashboard', 'finance', 'product'],                                     // finance
+  6: ['dashboard', 'inventory', 'product'],                                   // outlet_admin
   7: ['dashboard', 'inventory', 'purchase-orders'],                           // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - no access
