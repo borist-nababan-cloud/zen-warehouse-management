@@ -11,6 +11,7 @@ import { Toaster } from 'sonner'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ProductPage } from '@/pages/ProductPage'
+import { MasterTypePage } from '@/pages/MasterTypePage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -62,6 +63,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
                 <ProductPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Master Type Page - Master Data (Read-only, all authenticated users) */}
+          <Route
+            path="/master-type"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 3, 4, 5, 6, 7, 8]}>
+                <MasterTypePage />
               </ProtectedRoute>
             }
           />

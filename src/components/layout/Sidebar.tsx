@@ -26,6 +26,7 @@ import {
   ChevronUp,
   Tag,
   Boxes,
+  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -119,14 +120,20 @@ const masterDataGroups: NavGroup[] = [
   {
     title: 'Master Data',
     icon: Boxes,
-    roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
+    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],  // All authenticated users (Type is visible to all)
     defaultOpen: true,
     children: [
+      {
+        title: 'Type',
+        path: '/master-type',
+        icon: Layers,
+        roleIds: [1, 2, 3, 4, 5, 6, 7, 8],  // All authenticated users
+      },
       {
         title: 'Product',
         path: '/product',
         icon: Tag,
-        roleIds: [1, 5, 6, 8],  // Same as parent
+        roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
       },
       // Future submenus (placeholders)
       // {
