@@ -12,6 +12,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ProductPage } from '@/pages/ProductPage'
 import { MasterTypePage } from '@/pages/MasterTypePage'
+import { PriceUnitManagerPage } from '@/pages/PriceUnitManagerPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -73,6 +74,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 2, 3, 4, 5, 6, 7, 8]}>
                 <MasterTypePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Price & Unit Manager Page - Master Data (Price and Satuan both link here) */}
+          <Route
+            path="/price-unit"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <PriceUnitManagerPage />
               </ProtectedRoute>
             }
           />

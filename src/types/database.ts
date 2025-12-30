@@ -143,6 +143,55 @@ export interface MasterBarangWithType extends MasterBarang {
   master_outlet: MasterOutlet | null
 }
 
+/**
+ * Price Unit Update Data Type
+ * Used for updating both price and unit in one operation
+ */
+export interface PriceUnitUpdateData {
+  barang_id: number
+  kode_outlet: string
+  buy_price?: number
+  sell_price?: number
+  purchase_uom?: string
+  conversion_rate?: number
+}
+
+/**
+ * barang_prices table - Outlet-specific product prices
+ */
+export interface BarangPrice {
+  id: number                    // Auto-generated primary key
+  barang_id: number             // References master_barang.id
+  kode_outlet: string           // References master_outlet.kode_outlet
+  buy_price: number             // Buy price (default 0)
+  sell_price: number            // Sell price (default 0)
+  updated_at: string            // Last update timestamp
+  update_by: string | null      // User who updated
+}
+
+/**
+ * barang_units table - Unit conversion configurations
+ */
+export interface BarangUnit {
+  id: number                    // Auto-generated primary key
+  barang_id: number             // References master_barang.id
+  kode_outlet: string           // References master_outlet.kode_outlet
+  base_uom: string              // Base unit of measure (default 'PCS')
+  purchase_uom: string          // Purchase unit of measure (default 'PCS')
+  conversion_rate: number       // Conversion rate (default 1, e.g., 1 BOX = 12 PCS)
+  updated_at: string            // Last update timestamp
+  update_by: string | null      // User who updated
+}
+
+/**
+ * Combined type for Price/Unit management
+ * Join of master_barang, barang_prices, and barang_units
+ */
+export interface BarangPriceUnit extends MasterBarang {
+  barang_price?: BarangPrice | null
+  barang_unit?: BarangUnit | null
+}
+
 // ============================================
 // LEGACY TABLE TYPES (to be deprecated)
 // ============================================
@@ -188,6 +237,8 @@ export type DatabaseRow = {
   group_outlet: GroupOutlet
   master_type: MasterType
   master_barang: MasterBarang
+  barang_prices: BarangPrice
+  barang_units: BarangUnit
 
   // Legacy schema
   locations: Location
@@ -233,12 +284,12 @@ export const ROLE_LABELS: Record<RoleId, string> = {
  * Role 9 (UNASSIGNED) has no access
  */
 export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
-  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product'],      // admin_holding
+  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product', 'price-unit'],      // admin_holding
   2: ['dashboard', 'inventory', 'purchase-orders'],                           // staff_holding
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'product'],                                     // finance
-  6: ['dashboard', 'inventory', 'product'],                                   // outlet_admin
+  5: ['dashboard', 'finance', 'product', 'price-unit'],                       // finance
+  6: ['dashboard', 'inventory', 'product', 'price-unit'],                     // outlet_admin
   7: ['dashboard', 'inventory', 'purchase-orders'],                           // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - no access

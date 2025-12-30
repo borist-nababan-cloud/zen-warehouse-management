@@ -1392,3 +1392,325 @@ The SKU generation was initially planned for the frontend but was moved to the d
 *Last Updated: December 29, 2025*
 *Project Status: Master Data - Product Module Complete*
 *Next: Price and Inventory modules, or other business features*
+
+---
+
+## Session: December 30, 2025 - Master Data Extensions (Type & Price/Unit Manager)
+
+### Overview
+
+This session implemented two additional Master Data features:
+1. **Master Type Page** - A read-only display of product types (managed via Supabase Studio)
+2. **Price & Unit Manager Page** - Manage product prices and unit conversions with ownership-based edit control
+
+### Part 1: Master Type Page (Read-Only)
+
+#### Requirements
+- Display all data from `master_type` table
+- NO CRUD operations - data managed via Supabase Studio only
+- All authenticated users (roles 1-8) can view
+
+#### Implementation
+
+**File:** `src/pages/MasterTypePage.tsx`
+
+**Features:**
+- Read-only table display with columns: ID, Type Name, Description, Created At
+- Search by ID, type name, or description
+- Stats cards showing total/displayed counts
+- Info notice indicating read-only access and Supabase Studio management
+- All roles (1-8) can access
+
+**Navigation:**
+- Added to Master Data accordion as "Type" menu item
+- Icon: Layers
+- Route: `/master-type`
+
+**Files Created/Modified:**
+| File | Changes |
+|------|---------|
+| `src/pages/MasterTypePage.tsx` | New read-only page component |
+| `src/components/layout/Sidebar.tsx` | Added Type menu item (all roles 1-8) |
+| `src/App.tsx` | Added `/master-type` route |
+
+### Part 2: Price & Unit Manager Page
+
+#### Database Schema
+
+**barang_prices** Table:
+| Column | Type | Description |
+|--------|------|-------------|
+| id | BIGINT (PK) | Auto-generated ID |
+| barang_id | BIGINT (FK) | References master_barang(id) |
+| kode_outlet | TEXT (FK) | References master_outlet.kode_outlet |
+| buy_price | NUMERIC | Buy price (default 0) |
+| sell_price | NUMERIC | Sell price (default 0) |
+| updated_at | TIMESTAMPTZ | Last update timestamp |
+| update_by | TEXT | User who updated |
+
+**barang_units** Table:
+| Column | Type | Description |
+|--------|------|-------------|
+| id | BIGINT (PK) | Auto-generated ID |
+| barang_id | BIGINT (FK) | References master_barang(id) |
+| kode_outlet | TEXT (FK) | References master_outlet.kode_outlet |
+| base_uom | TEXT | Base UOM (default 'PCS') |
+| purchase_uom | TEXT | Purchase UOM (default 'PCS') |
+| conversion_rate | NUMERIC | Conversion rate (default 1) |
+| updated_at | TIMESTAMPTZ | Last update timestamp |
+| update_by | TEXT | User who updated |
+
+#### Business Rules
+
+| Scenario | User Role | Item Owner | Can Edit? |
+|----------|-----------|------------|-----------|
+| 1 | Holding (`111`) | Holding (`111`) | ✅ Yes |
+| 2 | Holding (`111`) | Outlet (`JKT01`) | ✅ Yes (HQ sees all) |
+| 3 | Outlet (`JKT01`) | Holding (`111`) | ❌ No (Read-only, "HQ Managed") |
+| 4 | Outlet (`JKT01`) | Outlet (`JKT01`) | ✅ Yes |
+
+**Edit Logic Formula:**
+```typescript
+const canEdit = user.kode_outlet === '111' || user.kode_outlet === item.kode_outlet
+```
+
+#### TypeScript Types Added
+
+**File:** `src/types/database.ts`
+
+```typescript
+export interface PriceUnitUpdateData {
+  barang_id: number
+  kode_outlet: string
+  buy_price?: number
+  sell_price?: number
+  purchase_uom?: string
+  conversion_rate?: number
+}
+
+export interface BarangPrice {
+  id: number
+  barang_id: number
+  kode_outlet: string
+  buy_price: number
+  sell_price: number
+  updated_at: string
+  update_by: string | null
+}
+
+export interface BarangUnit {
+  id: number
+  barang_id: number
+  kode_outlet: string
+  base_uom: string
+  purchase_uom: string
+  conversion_rate: number
+  updated_at: string
+  update_by: string | null
+}
+
+export interface BarangPriceUnit extends MasterBarang {
+  barang_price?: BarangPrice | null
+  barang_unit?: BarangUnit | null
+}
+
+// Updated ROLE_MENU_PERMISSIONS
+export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
+  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product', 'price-unit'],
+  2: ['dashboard', 'inventory', 'purchase-orders'],
+  3: ['dashboard', 'laundry'],
+  4: ['dashboard', 'laundry'],
+  5: ['dashboard', 'finance', 'product', 'price-unit'],
+  6: ['dashboard', 'inventory', 'product', 'price-unit'],
+  7: ['dashboard', 'inventory', 'purchase-orders'],
+  8: ['*'],  // SUPERUSER
+  9: [],     // UNASSIGNED
+}
+```
+
+#### Service Layer Implementation
+
+**File:** `src/services/barangPriceUnitService.ts`
+
+**Functions:**
+```typescript
+// Query functions
+export async function getPriceUnitsPaginated(kode_outlet, page, pageSize): Promise<PaginatedResponse<BarangPriceUnit>>
+export async function searchPriceUnits(kode_outlet, searchQuery): Promise<ApiResponse<BarangPriceUnit[]>>
+
+// Mutation functions
+export async function updatePrice(barang_id, kode_outlet, buy_price, sell_price, updated_by): Promise<ApiResponse<BarangPrice>>
+export async function updateUnit(barang_id, kode_outlet, purchase_uom, conversion_rate, updated_by): Promise<ApiResponse<BarangUnit>>
+export async function updatePriceUnit(updateData, updated_by): Promise<ApiResponse<{ price, unit }>>
+
+// Helper functions
+export function canEditProduct(userOutletCode, productOutletCode): boolean
+export function getOutletLabel(kode_outlet): string
+```
+
+**Data Fetching Strategy:**
+- Fetch `master_barang` with pagination
+- Fetch `barang_prices` for user's outlet
+- Fetch `barang_units` for user's outlet
+- Join in frontend using Maps for O(1) lookup
+
+#### React Hooks (TanStack Query)
+
+**File:** `src/hooks/useBarangPriceUnit.ts`
+
+```typescript
+export function usePriceUnitsPaginated(kode_outlet, page, pageSize)
+export function useSearchPriceUnits(kode_outlet, searchQuery)
+export function useUpdatePriceUnit()
+export function useCanEditProduct(userOutletCode)
+```
+
+#### UI Components
+
+**File:** `src/pages/PriceUnitManagerPage.tsx`
+
+**Features:**
+- Table with inline editing
+- Editable fields: Purchase UOM, Conversion Rate, Buy Price, Sell Price
+- Row-level save buttons with dirty state tracking ("Unsaved" indicator)
+- HQ-owned items show "🔒 HQ Managed" badge for outlet users (disabled inputs)
+- Pagination (50 items per page)
+- Search by SKU or product name
+- Info notice explaining ownership rules
+
+**Row State Management:**
+```typescript
+interface RowEditState {
+  barang_id: number
+  purchase_uom: string
+  conversion_rate: number
+  buy_price: number
+  sell_price: number
+  isDirty: boolean
+  isSaving: boolean
+}
+```
+
+#### Navigation Structure
+
+Both menu items point to the same page (`/price-unit`):
+
+| Menu Item | Icon | Route | Roles |
+|-----------|------|-------|-------|
+| Price | DollarSign | /price-unit | 1, 5, 6, 8 |
+| Satuan | Ruler | /price-unit | 1, 5, 6, 8 |
+
+**Updated Sidebar (`src/components/layout/Sidebar.tsx`):**
+```typescript
+const masterDataGroups: NavGroup[] = [
+  {
+    title: 'Master Data',
+    icon: Boxes,
+    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
+    defaultOpen: true,
+    children: [
+      { title: 'Type', path: '/master-type', icon: Layers, roleIds: [1, 2, 3, 4, 5, 6, 7, 8] },
+      { title: 'Product', path: '/product', icon: Tag, roleIds: [1, 5, 6, 8] },
+      { title: 'Price', path: '/price-unit', icon: DollarSign, roleIds: [1, 5, 6, 8] },
+      { title: 'Satuan', path: '/price-unit', icon: Ruler, roleIds: [1, 5, 6, 8] },
+    ],
+  },
+]
+```
+
+#### Route Protection
+
+**File:** `src/App.tsx`
+
+```typescript
+<Route
+  path="/price-unit"
+  element={
+    <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+      <PriceUnitManagerPage />
+    </ProtectedRoute>
+  }
+/>
+```
+
+### Files Created/Modified This Session
+
+**Created:**
+| File | Purpose |
+|------|---------|
+| `src/pages/MasterTypePage.tsx` | Read-only product types display |
+| `src/pages/PriceUnitManagerPage.tsx` | Price & unit management with edit control |
+| `src/services/barangPriceUnitService.ts` | Price/unit CRUD operations |
+| `src/hooks/useBarangPriceUnit.ts` | TanStack Query hooks for price/unit |
+
+**Modified:**
+| File | Changes |
+|------|---------|
+| `src/types/database.ts` | Added BarangPrice, BarangUnit, BarangPriceUnit, PriceUnitUpdateData, updated ROLE_MENU_PERMISSIONS |
+| `src/components/layout/Sidebar.tsx` | Added Type, Price, Satuan menu items; added Ruler icon |
+| `src/App.tsx` | Added /master-type and /price-unit routes |
+
+### Key Technical Decisions
+
+1. **Two Entry Points, One Page**: Both "Price" and "Satuan" menu items navigate to the same `/price-unit` page for convenience
+2. **Frontend Data Joining**: Fetch tables separately and join in frontend using Maps for performance
+3. **Row-Level State Management**: Each row maintains its own edit state with dirty tracking
+4. **Ownership-Based Edit Control**: Edit permissions determined by comparing `user.kode_outlet` with `item.kode_outlet`
+5. **UPDATE Operations Only**: Triggers create rows in `barang_prices` and `barang_units` when products are created, so this page only performs UPDATEs
+
+### UI Preview
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Master Data > Price                                                          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  ℹ️ Ownership Rules                                                          │
+│  • Holding (HQ): Can edit all products from all outlets                      │
+│  • Outlets: Can only edit products they created                              │
+│  • HQ Products: Marked as "HQ Managed" and read-only for outlets             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  ┌────────────────────────────────────────────────────────────────────────┐  │
+│  │ SKU          │ Product Name  │ Owner │ Purch UOM │ Conv │ Buy │ Sell │  │
+│  ├────────────────────────────────────────────────────────────────────────┤  │
+│  │ ZP25XII0001  │ Product A     │ HQ    │ [BOX]     │ [12] │[0]  │[0]  │ │ ← Editable
+│  │              │               │       │           │      │     │     │  │    [Save]
+│  │ ZP25XII0002  │ Product B     │ JKT01 │ [PCS]     │ [1]  │[500]│[750]│ │ ← Editable (local)
+│  │ ZP25XII0003  │ Product C     │ HQ    │ PCS       │ 1    │ 1000│ 1500│ │ ← HQ Managed
+│  │              │               │       │ 🔒 HQ...  │      │     │     │  │    (disabled)
+│  └────────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Pre-existing TypeScript Errors (Not Related to This Session)
+
+The following errors exist from previous sessions and were not addressed in this session:
+- `src/hooks/useMasterBarang.ts(24,29)`: 'MasterBarangWithType' is declared but never used
+- `src/pages/ProductPage.tsx(18,29)`: 'CardDescription' is declared but its value is never read
+- `src/pages/ProductPage.tsx(226,9)`: 'totalCount' is declared but its value is never read
+- `src/services/authService.ts(293,7)`: Type 'unknown' is not assignable to type 'UserProfile | null'
+
+### Dev Server Status
+
+✅ **Application runs without errors on load**
+- Dev server started successfully on `http://localhost:3001`
+- No runtime errors during initialization
+- All routes load correctly
+
+### Session Summary
+
+This session implemented two Master Data features:
+
+1. **Master Type Page** - A simple read-only display of product types, managed via Supabase Studio
+2. **Price & Unit Manager** - A comprehensive price and unit management interface with:
+   - Ownership-based edit control (Holding vs Outlet)
+   - Row-level inline editing with dirty state tracking
+   - HQ Managed badge for read-only items
+   - Pagination and search functionality
+
+Both pages follow the established patterns: service layer → TanStack Query hooks → UI components, with proper TypeScript typing and role-based access control.
+
+---
+
+*Last Updated: December 30, 2025*
+*Project Status: Master Data Modules (Type, Product, Price/Unit) Complete*
+*Next: Continue with other business modules or enhancements*
