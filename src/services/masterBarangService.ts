@@ -61,7 +61,7 @@ export async function getProductsPaginated(
       .select(`
         *,
         master_type:master_type(*),
-        master_outlet:master_outlet(*)
+        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)
       `, { count: 'exact' })
 
     // Filter out deleted items unless explicitly requested
@@ -115,7 +115,7 @@ export async function getProductById(
       .select(`
         *,
         master_type:master_type(*),
-        master_outlet:master_outlet(*)
+        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)
       `)
       .eq('kode_outlet', kodeOutlet)
       .eq('id', id)
@@ -151,7 +151,7 @@ export async function getProductsByOutlet(
       .select(`
         *,
         master_type:master_type(*),
-        master_outlet:master_outlet(*)
+        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)
       `)
       .eq('kode_outlet', kodeOutlet)
       .eq('deleted', false)

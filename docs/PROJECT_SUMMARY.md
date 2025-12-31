@@ -2005,3 +2005,45 @@ This session focused on debugging and fixing critical RLS policy issues discover
 *Last Updated: December 31, 2025*
 *Project Status: RLS Policies Fixed - Awaiting User Testing After Cache Clear*
 *Next: User to test after running SQL script and clearing cache*
+
+---
+
+## Session: December 31, 2025 - RLS Fixes & UI Refactoring
+
+### Overview
+Addressed critical data visibility issues for `outlet_admin` (Role 6) and refactored the **Price & Unit** page for better usability.
+
+### Key Achievements
+
+#### 1. RLS Policy & Data Visibility Fixes
+- **Problem:** `outlet_admin` saw empty tables for Products and Prices.
+- **Root Causes:**
+  1.  Missing RLS policies for `barang_prices` and `barang_units`.
+  2.  Ambiguous foreign key join in `masterBarangService.ts` causing silent query failures.
+  3.  Runtime error in `barangPriceUnitService.ts` (`Map` initialization crash).
+- **Solutions:**
+  - Applied `scripts/fix_rls_final.sql` (Verified via `verify_access.cjs`).
+  - Updated service queries to use explicit FK syntax: `master_outlet!master_barang_kode_outlet_fkey`.
+  - Fixed `Map` initialization logic in service layer.
+
+#### 2. Backend Configuration Fix
+- **Problem:** "Save" button on Price & Unit page failed with `500 Internal Server Error`.
+- **Cause:** Table `barang_prices` lacked `REPLICA IDENTITY` setting required for updates.
+- **Solution:** Executed SQL:
+  ```sql
+  ALTER TABLE public.barang_prices REPLICA IDENTITY FULL;
+  ALTER TABLE public.barang_units REPLICA IDENTITY FULL;
+  ```
+
+#### 3. UI Refactoring (Price & Unit Page)
+- **Compact Layout:** Reduced row height (`h-24` → `h-9`) for higher data density.
+- **Sticky Header:** Implemented `sticky top-0` for better navigation.
+- **Number Formatting:** Added auto-formatting (e.g., `50.000`) for ID locale currency.
+- **Owner Column:** Refactored to display **Outlet Name** (e.g., "ZEN SUNDA") instead of ID.
+
+#### 4. Protocol Updates
+- **Screen Captures:** All future browser verification screenshots will be saved to `screen-capture/` directory.
+
+### Verified Status
+- **Product Page:** `outlet_admin` can see their own products + Holding products (Read-only).
+- **Price & Unit Page:** `outlet_admin` can view and edit prices for their own products. Updates persist correctly.

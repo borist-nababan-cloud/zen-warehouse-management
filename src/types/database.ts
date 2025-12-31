@@ -190,6 +190,7 @@ export interface BarangUnit {
 export interface BarangPriceUnit extends MasterBarang {
   barang_price?: BarangPrice | null
   barang_unit?: BarangUnit | null
+  master_outlet?: MasterOutlet | null
 }
 
 // ============================================

@@ -4,7 +4,10 @@
       "Bash(npx -y create-vite:*)",
       "Bash(npx tsc:*)",
       "Bash(PGPASSWORD='6eMmeCxaATl8z7be3ReaGodvN7HpcOpt' psql -h 217.21.78.155 -p 57777 -U postgres -d postgres -c \"SELECT version\\(\\);\")",
-      "mcp__zai-mcp-server__extract_text_from_screenshot"
+      "mcp__zai-mcp-server__extract_text_from_screenshot",
+      "Bash(PGPASSWORD=\"6eMmeCxaATl8z7be3ReaGodvN7HpcOpt\" psql:*)",
+      "Bash(PGPASSWORD=\"6eMmeCxaATl8z7be3ReaGodvN7HpcOpt\" psql -h 217.21.78.155 -p 57777 -U postgres -d postgres -c \"SELECT id, sku, kode_outlet, name, id_type, deleted FROM public.master_barang ORDER BY created_at DESC LIMIT 20;\")",
+      "Bash(PGPASSWORD=\"6eMmeCxaATl8z7be3ReaGodvN7HpcOpt\" psql -h 217.21.78.155 -p 57777 -U postgres -d postgres -c \"SELECT prosrc FROM pg_proc WHERE proname LIKE ''%sku%'' OR proname LIKE ''%generate%'';\")"
     ]
   }
 }

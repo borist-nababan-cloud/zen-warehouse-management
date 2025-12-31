@@ -49,7 +49,7 @@ export async function getPriceUnitsPaginated(
     // This is different from Product page where users see '111' + own outlet
     const { data: barangData, error: barangError, count } = await supabase
       .from('master_barang')
-      .select('*', { count: 'exact' })
+      .select('*, master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)', { count: 'exact' })
       .eq('deleted', false)
       .eq('kode_outlet', kode_outlet)  // Only fetch products for this outlet
       .order('created_at', { ascending: false })
@@ -103,10 +103,10 @@ export async function getPriceUnitsPaginated(
     }
 
     // Create maps for quick lookup
-    const priceMap = new Map(pricesData?.map((p) => p.barang_id) || [])
+    const priceMap = new Map<number, BarangPrice>()
     pricesData?.forEach((price) => priceMap.set(price.barang_id, price))
 
-    const unitMap = new Map(unitsData?.map((u) => u.barang_id) || [])
+    const unitMap = new Map<number, BarangUnit>()
     unitsData?.forEach((unit) => unitMap.set(unit.barang_id, unit))
 
     // Combine data
@@ -152,7 +152,7 @@ export async function searchPriceUnits(
     // For Price & Unit page: Only search products that have prices/units for this outlet
     const { data: barangData, error: barangError } = await supabase
       .from('master_barang')
-      .select('*')
+      .select('*, master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)')
       .eq('kode_outlet', kode_outlet)  // Only search products for this outlet
       .or(`sku.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%`)
       .eq('deleted', false)
@@ -191,11 +191,14 @@ export async function searchPriceUnits(
       .in('barang_id', barangIds)
 
     // Combine data
-    const priceMap = new Map(pricesData?.map((p) => p.barang_id) || [])
+    const priceMap = new Map<number, BarangPrice>()
     pricesData?.forEach((price) => priceMap.set(price.barang_id, price))
 
-    const unitMap = new Map(unitsData?.map((u) => u.barang_id) || [])
-    unitsData?.forEach((unit) => unitMap.set(unit.barang_id, unit))
+    const unitMap = new Map<number, BarangUnit>()
+    unitsData?.forEach((unit) => {
+      // Ensure specific typing if needed or just let inference work
+      unitMap.set(unit.barang_id, unit)
+    })
 
     const combinedData: BarangPriceUnit[] = barangData.map((barang) => ({
       ...barang,

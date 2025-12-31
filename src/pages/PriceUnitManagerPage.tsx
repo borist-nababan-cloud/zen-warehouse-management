@@ -12,7 +12,7 @@
  * Access: Roles 1, 5, 6, 8 (admin_holding, finance, outlet_admin, superuser)
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePriceUnitsPaginated, useUpdatePriceUnit, useCanEditProduct } from '@/hooks/useBarangPriceUnit'
 import { useAuthUser } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -24,6 +24,30 @@ import { HOLDING_OUTLET_CODE } from '@/types/database'
 import { Search, Save, Lock, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import type { BarangPriceUnit, PriceUnitUpdateData } from '@/types/database'
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Format number to thousands (e.g. 1000 -> 1.000) using ID locale
+ */
+const formatNumber = (value: number | string): string => {
+  if (value === '' || value === undefined || value === null) return ''
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return ''
+  return new Intl.NumberFormat('id-ID').format(num)
+}
+
+/**
+ * Parse clean number from formatted string (e.g. "1.000" -> 1000)
+ */
+const parseNumber = (value: string): number => {
+  // Remove dots (thousands separator in ID) and then parse
+  // Handles localized input where '.' is separator
+  const clean = value.replace(/\./g, '').replace(/,/g, '.')
+  return parseFloat(clean) || 0
+}
 
 // ============================================
 // ROW EDIT STATE TYPE
@@ -55,48 +79,84 @@ interface EditableRowProps {
 function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChange, onSave }: EditableRowProps) {
   const isHQManaged = item.kode_outlet === HOLDING_OUTLET_CODE && userOutletCode !== HOLDING_OUTLET_CODE
 
-  const handleInputChange = (field: 'purchase_uom' | 'conversion_rate' | 'buy_price' | 'sell_price', value: string) => {
+  // Local state for formatted inputs to handle typing
+  const [buyPriceDisplay, setBuyPriceDisplay] = useState(formatNumber(editState.buy_price))
+  const [sellPriceDisplay, setSellPriceDisplay] = useState(formatNumber(editState.sell_price))
+
+  // Update display if external editState changes (e.g. from DB reload)
+  useEffect(() => {
+    // Only update if not currently being typed?
+    // Actually, onEditChange updates editState, so we should sync display
+    // BUT we need to be careful not to override typing cursor.
+    // Simple approach: Only sync on mount or if drastic change, but here
+    // we let the input handler manage display state primarily.
+    if (!editState.isDirty) {
+      setBuyPriceDisplay(formatNumber(editState.buy_price))
+      setSellPriceDisplay(formatNumber(editState.sell_price))
+    }
+  }, [editState.buy_price, editState.sell_price, editState.isDirty])
+
+  const handlePriceChange = (field: 'buy_price' | 'sell_price', value: string) => {
+    // Allow typing numbers and dots (if user manually types them?)
+    // Actually standard ID format doesn't accept dots for decimal usually in simple currency
+    // But let's allow digits only for simplicity then format.
+
+    // 1. Remove non-numeric chars (except dot/comma if needed, but for ID thousands we strip dot)
+    const rawValue = value.replace(/[^0-9]/g, '')
+
+    // 2. Parse to number
+    const numValue = parseInt(rawValue) || 0
+
+    // 3. Format back to display
+    const formatted = formatNumber(numValue)
+
+    // 4. Update state
+    if (field === 'buy_price') setBuyPriceDisplay(formatted)
+    else setSellPriceDisplay(formatted)
+
+    onEditChange(item.id, field, numValue)
+  }
+
+  const handleInputChange = (field: 'purchase_uom' | 'conversion_rate', value: string) => {
     if (field === 'purchase_uom') {
       onEditChange(item.id, field, value)
     } else {
-      // Parse numeric values
-      const numValue = parseFloat(value) || 0
-      onEditChange(item.id, field, numValue)
+      onEditChange(item.id, field, parseFloat(value) || 0)
     }
   }
 
   return (
     <tr className="hover:bg-muted/50 border-b">
       {/* SKU */}
-      <td className="px-4 py-3 text-sm font-medium">{item.sku || '-'}</td>
+      <td className="px-4 py-2 text-sm font-medium whitespace-nowrap">{item.sku || '-'}</td>
 
       {/* Product Name */}
-      <td className="px-4 py-3 text-sm">{item.name || '-'}</td>
+      <td className="px-4 py-2 text-sm">{item.name || '-'}</td>
 
       {/* Owner Outlet */}
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-2 text-sm whitespace-nowrap">
         {item.kode_outlet === HOLDING_OUTLET_CODE ? (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-            HQ
+            {item.master_outlet?.name_outlet || 'HOLDING'}
           </span>
         ) : (
-          <span className="text-muted-foreground text-xs">{item.kode_outlet}</span>
+          <span className="text-muted-foreground text-xs">{item.master_outlet?.name_outlet || item.kode_outlet}</span>
         )}
       </td>
 
       {/* Purchase UOM */}
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-2 text-sm">
         <Input
           value={editState.purchase_uom || ''}
           onChange={(e) => handleInputChange('purchase_uom', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
-          className={canEditItem ? 'h-8' : 'h-8 bg-muted cursor-not-allowed'}
+          className={canEditItem ? 'h-9 text-xs' : 'h-9 bg-muted cursor-not-allowed text-xs'}
           placeholder="PCS"
         />
       </td>
 
       {/* Conversion Rate */}
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-2 text-sm">
         <Input
           type="number"
           step="0.01"
@@ -104,61 +164,57 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
           value={editState.conversion_rate || 1}
           onChange={(e) => handleInputChange('conversion_rate', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
-          className={canEditItem ? 'h-8 w-20' : 'h-8 w-20 bg-muted cursor-not-allowed'}
+          className={canEditItem ? 'h-9 w-20 text-xs' : 'h-9 w-20 bg-muted cursor-not-allowed text-xs'}
         />
       </td>
 
       {/* Buy Price */}
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-2 text-sm">
         <Input
-          type="number"
-          step="0.01"
-          min="0"
-          value={editState.buy_price || 0}
-          onChange={(e) => handleInputChange('buy_price', e.target.value)}
+          type="text"
+          value={buyPriceDisplay}
+          onChange={(e) => handlePriceChange('buy_price', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
-          className={canEditItem ? 'h-24 w-24' : 'h-24 w-24 bg-muted cursor-not-allowed'}
+          className={canEditItem ? 'h-9 w-32 text-right font-mono text-xs' : 'h-9 w-32 text-right font-mono bg-muted cursor-not-allowed text-xs'}
           placeholder="0"
         />
       </td>
 
       {/* Sell Price */}
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-2 text-sm">
         <Input
-          type="number"
-          step="0.01"
-          min="0"
-          value={editState.sell_price || 0}
-          onChange={(e) => handleInputChange('sell_price', e.target.value)}
+          type="text"
+          value={sellPriceDisplay}
+          onChange={(e) => handlePriceChange('sell_price', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
-          className={canEditItem ? 'h-24 w-24' : 'h-24 w-24 bg-muted cursor-not-allowed'}
+          className={canEditItem ? 'h-9 w-32 text-right font-mono text-xs' : 'h-9 w-32 text-right font-mono bg-muted cursor-not-allowed text-xs'}
           placeholder="0"
         />
       </td>
 
       {/* Status/Actions */}
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-2 text-sm whitespace-nowrap">
         {isHQManaged ? (
           <span className="inline-flex items-center gap-1 text-amber-600 text-xs font-medium">
             <Lock className="h-3 w-3" />
-            HQ Managed
+            HQ
           </span>
         ) : (
           <div className="flex items-center gap-2">
             {editState.isDirty && (
-              <span className="text-xs text-muted-foreground">Unsaved</span>
+              <span className="text-xs text-muted-foreground mr-1">Unsaved</span>
             )}
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7"
+              className="h-8 w-8"
               onClick={() => onSave(item.id)}
               disabled={!editState.isDirty || editState.isSaving || !canEditItem}
             >
               {editState.isSaving ? (
                 <RefreshCw className="h-3 w-3 animate-spin" />
               ) : (
-                <Save className="h-3 w-3" />
+                <Save className="h-4 w-4" />
               )}
             </Button>
           </div>
@@ -323,55 +379,47 @@ export function PriceUnitManagerPage() {
   return (
     <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
       <DashboardLayout>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Price & Unit Management</h1>
-              <p className="text-muted-foreground mt-1">
+              <h1 className="text-2xl font-bold">Price & Unit Management</h1>
+              <p className="text-muted-foreground text-sm mt-1">
                 Manage product prices and unit conversions
                 {user?.kode_outlet && <span> (Outlet: {user.kode_outlet})</span>}
               </p>
             </div>
           </div>
 
-          {/* Info Notice */}
-          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-500 mt-0.5 shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium text-blue-900 dark:text-blue-100">
-                    Ownership Rules
-                  </p>
-                  <ul className="text-blue-700 dark:text-blue-300 mt-2 space-y-1 list-disc list-inside">
-                    <li><strong>Holding (HQ):</strong> Can edit all products from all outlets</li>
-                    <li><strong>Outlets:</strong> Can only edit products they created</li>
-                    <li><strong>HQ Products:</strong> Marked as "HQ Managed" and read-only for outlets</li>
-                  </ul>
+          {/* Info Notice + Stats in Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="col-span-2 border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 shadow-sm">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-500 mt-0.5 shrink-0" />
+                  <div className="text-xs">
+                    <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                      Ownership Rules
+                    </p>
+                    <ul className="text-blue-700 dark:text-blue-300 space-y-0.5 list-disc list-inside">
+                      <li>HOLDING (111) edits all. Outlets edit own only.</li>
+                      <li>Prices are updated per outlet.</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <p className="text-3xl font-bold mt-1">{totalCount}</p>
+            <Card className="shadow-sm">
+              <CardContent className="pt-4 pb-4">
+                <p className="text-xs text-muted-foreground">Products</p>
+                <p className="text-2xl font-bold">{totalCount}</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Current Page</p>
-                <p className="text-3xl font-bold mt-1">{page + 1} / {totalPages || 1}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Your Outlet</p>
-                <p className="text-3xl font-bold mt-1">
+            <Card className="shadow-sm">
+              <CardContent className="pt-4 pb-4">
+                <p className="text-xs text-muted-foreground">Outlet</p>
+                <p className="text-2xl font-bold">
                   {user?.kode_outlet === HOLDING_OUTLET_CODE ? 'HQ' : user?.kode_outlet || '-'}
                 </p>
               </CardContent>
@@ -379,35 +427,33 @@ export function PriceUnitManagerPage() {
           </div>
 
           {/* Search */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by SKU or product name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex h-9 w-full max-w-sm items-center space-x-2">
+            <div className="relative w-full">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search SKU..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pl-9 text-sm"
+              />
+            </div>
+          </div>
 
           {/* Data Table */}
-          <Card>
+          <Card className="border overflow-hidden">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted">
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto relative">
+                <table className="w-full relative">
+                  <thead className="bg-muted sticky top-0 z-20 shadow-sm">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium">SKU</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Product Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Owner</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Purchase UOM</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Conv. Rate</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Buy Price</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Sell Price</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">SKU</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">Product Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">Owner</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-24">Unit</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-24">Conv</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-36">Buy Price</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-36">Sell Price</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-20">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -442,32 +488,33 @@ export function PriceUnitManagerPage() {
           </Card>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredItems.length} of {totalCount} products
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handlePrevPage}
-                disabled={page === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">
-                Page {page + 1} of {totalPages || 1}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-2 text-sm">
+              <span className="text-muted-foreground">
+                Page {page + 1} of {totalPages}
               </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleNextPage}
-                disabled={page >= totalPages - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handlePrevPage}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages - 1}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
