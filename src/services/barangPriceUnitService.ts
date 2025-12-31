@@ -45,10 +45,13 @@ export async function getPriceUnitsPaginated(
     const to = from + pageSize - 1
 
     // Fetch master_barang with pagination
+    // For Price & Unit page: Only fetch products that have prices/units for this outlet
+    // This is different from Product page where users see '111' + own outlet
     const { data: barangData, error: barangError, count } = await supabase
       .from('master_barang')
       .select('*', { count: 'exact' })
       .eq('deleted', false)
+      .eq('kode_outlet', kode_outlet)  // Only fetch products for this outlet
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -145,10 +148,12 @@ export async function searchPriceUnits(
   searchQuery: string
 ): Promise<ApiResponse<BarangPriceUnit[]>> {
   try {
-    // Search in master_barang
+    // Search in master_barang for this outlet only
+    // For Price & Unit page: Only search products that have prices/units for this outlet
     const { data: barangData, error: barangError } = await supabase
       .from('master_barang')
       .select('*')
+      .eq('kode_outlet', kode_outlet)  // Only search products for this outlet
       .or(`sku.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%`)
       .eq('deleted', false)
       .order('created_at', { ascending: false })

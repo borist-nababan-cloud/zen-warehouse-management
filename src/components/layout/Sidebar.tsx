@@ -27,7 +27,6 @@ import {
   Tag,
   Boxes,
   Layers,
-  Ruler,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -137,16 +136,10 @@ const masterDataGroups: NavGroup[] = [
         roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
       },
       {
-        title: 'Price',
+        title: 'Price & Unit',
         path: '/price-unit',
         icon: DollarSign,
         roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
-      },
-      {
-        title: 'Satuan',
-        path: '/price-unit',
-        icon: Ruler,
-        roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser (same page as Price)
       },
       // Future submenus (placeholders)
       // {

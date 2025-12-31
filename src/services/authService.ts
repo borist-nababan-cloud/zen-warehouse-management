@@ -290,7 +290,7 @@ async function createUnassignedProfile(
     if (error) throw error
 
     return {
-      data,
+      data: data as UserProfile | null,
       error: null,
       isSuccess: true,
     }

@@ -21,7 +21,7 @@ import {
   canCurrentUserEditProducts,
   canUserSeeAllOutlets,
 } from '@/services/masterBarangService'
-import type { MasterBarang, MasterBarangWithType } from '@/types/database'
+import type { MasterBarang } from '@/types/database'
 
 // Query keys for cache management
 export const masterBarangQueryKeys = {

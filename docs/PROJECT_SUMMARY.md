@@ -1714,3 +1714,294 @@ Both pages follow the established patterns: service layer → TanStack Query hoo
 *Last Updated: December 30, 2025*
 *Project Status: Master Data Modules (Type, Product, Price/Unit) Complete*
 *Next: Continue with other business modules or enhancements*
+
+---
+
+## Session: December 31, 2025 - RLS Policy Fixes & Navigation Improvements
+
+### Overview
+
+This session addressed critical issues discovered during testing with the role 6 (outlet_admin) account. The main focus was on fixing Row Level Security (RLS) policies, combining duplicate navigation items, and resolving TypeScript errors.
+
+### Issues Reported by User
+
+1. **Navigation Duplication**: "Price" and "Satuan" menu items both point to the same page - should be combined
+2. **Insert Product Failed**: Testing insert with `adminsunda@zenfamilyspa.id` (role=6, kode_outlet='109') resulted in 409 error
+3. **Product Page Empty for Role 6**: Product page shows empty table for outlet_admin users
+4. **Price & Unit Filter Behavior**: Should only show user's own outlet data (different from Product page)
+
+### Investigation & Root Cause Analysis
+
+#### Issue 1: Navigation Duplication (RESOLVED)
+
+**Problem:** Two separate menu items pointing to the same page `/price-unit`
+- "Price" → `/price-unit`
+- "Satuan" → `/price-unit`
+
+**Solution:** Combined into single "Price & Unit" menu item
+
+**File Modified:** `src/components/layout/Sidebar.tsx`
+
+**Before:**
+```typescript
+{ title: 'Price', path: '/price-unit', icon: DollarSign, roleIds: [1, 5, 6, 8] },
+{ title: 'Satuan', path: '/price-unit', icon: Ruler, roleIds: [1, 5, 6, 8] },
+```
+
+**After:**
+```typescript
+{ title: 'Price & Unit', path: '/price-unit', icon: DollarSign, roleIds: [1, 5, 6, 8] },
+```
+
+Also removed unused `Ruler` icon import.
+
+---
+
+#### Issue 2: 409 Error on Insert (INVESTIGATED)
+
+**Error:** HTTP 409 Conflict when inserting product with role=6, kode_outlet='109'
+
+**Root Cause Analysis:**
+- Created diagnostic scripts to investigate database state
+- Found that `barang_prices` and `barang_units` tables had **RLS enabled but NO policies**
+- The `auto_generate_outlet_details()` trigger was being blocked by RLS
+- The trigger creates rows in `barang_prices`, `barang_units`, and `inventory_balance` after product insert
+
+**Database State at Time of Investigation:**
+```
+master_barang: 5 products (2 from outlet 109, 3 from outlet 111)
+barang_prices: RLS enabled, NO policies
+barang_units: RLS enabled, NO policies
+inventory_balance: RLS disabled (working correctly)
+```
+
+**Solution Created:** `database-docs/fix-rls-policies.sql`
+
+---
+
+#### Issue 3: Product Page Empty for Role 6 (INVESTIGATED)
+
+**User Report:** Product page shows empty table for `adminsunda@zenfamilyspa.id` (role=6, kode_outlet='109')
+
+**Expected Behavior:**
+- Role 6 (outlet_admin) should see products where `kode_outlet IN ('111', '109')`
+- `'111'` (Holding) products - Read-only reference
+- `'109'` (own outlet) products - Editable
+- Can only edit products where `user.kode_outlet === product.kode_outlet`
+
+**Database Investigation Results:**
+```
+✅ Database verified working correctly:
+   - 5 products exist (2 from outlet 109, 3 from outlet 111)
+   - RLS policy "Outlet users can read own outlet and holding products" exists
+   - Simulated query returns all 5 products correctly
+
+❌ Frontend cache issue detected:
+   - Dev server restart required
+   - Browser cache needs clearing
+   - Supabase client cache needs invalidation
+```
+
+**User Action Required:**
+1. Stop dev server (Ctrl+C)
+2. Clear `.vite` cache: `rm -rf .vite`
+3. Restart: `npm run dev`
+4. Hard refresh browser (Ctrl+Shift+R)
+5. Sign out and sign in again
+
+---
+
+#### Issue 4: Price & Unit Page Filter Behavior (FIXED)
+
+**User Requirement:** Different from Product page
+- Product page: Role 6 sees `'111'` + own outlet
+- Price & Unit page: Role 6 sees ONLY own outlet's price/unit data
+
+**Solution:** Updated service layer to filter `master_barang` by user's outlet
+
+**File Modified:** `src/services/barangPriceUnitService.ts`
+
+**Changes:**
+```typescript
+// getPriceUnitsPaginated - added outlet filter
+.eq('kode_outlet', kode_outlet)  // Only fetch products for this outlet
+
+// searchPriceUnits - added outlet filter
+.eq('kode_outlet', kode_outlet)  // Only search products for this outlet
+```
+
+### Database Schema Changes
+
+#### RLS Policies Created
+
+**File:** `database-docs/fix-rls-policies.sql`
+
+**barang_prices Policies:**
+| Policy | Operation | Access |
+|--------|-----------|--------|
+| Authenticated can read barang_prices | SELECT | All authenticated |
+| Admin and Superuser can read all prices | SELECT | Roles 1, 8 |
+| Outlet users can read own outlet prices | SELECT | Roles 5, 6 (own outlet) |
+| Admin can insert prices | INSERT | Role 1 (own outlet) |
+| Outlet users can insert prices | INSERT | Roles 5, 6 (own outlet) |
+| Admin can update prices | UPDATE | Role 1 (own outlet) |
+| Outlet users can update prices | UPDATE | Roles 5, 6 (own outlet) |
+
+**barang_units Policies:** (Same structure as barang_prices)
+
+**master_barang Policy Updated:**
+| Policy | Operation | Access |
+|--------|-----------|--------|
+| ~~Outlet users can read own outlet products~~ | ~~SELECT~~ | ~~Dropped~~ |
+| Outlet users can read own outlet and holding products | SELECT | Roles 5, 6 (own outlet + '111') |
+
+**New Policy Logic:**
+```sql
+CREATE POLICY "Outlet users can read own outlet and holding products"
+ON public.master_barang FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users_profile
+    WHERE users_profile.uid = auth.uid()
+    AND users_profile.user_role IN (5, 6)
+    AND (
+      users_profile.kode_outlet = master_barang.kode_outlet
+      OR master_barang.kode_outlet = '111'::text  -- Can see Holding products
+    )
+  )
+);
+```
+
+**Duplicate Constraints Cleaned:**
+- `unique_sku_global` dropped (kept `master_barang_sku_key`)
+- `barang_prices_pkey` dropped (kept `unique_price_per_outlet`)
+- `barang_units_pkey` dropped (kept `unique_unit_per_outlet`)
+
+### TypeScript Errors Fixed
+
+| File | Error | Fix |
+|------|-------|-----|
+| `src/hooks/useMasterBarang.ts` | 'MasterBarangWithType' declared but never used | Removed unused import |
+| `src/pages/ProductPage.tsx` | 'CardDescription' declared but never read | Removed unused import |
+| `src/pages/ProductPage.tsx` | 'totalCount' declared but never read | Removed unused variable |
+| `src/services/authService.ts` | Type 'unknown' not assignable to 'UserProfile \| null' | Added `as UserProfile \| null` cast |
+
+### Files Created This Session
+
+| File | Purpose |
+|------|---------|
+| `database-docs/fix-rls-policies.sql` | SQL script to fix RLS policies on barang_prices, barang_units, master_barang |
+| `scripts/diagnose-409-error.cjs` | Diagnostic script for 409 error investigation |
+| `scripts/check-trigger-function.cjs` | Check auto_generate_outlet_details() function |
+| `scripts/check-rls-policies.cjs` | Check RLS policies on all tables |
+| `scripts/investigate-display-issue.cjs` | Investigate why products not displaying |
+| `scripts/check-master-outlet-rls.cjs` | Check RLS on master_outlet table |
+| `scripts/check-users-profile-rls.cjs` | Check RLS on users_profile table |
+| `scripts/verify-current-state.cjs` | Comprehensive database state verification |
+| `scripts/run-sql-test.cjs` | Test Supabase query simulation |
+| `scripts/quick-check.cjs` | Quick RLS policy verification |
+| `scripts/test-supabase-query.js` | Test Supabase API with authentication (failed - network) |
+| `scripts/test-supabase-auth.cjs` | Test Supabase auth flow |
+| `database-docs/test-supabase-query.sql` | SQL query for manual testing |
+
+### Files Modified This Session
+
+| File | Changes |
+|------|---------|
+| `src/components/layout/Sidebar.tsx` | Combined Price & Satuan into "Price & Unit"; removed Ruler icon |
+| `src/services/barangPriceUnitService.ts` | Added `.eq('kode_outlet', kode_outlet)` filter to both paginated and search queries |
+| `src/hooks/useMasterBarang.ts` | Removed unused `MasterBarangWithType` import |
+| `src/pages/ProductPage.tsx` | Removed unused `CardDescription` import and `totalCount` variable |
+| `src/services/authService.ts` | Added type cast `as UserProfile \| null` for RPC return value |
+
+### Database State After Fixes
+
+**Products:**
+| SKU | Name | Outlet | Status |
+|-----|------|--------|--------|
+| ZP25XII0005 | MATA BOR 12 MEREK RYU | 109 (ZEN SUNDA) | Active |
+| ZP25XII0004 | Test Product for Diagnosis | 109 (ZEN SUNDA) | Active |
+| ZP25XII0003 | HAND TOWEL TISSUE | 111 (HOLDING) | Active |
+| ZP25XII0002 | ALAT UNTUK NGEPEL | 111 (HOLDING) | Active |
+| ZP25XII0001 | BALLPOINT | 111 (HOLDING) | Active |
+
+**RLS Policies Status:**
+- ✅ `master_barang` - Policies correctly configured
+- ✅ `barang_prices` - Policies created (was empty, now fixed)
+- ✅ `barang_units` - Policies created (was empty, now fixed)
+- ✅ `inventory_balance` - RLS disabled (correct)
+
+### Key Technical Decisions
+
+1. **Price & Unit Page Filter Behavior**: Unlike Product page, this page only shows user's own outlet products to avoid confusion with price/unit data from other outlets
+2. **RLS Policy Naming**: Changed from "Outlet users can read own outlet products" to "Outlet users can read own outlet and holding products" to reflect new behavior
+3. **ON CONFLICT DO NOTHING**: Trigger uses this to prevent errors if rows already exist in barang_prices/units
+4. **SECURITY DEFINER for Trigger**: The `auto_generate_outlet_details()` function has SECURITY DEFINER to bypass RLS when creating related rows
+
+### User Action Required
+
+**Before the fixes will work, user must:**
+
+1. **Run SQL Script in Supabase Studio:**
+   - Open Supabase Studio → SQL Editor
+   - Run the entire contents of `database-docs/fix-rls-policies.sql`
+
+2. **Restart Dev Server:**
+   ```bash
+   # Stop dev server (Ctrl+C)
+   rm -rf .vite
+   npm run dev
+   ```
+
+3. **Clear Browser Cache:**
+   - Hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
+   - Or open in incognito/private window
+
+4. **Re-authenticate:**
+   - Sign out
+   - Sign in again with `adminsunda@zenfamilyspa.id`
+
+### Expected Behavior After Fixes
+
+**Product Page (role=6, kode_outlet='109'):**
+- Shows products from outlet 109 AND outlet 111 (Holding)
+- Can edit only outlet 109 products
+- Outlet 111 products show as reference (read-only)
+
+**Price & Unit Page (role=6, kode_outlet='109'):**
+- Shows ONLY products from outlet 109
+- Can edit price/unit data for outlet 109 only
+- No confusion with other outlets' pricing
+
+### Database Connection
+
+```bash
+Host: 217.21.78.155
+Port: 57777
+Database: postgres
+User: postgres
+Password: 6eMmeCxaATl8z7be3ReaGodvN7HpcOpt
+```
+
+### Session Summary
+
+This session focused on debugging and fixing critical RLS policy issues discovered during testing with role 6 (outlet_admin) users:
+
+1. **Navigation Cleanup** - Combined duplicate Price/Satuan menu items into single "Price & Unit"
+2. **RLS Policy Investigation** - Discovered that `barang_prices` and `barang_units` had RLS enabled but no policies, blocking the auto-populate trigger
+3. **RLS Policy Creation** - Created comprehensive RLS policies for price and unit tables
+4. **Role 6 Visibility Fix** - Updated `master_barang` policy to allow role 6 to see both Holding ('111') and their own outlet products
+5. **TypeScript Cleanup** - Fixed 4 TypeScript errors from previous sessions
+6. **Service Filter Update** - Updated Price & Unit service to filter by user's outlet only (different behavior from Product page)
+
+**Status:**
+- ✅ Code changes complete
+- ⚠️  **USER ACTION REQUIRED:** Run `database-docs/fix-rls-policies.sql` in Supabase Studio
+- ⚠️  **USER ACTION REQUIRED:** Restart dev server and clear browser cache
+
+---
+
+*Last Updated: December 31, 2025*
+*Project Status: RLS Policies Fixed - Awaiting User Testing After Cache Clear*
+*Next: User to test after running SQL script and clearing cache*

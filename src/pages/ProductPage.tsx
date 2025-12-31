@@ -15,7 +15,7 @@ import { useAuthUser } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -223,7 +223,6 @@ export function ProductPage() {
     )
   }) || []
 
-  const totalCount = filteredData.length
   const pageSize = 100
   const totalPages = Math.ceil((data?.count || 0) / pageSize)
 
