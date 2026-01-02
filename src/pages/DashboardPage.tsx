@@ -63,7 +63,7 @@ const moduleCards: ModuleCard[] = [
     icon: Package,
     path: '/inventory',
     roleIds: [1, 2, 6, 7, 8],  // admin_holding, staff_holding, outlet_admin, warehouse_staff, superuser
-    color: 'bg-blue-500/10 text-blue-500',
+    color: 'bg-pastel-blue text-blue-700',
   },
   {
     title: 'Purchase Orders',
@@ -71,15 +71,15 @@ const moduleCards: ModuleCard[] = [
     icon: FileText,
     path: '/purchase-orders',
     roleIds: [1, 2, 7, 8],  // admin_holding, staff_holding, warehouse_staff, superuser
-    color: 'bg-purple-500/10 text-purple-500',
+    color: 'bg-pastel-purple text-purple-700',
   },
   {
     title: 'Finance',
-    description: 'Invoices, payments, and financial reports',
+    description: 'Invoices, payment and financial reports',
     icon: DollarSign,
     path: '/finance',
     roleIds: [1, 5, 8],  // admin_holding, finance, superuser
-    color: 'bg-green-500/10 text-green-500',
+    color: 'bg-pastel-green text-green-700',
   },
   {
     title: 'Laundry Operations',
@@ -87,7 +87,7 @@ const moduleCards: ModuleCard[] = [
     icon: Shirt,
     path: '/laundry',
     roleIds: [3, 4, 8],  // laundry_admin, laundry_staff, superuser
-    color: 'bg-cyan-500/10 text-cyan-500',
+    color: 'bg-pastel-blue text-cyan-700',
   },
   {
     title: 'User Management',
@@ -95,7 +95,7 @@ const moduleCards: ModuleCard[] = [
     icon: Users,
     path: '/users',
     roleIds: [1, 8],  // admin_holding, superuser
-    color: 'bg-orange-500/10 text-orange-500',
+    color: 'bg-pastel-orange text-orange-700',
   },
 ]
 
@@ -112,29 +112,31 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, icon: Icon, trend = 'neutral', color }: StatCardProps) {
+  // Apply the pastel color to the card itself (bg-pastel-*)
+  // Add transparency to the icon background for contrast
   return (
-    <Card>
+    <Card className={`border-none shadow-sm transition-all hover:shadow-md ${color}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
+            <p className="text-sm font-medium opacity-80">{title}</p>
+            <p className="text-2xl font-bold mt-2">{value}</p>
           </div>
-          <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${color}`}>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/40 shadow-sm backdrop-blur-sm">
             <Icon className="h-6 w-6" />
           </div>
         </div>
         {trend !== 'neutral' && (
-          <div className="mt-4 flex items-center gap-1 text-xs">
+          <div className="mt-4 flex items-center gap-1 text-xs font-medium">
             {trend === 'up' ? (
-              <TrendingUp className="h-3 w-3 text-green-500" />
+              <TrendingUp className="h-3 w-3" />
             ) : (
-              <TrendingDown className="h-3 w-3 text-red-500" />
+              <TrendingDown className="h-3 w-3" />
             )}
-            <span className={trend === 'up' ? 'text-green-500' : 'text-red-500'}>
+            <span>
               {trend === 'up' ? '+12%' : '-5%'}
             </span>
-            <span className="text-muted-foreground">from last month</span>
+            <span className="opacity-70 ml-1">from last month</span>
           </div>
         )}
       </CardContent>
@@ -186,18 +188,18 @@ function ModuleGrid() {
   // Filter modules based on user role
   const availableModules = user
     ? moduleCards.filter((module) => {
-        // SUPERUSER (8) sees everything
-        if (user.user_role === 8) return true
-        // Check if user's role is in the allowed roles for this module
-        return module.roleIds.includes(user.user_role)
-      })
+      // SUPERUSER (8) sees everything
+      if (user.user_role === 8) return true
+      // Check if user's role is in the allowed roles for this module
+      return module.roleIds.includes(user.user_role)
+    })
     : []
 
   if (availableModules.length === 0) {
     return (
       <Card>
         <CardContent className="p-12 text-center">
-        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Modules Available</h3>
           <p className="text-muted-foreground">
             There are no modules available for your role. Please contact your administrator.
@@ -311,7 +313,7 @@ export function DashboardPage() {
           />
         )}
 
-        {/* Stats Section - Placeholder for now */}
+        {/* Stats Section - View Only */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Overview</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -320,27 +322,27 @@ export function DashboardPage() {
               value="124"
               icon={Package}
               trend="up"
-              color="bg-blue-500/10 text-blue-500"
+              color="bg-pastel-blue text-blue-700"
             />
             <StatCard
               title="Active Orders"
               value="18"
               icon={FileText}
               trend="up"
-              color="bg-purple-500/10 text-purple-500"
+              color="bg-pastel-purple text-purple-700"
             />
             <StatCard
               title="Pending Tasks"
               value="5"
               icon={AlertCircle}
-              color="bg-orange-500/10 text-orange-500"
+              color="bg-pastel-orange text-orange-700"
             />
             <StatCard
               title="Revenue (MTD)"
               value="$12,450"
               icon={DollarSign}
               trend="up"
-              color="bg-green-500/10 text-green-500"
+              color="bg-pastel-green text-green-700"
             />
           </div>
         </div>

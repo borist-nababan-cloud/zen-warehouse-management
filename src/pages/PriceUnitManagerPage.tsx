@@ -12,7 +12,7 @@
  * Access: Roles 1, 5, 6, 8 (admin_holding, finance, outlet_admin, superuser)
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { usePriceUnitsPaginated, useUpdatePriceUnit, useCanEditProduct } from '@/hooks/useBarangPriceUnit'
 import { useAuthUser } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -39,15 +39,7 @@ const formatNumber = (value: number | string): string => {
   return new Intl.NumberFormat('id-ID').format(num)
 }
 
-/**
- * Parse clean number from formatted string (e.g. "1.000" -> 1000)
- */
-const parseNumber = (value: string): number => {
-  // Remove dots (thousands separator in ID) and then parse
-  // Handles localized input where '.' is separator
-  const clean = value.replace(/\./g, '').replace(/,/g, '.')
-  return parseFloat(clean) || 0
-}
+
 
 // ============================================
 // ROW EDIT STATE TYPE
