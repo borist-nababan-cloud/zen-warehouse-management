@@ -27,6 +27,8 @@ import {
   Tag,
   Boxes,
   Layers,
+  TrendingUp,
+  Activity,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -152,9 +154,27 @@ const masterDataGroups: NavGroup[] = [
   },
 ]
 
+/**
+ * PoS Dashboard Navigation Groups
+ * Analytical dashboards
+ */
+const posDashboardGroups: NavGroup[] = [
+  {
+    title: 'PoS Dashboard',
+    icon: TrendingUp,
+    roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
+    defaultOpen: true,
+    children: [
+      { title: 'Financial', path: '/dashboard/financial', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
+      { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [1, 5, 6, 8] },
+    ],
+  },
+]
+
 // Combine flat items and groups
 const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
+  ...posDashboardGroups,
   ...masterDataGroups,
 ]
 
@@ -166,6 +186,8 @@ interface SidebarProps {
   className?: string
 }
 
+import { Footer } from './Footer'
+
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
@@ -173,14 +195,16 @@ export function Sidebar({ className }: SidebarProps) {
   const { user } = useAuthUser()
   const signOut = useSignOut()
 
+  const navbarTitle = import.meta.env.VITE_NAVBAR_TITLE || 'WMS'
+
   // Filter nav items based on user role
   const availableItems = user
     ? allNavItems.filter((item) => {
-        // SUPERUSER (8) sees everything
-        if (user.user_role === 8) return true
-        // Check if user's role is in the allowed roles for this item
-        return item.roleIds.includes(user.user_role)
-      })
+      // SUPERUSER (8) sees everything
+      if (user.user_role === 8) return true
+      // Check if user's role is in the allowed roles for this item
+      return item.roleIds.includes(user.user_role)
+    })
     : []
 
   const isActivePath = (path: string) => {
@@ -221,7 +245,7 @@ export function Sidebar({ className }: SidebarProps) {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <Warehouse className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold">WMS</span>
+            <span className="text-lg font-bold">{navbarTitle}</span>
           </div>
         )}
         <Button
@@ -258,8 +282,8 @@ export function Sidebar({ className }: SidebarProps) {
                     onClick={() => toggleGroup(item.title)}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      hasActiveChild && 'bg-accent text-accent-foreground'
+                      'hover:bg-pastel-blue/50 hover:text-blue-800',
+                      hasActiveChild && 'bg-pastel-blue text-blue-900 font-medium hover:bg-pastel-blue/80'
                     )}
                   >
                     <Icon className="h-5 w-5 shrink-0" />
@@ -288,8 +312,8 @@ export function Sidebar({ className }: SidebarProps) {
                               to={child.path || '#'}
                               className={cn(
                                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                                'hover:bg-accent hover:text-accent-foreground',
-                                active && 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                'hover:bg-pastel-blue/50 hover:text-blue-800',
+                                active && 'bg-pastel-blue text-blue-900 font-medium hover:bg-pastel-blue/80'
                               )}
                             >
                               <ChildIcon className="h-4 w-4 shrink-0" />
@@ -313,8 +337,8 @@ export function Sidebar({ className }: SidebarProps) {
                   to={item.path || '#'}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                    'hover:bg-accent hover:text-accent-foreground',
-                    active && 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    'hover:bg-pastel-blue/50 hover:text-blue-800',
+                    active && 'bg-pastel-blue text-blue-900 font-medium hover:bg-pastel-blue/80'
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -377,6 +401,10 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const appName = import.meta.env.VITE_APP_NAME || 'Warehouse Management System'
+  const companyName = import.meta.env.VITE_COMPANY_NAME || ''
+  const headerTitle = companyName ? `${appName} - ${companyName}` : appName
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
@@ -387,7 +415,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Top Header */}
         <header className="flex h-16 items-center justify-between border-b bg-background px-6">
           <div>
-            <h1 className="text-xl font-semibold">Warehouse Management System</h1>
+            <h1 className="text-xl font-semibold">{headerTitle}</h1>
           </div>
         </header>
 
@@ -395,6 +423,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
+
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   )

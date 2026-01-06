@@ -98,6 +98,7 @@ export interface MasterOutlet {
   location: string
   province: string
   outlet_group_id: number  // References group_outlet.group_id
+  active: boolean          // Active status
 }
 
 /**

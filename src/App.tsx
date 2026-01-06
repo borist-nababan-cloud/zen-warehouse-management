@@ -13,6 +13,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { ProductPage } from '@/pages/ProductPage'
 import { MasterTypePage } from '@/pages/MasterTypePage'
 import { PriceUnitManagerPage } from '@/pages/PriceUnitManagerPage'
+import { FinancialDashboardPage } from './pages/FinancialDashboardPage'
+import { OperationalDashboardPage } from './pages/OperationalDashboardPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -54,6 +56,26 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Financial Dashboard - New Module */}
+          <Route
+            path="/dashboard/financial"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <FinancialDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Operational Dashboard - New Module */}
+          <Route
+            path="/dashboard/operational"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <OperationalDashboardPage />
               </ProtectedRoute>
             }
           />

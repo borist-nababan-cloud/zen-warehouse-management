@@ -15,6 +15,7 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
@@ -32,11 +33,12 @@ dist-ssr
 
 # MD Files
 
-perintah.md
+!perintah.md
+frontendplan.md
 frontendplan.md
 
 # Database documentation
-database-docs/
-docs/
+!database-docs/
+
 my-cred/
 screen-capture/

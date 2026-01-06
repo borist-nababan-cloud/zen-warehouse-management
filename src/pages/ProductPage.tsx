@@ -267,10 +267,10 @@ export function ProductPage() {
 
     const result = editingProduct
       ? await updateMutation.mutateAsync({
-          kodeOutlet: editingProduct.kode_outlet,
-          id: editingProduct.id,
-          data: submitData,
-        })
+        kodeOutlet: editingProduct.kode_outlet,
+        id: editingProduct.id,
+        data: submitData,
+      })
       : await createMutation.mutateAsync(submitData)
 
     if (result.isSuccess) {
@@ -394,11 +394,11 @@ export function ProductPage() {
           </Card>
 
           {/* Data Table */}
-          <Card>
+          <Card className="border-pastel-blue/20 shadow-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-muted">
+                  <thead className="bg-pastel-blue/30 text-blue-900">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium">SKU</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Product Name</th>
@@ -410,7 +410,7 @@ export function ProductPage() {
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-pastel-blue/10">
                     {filteredData.length === 0 ? (
                       <tr>
                         <td colSpan={canEdit ? 6 : 5} className="px-4 py-8 text-center text-muted-foreground">
@@ -419,7 +419,7 @@ export function ProductPage() {
                       </tr>
                     ) : (
                       filteredData.map((product) => (
-                        <tr key={`${product.kode_outlet}-${product.id}`} className="hover:bg-muted/50">
+                        <tr key={`${product.kode_outlet}-${product.id}`} className="hover:bg-pastel-blue/10 transition-colors">
                           <td className="px-4 py-3 text-sm">{product.sku || '-'}</td>
                           <td className="px-4 py-3 text-sm font-medium">{product.name || '-'}</td>
                           <td className="px-4 py-3 text-sm">
@@ -430,9 +430,13 @@ export function ProductPage() {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             {product.deleted ? (
-                              <span className="text-destructive">Deleted</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Deleted
+                              </span>
                             ) : (
-                              <span className="text-green-600">Active</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pastel-green text-green-800">
+                                Active
+                              </span>
                             )}
                           </td>
                           {canEdit && (
@@ -441,6 +445,7 @@ export function ProductPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  className="h-8 w-8 hover:bg-pastel-blue/50 hover:text-blue-700"
                                   onClick={() => handleEdit(product)}
                                 >
                                   <Pencil className="h-4 w-4" />
@@ -448,9 +453,10 @@ export function ProductPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  className="h-8 w-8 hover:bg-red-100 hover:text-red-700"
                                   onClick={() => handleDelete(product)}
                                 >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </td>

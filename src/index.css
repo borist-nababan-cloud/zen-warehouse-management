@@ -21,5 +21,12 @@
   --color-input: oklch(90% 0.01 265);
   --color-ring: oklch(55% 0.22 265);
 
+  --color-pastel-blue: #e0f2fe;
+  --color-pastel-green: #dcfce7;
+  --color-pastel-purple: #f3e8ff;
+  --color-pastel-orange: #ffedd5;
+  --color-pastel-red: #fee2e2;
+  --color-pastel-yellow: #fef9c3;
+
   --radius: 0.5rem;
 }

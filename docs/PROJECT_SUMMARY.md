@@ -2047,3 +2047,94 @@ Addressed critical data visibility issues for `outlet_admin` (Role 6) and refact
 ### Verified Status
 - **Product Page:** `outlet_admin` can see their own products + Holding products (Read-only).
 - **Price & Unit Page:** `outlet_admin` can view and edit prices for their own products. Updates persist correctly.
+
+---
+
+## Session: January 05, 2026 - Financial Dashboard Refactoring
+
+### Overview
+Refactored the Financial Dashboard into a split-view architecture ("Live Monitor" and "Historical Analysis") and upgraded the data aggregation logic to handle complex payment methods correctly.
+
+### Key Changes Made
+
+#### 1. Split Dashboard Architecture
+**Live Monitor (Top Section):**
+- **Purpose**: Real-time operational view for the current day.
+- **Features**:
+  - Auto-refresh every 5 minutes (300,000ms).
+  - Manual "Refresh Data" button.
+  - "Last updated" timestamp indicator.
+  - Display: Total Revenue, Total Discounts, Total Cash Received.
+
+**Historical Analysis (Bottom Section):**
+- **Purpose**: Deep-dive trends and reconciliation.
+- **Features**:
+  - **Presets**: "This Week", "This Month" (Default), "This Year".
+  - **Custom Range**: Date picker.
+  - **Visualization**: Revenue Trend, Payment Mix, Bank Reconciliation, Discount Impact.
+
+#### 2. Aggregation Logic Upgrade
+- **Problem**: Previous logic missed non-bank payment methods (e.g., "GO-PAY", "PAYLATER") in the Bank Reconciliation chart because it strictly checked for `bank_1`/`bank_2` columns.
+- **Fix**: Implemented a fallback strategy in `HistoricalSection.tsx`.
+  ```typescript
+  // Fallback to Method Name if Bank Name is empty
+  const key = (row.bank_1 || row.method_1 || 'UNKNOWN').toUpperCase()
+  ```
+- **Result**: Charts now correctly visualize all revenue sources, including e-wallets and control accounts.
+
+#### 3. Component Modularization
+- `FinancialDashboardPage.tsx`: Orchestrator component.
+- `LiveSection.tsx`: Handles real-time fetching and simple KPIs.
+- `HistoricalSection.tsx`: Handles complex filtering and charting.
+- `DashboardFilters.tsx`: Updated with preset buttons.
+- `KPIs & Charts`: Refactored to assume "Wide" data structure from `view_financial_dashboard`.
+
+### Files Modified
+- `src/pages/FinancialDashboardPage.tsx` (Refactored)
+- `src/components/features/financial/LiveSection.tsx` (New)
+- `src/components/features/financial/HistoricalSection.tsx` (New)
+- `src/components/features/financial/DashboardFilters.tsx` (Updated)
+- `src/types/dashboard.ts` (Updated interfaces)
+
+### Status
+- **Build**: Passed (`npm run build`).
+- **Verification**: Logic updated to handle edge case payment methods.
+- **Ready**: For production deployment.
+
+---
+
+## Session: January 05, 2026 - Operational Dashboard Implementation
+
+### Overview
+Implemented the **Operational Dashboard**, a specialized view for monitoring granular operational metrics like gender distribution, therapist performance, and room utilization. This module extends the same "Split Dashboard" architecture (Live/Historical) used in the Financial Dashboard.
+
+### Key Features
+#### 1. Live Operational Monitor
+- **Focus**: Real-time "Today" view.
+- **Metrics**: 
+  - Total Operating Hours (calculated from `duration_minutes`).
+  - Total Guests (Unique Transaction IDs).
+- **Auto-Refresh**: Updates every 5 minutes.
+
+#### 2. Historical Operational Analysis
+- **Focus**: Trend analysis with presets (Week/Month/Year).
+- **Visualizations**:
+  - **Gender Distribution**: Donut Chart (Female vs Male).
+  - **Room Efficiency**: Bar Chart showing total utilization minutes per room.
+  - **Therapist Leaderboard**: Top 10 / Bottom 10 Toggle based on Total Duration.
+  - **Service Market Share**: Heatmap table showing % of Service Category volume per Therapist.
+
+### Architecture & Logic
+- **Client-Side Aggregation**: 
+  - Raw data fetched from `view_operational_dashboard`.
+  - Complex aggregation (pivoting services, grouping by room/therapist) handled in `useMemo` for performance and flexibility.
+- **Components**:
+  - `OperationalDashboardPage.tsx`: Orchestrator.
+  - `OperationalLiveSection.tsx` & `OperationalHistoricalSection.tsx`: Core sections.
+  - `GenderChart`, `RoomEfficiencyChart`, `TherapistLeaderboard`, `TherapistMarketShare`: Specialized visualization components.
+- **Route**: `/dashboard/operational` (Protected: Roles 1, 5, 6, 8).
+
+### Status
+- **Build**: Passed (`tsc && vite build`).
+- **Integration**: Linked in Sidebar under "PoS Dashboard" group.
+- **Ready**: For user testing.
