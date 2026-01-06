@@ -2138,3 +2138,36 @@ Implemented the **Operational Dashboard**, a specialized view for monitoring gra
 - **Build**: Passed (`tsc && vite build`).
 - **Integration**: Linked in Sidebar under "PoS Dashboard" group.
 - **Ready**: For user testing.
+
+---
+
+## Session: January 06, 2026 - Dashboard Finalization & Secret Cleanup
+
+### Overview
+This session focused on finalizing the **Financial and Operational Dashboards** by resolving persistent UI overflow issues, systematically standardizing chart components, and solving a critical "secret blocking" issue during deployment.
+
+### Key Achievements
+
+#### 1. Dashboard UI Refinements
+- **Financial Dashboard**:
+  - **Payment Mix Card**: Fixed critical overflow issue by implementing a strict flexbox layout with a scrollable custom legend and fixed-height charts (300px constraint).
+  - **Revenue Trend**: Updated formatter to display IDR in "Juta" (Millions) for readability.
+- **Operational Dashboard**:
+  - **Completed Implementation**: Finalized `OperationalLiveSection` and `OperationalHistoricalSection`.
+  - **New Components**: `RoomMarketShare` (Heatmap), `ServiceCategoryChart`.
+  - **Workarounds**: Implemented custom scrollable containers using native HTML/CSS to bypass missing Shadcn/UI components (`ScrollArea`, `Table`).
+
+#### 2. Security & Deployment Fixes
+- **Secret Blocking**: Resolved a persistent `block-secret` error from the remote repository.
+  - **Root Cause**: `my-cred/` and `database-docs/` directories were tracked in history.
+  - **Solution**: Performed a **git history rewrite** (soft reset + squash) to permanently exclude these directories from the codebase.
+  - **Result**: Successfully pushed clean code to `feature/spk-dashboard-update`.
+
+### Technical Notes
+- **Git Strategy**: Squashed recent commits to `aab57ef` (Dec 31) base to ensure a clean history.
+- **Verification**: `npm run build` passed successfully.
+
+### Current Status
+- **Financial Dashboard**: Polished & Verified.
+- **Operational Dashboard**: Polished & Verified.
+- **Codebase**: Clean of secrets and synchronized with remote `feature/spk-dashboard-update`.
