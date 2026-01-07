@@ -15,6 +15,8 @@ import { MasterTypePage } from '@/pages/MasterTypePage'
 import { PriceUnitManagerPage } from '@/pages/PriceUnitManagerPage'
 import { FinancialDashboardPage } from './pages/FinancialDashboardPage'
 import { OperationalDashboardPage } from './pages/OperationalDashboardPage'
+import { ProductMixDashboardPage } from './pages/ProductMixDashboardPage'
+import { PeakHoursDashboardPage } from './pages/PeakHoursDashboardPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -76,6 +78,26 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
                 <OperationalDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Product Mix Dashboard - New Module */}
+          <Route
+            path="/dashboard/product-mix"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <ProductMixDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Peak Hours Dashboard - New Module */}
+          <Route
+            path="/dashboard/peak-hours"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <PeakHoursDashboardPage />
               </ProtectedRoute>
             }
           />

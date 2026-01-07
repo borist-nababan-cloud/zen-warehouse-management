@@ -1,5 +1,5 @@
 import { Store, Calendar as CalendarIcon } from 'lucide-react'
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns'
 import { DashboardFilter } from '@/types/dashboard'
 import { RoleId } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -23,11 +23,16 @@ export function DashboardFilters({
 }: DashboardFiltersProps) {
     const canSelectOutlet = userRole === 1 || userRole === 5 || userRole === 8
 
-    const handlePreset = (type: 'week' | 'month' | 'year') => {
+    const handlePreset = (type: 'yesterday' | 'week' | 'month' | 'year') => {
         const now = new Date()
         let start, end
 
         switch (type) {
+            case 'yesterday':
+                const yesterday = subDays(now, 1)
+                start = yesterday
+                end = yesterday
+                break
             case 'week':
                 // "This Week": Monday to Monday (or current date) - interpreting as Start of Week (Mon) to End of Week (Sun)
                 // "backward date if today not monday" is handled by startOfWeek looking back to previous Monday
@@ -78,6 +83,7 @@ export function DashboardFilters({
                 {/* Date Presets */}
                 {showPresets && (
                     <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handlePreset('yesterday')}>Yesterday</Button>
                         <Button variant="outline" size="sm" onClick={() => handlePreset('week')}>This Week</Button>
                         <Button variant="outline" size="sm" onClick={() => handlePreset('month')}>This Month</Button>
                         <Button variant="outline" size="sm" onClick={() => handlePreset('year')}>This Year</Button>

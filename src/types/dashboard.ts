@@ -93,3 +93,62 @@ export interface OperationalDashboardState {
     therapistStats: TherapistPerformance[]
     roomStats: RoomPerformance[]
 }
+
+// --- Product Mix Dashboard Types ---
+
+export interface ProductMixData {
+    trans_type_id: 'JASA' | 'PRODUCT' | 'ADDITIONAL'
+    produk_jasa_nama: string
+    quantity: number
+    total_revenue: number
+    tanggal: string // ISO date string
+    kode_outlet: string
+    name_outlet?: string
+}
+
+export interface PromoData {
+    kodepromo: string
+    discount_amount: number // vpromo
+    tanggal: string // ISO date string
+    kode_outlet: string
+}
+
+export interface ProductMixState {
+    serviceRevenue: number
+    productRevenue: number
+    totalItemsSold: number
+    promoUsageValue: number
+
+    // Chart 1: Category Revenue
+    categoryRevenue: { name: string; value: number }[]
+
+    // Chart 2: Top 10 Products
+    topProducts: { name: string; quantity: number; revenue: number }[]
+
+    // Chart 3: Promo Effectiveness
+    promoStats: { name: string; count: number; value: number }[]
+}
+
+// --- Peak Hours Dashboard Types ---
+
+export interface TrafficData {
+    day_index: number // 0=Sun, 1=Mon...
+    day_name: string
+    hour_block: number // 0-23
+    transaction_value: number
+    tanggal: string // ISO date
+    kode_outlet: string
+}
+
+export interface PeakHoursState {
+    totalTraffic: number
+    busiestDay: { name: string; value: number }
+    peakHour: { hour: number; value: number }
+
+    // For Heatmap
+    heatmapData: Record<number, Record<number, number>> // [day][hour] -> count
+    maxHeatmapValue: number
+
+    // For Trend Chart
+    hourlyTrend: { hour: number; value: number }[]
+}

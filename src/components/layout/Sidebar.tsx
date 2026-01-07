@@ -29,6 +29,7 @@ import {
   Layers,
   TrendingUp,
   Activity,
+  Clock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -167,6 +168,8 @@ const posDashboardGroups: NavGroup[] = [
     children: [
       { title: 'Financial', path: '/dashboard/financial', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
       { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [1, 5, 6, 8] },
+      { title: 'Product & Service Mix', path: '/dashboard/product-mix', icon: Tag, roleIds: [1, 5, 6, 8] },
+      { title: 'Peak Hours Analysis', path: '/dashboard/peak-hours', icon: Clock, roleIds: [1, 5, 6, 8] },
     ],
   },
 ]
