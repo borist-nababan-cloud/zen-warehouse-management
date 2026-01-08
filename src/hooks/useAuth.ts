@@ -14,6 +14,7 @@ import {
   getCurrentUser,
   onAuthStateChange,
   getStoredUserRole,
+  updatePassword,
 } from '@/services/authService'
 import type { LoginFormData, RoleId } from '@/types/database'
 
@@ -94,6 +95,15 @@ export function useSignOut() {
       // Clear all queries after logout
       queryClient.clear()
     },
+  })
+}
+
+/**
+ * Hook for password update mutation
+ */
+export function useUpdatePassword() {
+  return useMutation({
+    mutationFn: (password: string) => updatePassword(password),
   })
 }
 

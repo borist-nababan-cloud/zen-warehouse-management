@@ -33,8 +33,8 @@ export function OutletRevenueTrendChart({ data, loading, outletNamesMap }: Outle
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[350px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ width: '100%', height: 350 }} className="w-full">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                         <LineChart data={data} margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                             <XAxis

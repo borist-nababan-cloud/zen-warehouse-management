@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { OperationalLiveSection } from '@/components/features/operational/OperationalLiveSection'
 import { OperationalHistoricalSection } from '@/components/features/operational/OperationalHistoricalSection'
 
+import { AIChatWidget } from '@/components/features/ai/AIChatWidget'
+
 export function OperationalDashboardPage() {
     const { user } = useAuthUser()
 
@@ -29,7 +31,7 @@ export function OperationalDashboardPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-8">
+            <div className="space-y-8 relative">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold tracking-tight">Operational Performance</h1>
                 </div>
@@ -46,6 +48,16 @@ export function OperationalDashboardPage() {
                     userRole={user?.user_role}
                     userOutlet={user?.kode_outlet || undefined}
                     availableOutlets={availableOutlets}
+                />
+
+                {/* AI Chat Widget */}
+                <AIChatWidget
+                    pageName="Operational Dashboard"
+                    contextData={{
+                        userRole: user?.user_role,
+                        userOutlet: user?.kode_outlet,
+                        availableOutlets: availableOutlets
+                    }}
                 />
             </div>
         </DashboardLayout>

@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { ProductMixLiveSection } from '@/components/features/product-mix/ProductMixLiveSection'
 import { ProductMixHistoricalSection } from '@/components/features/product-mix/ProductMixHistoricalSection'
 
+import { AIChatWidget } from '@/components/features/ai/AIChatWidget'
+
 export function ProductMixDashboardPage() {
     const { user } = useAuthUser()
     const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
@@ -27,7 +29,7 @@ export function ProductMixDashboardPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="space-y-8 animate-in fade-in duration-500 relative">
                 {/* Header Section */}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -53,6 +55,16 @@ export function ProductMixDashboardPage() {
                         availableOutlets={availableOutlets}
                     />
                 </div>
+
+                {/* AI Chat Widget */}
+                <AIChatWidget
+                    pageName="Product & Service Mix Dashboard"
+                    contextData={{
+                        userRole: user?.user_role,
+                        userOutlet: user?.kode_outlet,
+                        availableOutlets: availableOutlets
+                    }}
+                />
             </div>
         </DashboardLayout>
     )

@@ -23,8 +23,8 @@ export function ServiceCategoryChart({ data, loading }: ServiceCategoryChartProp
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[400px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ width: '100%', height: 400 }} className="w-full">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                         <BarChart data={data} layout="vertical" margin={{ left: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
                             <XAxis type="number" hide />

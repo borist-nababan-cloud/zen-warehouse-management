@@ -17,8 +17,7 @@ import {
   DollarSign,
   Shirt,
   Users,
-  TrendingUp,
-  TrendingDown,
+
   AlertCircle,
 } from 'lucide-react'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -103,46 +102,7 @@ const moduleCards: ModuleCard[] = [
 // COMPONENTS
 // ============================================
 
-interface StatCardProps {
-  title: string
-  value: string | number
-  icon: React.ElementType
-  trend?: 'up' | 'down' | 'neutral'
-  color: string
-}
 
-function StatCard({ title, value, icon: Icon, trend = 'neutral', color }: StatCardProps) {
-  // Apply the pastel color to the card itself (bg-pastel-*)
-  // Add transparency to the icon background for contrast
-  return (
-    <Card className={`border-none shadow-sm transition-all hover:shadow-md ${color}`}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium opacity-80">{title}</p>
-            <p className="text-2xl font-bold mt-2">{value}</p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/40 shadow-sm backdrop-blur-sm">
-            <Icon className="h-6 w-6" />
-          </div>
-        </div>
-        {trend !== 'neutral' && (
-          <div className="mt-4 flex items-center gap-1 text-xs font-medium">
-            {trend === 'up' ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : (
-              <TrendingDown className="h-3 w-3" />
-            )}
-            <span>
-              {trend === 'up' ? '+12%' : '-5%'}
-            </span>
-            <span className="opacity-70 ml-1">from last month</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
 
 interface WelcomeCardProps {
   userRole: RoleId
@@ -313,39 +273,7 @@ export function DashboardPage() {
           />
         )}
 
-        {/* Stats Section - View Only */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Overview</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="Total Products"
-              value="124"
-              icon={Package}
-              trend="up"
-              color="bg-pastel-blue text-blue-700"
-            />
-            <StatCard
-              title="Active Orders"
-              value="18"
-              icon={FileText}
-              trend="up"
-              color="bg-pastel-purple text-purple-700"
-            />
-            <StatCard
-              title="Pending Tasks"
-              value="5"
-              icon={AlertCircle}
-              color="bg-pastel-orange text-orange-700"
-            />
-            <StatCard
-              title="Revenue (MTD)"
-              value="$12,450"
-              icon={DollarSign}
-              trend="up"
-              color="bg-pastel-green text-green-700"
-            />
-          </div>
-        </div>
+
 
         {/* Available Modules */}
         <div>

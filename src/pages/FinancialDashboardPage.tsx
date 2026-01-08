@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { LiveSection } from '@/components/features/financial/LiveSection'
 import { HistoricalSection } from '@/components/features/financial/HistoricalSection'
 
+import { AIChatWidget } from '@/components/features/ai/AIChatWidget'
+
 export function FinancialDashboardPage() {
     const { user } = useAuthUser()
 
@@ -29,7 +31,7 @@ export function FinancialDashboardPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-8">
+            <div className="space-y-8 relative">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold tracking-tight">Financial Performance</h1>
                 </div>
@@ -46,6 +48,16 @@ export function FinancialDashboardPage() {
                     userRole={user?.user_role}
                     userOutlet={user?.kode_outlet || undefined}
                     availableOutlets={availableOutlets}
+                />
+
+                {/* AI Chat Widget */}
+                <AIChatWidget
+                    pageName="Financial Dashboard"
+                    contextData={{
+                        userRole: user?.user_role,
+                        userOutlet: user?.kode_outlet,
+                        availableOutlets: availableOutlets
+                    }}
                 />
             </div>
         </DashboardLayout>

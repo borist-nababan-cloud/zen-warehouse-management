@@ -17,6 +17,9 @@ import { FinancialDashboardPage } from './pages/FinancialDashboardPage'
 import { OperationalDashboardPage } from './pages/OperationalDashboardPage'
 import { ProductMixDashboardPage } from './pages/ProductMixDashboardPage'
 import { PeakHoursDashboardPage } from './pages/PeakHoursDashboardPage'
+import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
+
+import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -133,13 +136,12 @@ function App() {
           />
 
           {/* Placeholder routes for future implementation */}
+          {/* Placeholder routes for future implementation */}
           <Route
             path="/inventory"
             element={
               <ProtectedRoute>
-                <div className="flex min-h-screen items-center justify-center">
-                  <p>Inventory Module - Coming Soon</p>
-                </div>
+                <UnderConstructionPage />
               </ProtectedRoute>
             }
           />
@@ -147,9 +149,7 @@ function App() {
             path="/purchase-orders"
             element={
               <ProtectedRoute>
-                <div className="flex min-h-screen items-center justify-center">
-                  <p>Purchase Orders - Coming Soon</p>
-                </div>
+                <UnderConstructionPage />
               </ProtectedRoute>
             }
           />
@@ -157,9 +157,33 @@ function App() {
             path="/finance"
             element={
               <ProtectedRoute allowedRoles={[1, 5, 8]}>
-                <div className="flex min-h-screen items-center justify-center">
-                  <p>Finance Module - Coming Soon</p>
-                </div>
+                <UnderConstructionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laundry"
+            element={
+              <ProtectedRoute allowedRoles={[3, 4, 8]}>
+                <UnderConstructionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute allowedRoles={[1, 8]}>
+                <UnderConstructionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Change Password Page */}
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePasswordPage />
               </ProtectedRoute>
             }
           />

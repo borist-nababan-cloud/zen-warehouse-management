@@ -43,8 +43,8 @@ export function TopProductsChart({ data }: TopProductsChartProps) {
                 <CardDescription>By Quantity Sold</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ width: '100%', height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                         <BarChart
                             data={data}
                             layout="vertical"

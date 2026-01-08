@@ -170,8 +170,8 @@ export function PeakHoursLiveSection({ userRole, userOutlet, availableOutlets }:
                     <CardTitle className="text-sm font-medium">Hourly Traffic (Today)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[250px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div style={{ width: '100%', height: 250 }}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                             <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="hour" tick={{ fontSize: 12 }} />

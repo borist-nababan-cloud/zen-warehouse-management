@@ -21,12 +21,24 @@
   --color-input: oklch(90% 0.01 265);
   --color-ring: oklch(55% 0.22 265);
 
-  --color-pastel-blue: #e0f2fe;
-  --color-pastel-green: #dcfce7;
-  --color-pastel-purple: #f3e8ff;
-  --color-pastel-orange: #ffedd5;
-  --color-pastel-red: #fee2e2;
-  --color-pastel-yellow: #fef9c3;
+  /* Pastel Colors (converted to OKLCH for opacity support) */
+  --color-pastel-blue: oklch(93% 0.03 255);
+  /* #e0f2fe equivalent */
+  --color-pastel-green: oklch(93% 0.05 155);
+  /* #dcfce7 equivalent */
+  --color-pastel-purple: oklch(93% 0.05 305);
+  /* #f3e8ff equivalent */
+  --color-pastel-orange: oklch(93% 0.05 65);
+  /* #ffedd5 equivalent */
+  --color-pastel-red: oklch(93% 0.05 25);
+  /* #fee2e2 equivalent */
+  --color-pastel-yellow: oklch(95% 0.10 105);
+  /* #fef9c3 equivalent */
+
+  /* Updated Main Theme to softer/pastel aesthetic */
+  --color-primary: oklch(70% 0.15 265);
+  /* Softer Indigo */
+  --color-primary-foreground: oklch(98% 0.01 265);
 
   --radius: 0.5rem;
 }

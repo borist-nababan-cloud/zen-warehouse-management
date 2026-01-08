@@ -29,12 +29,15 @@ import {
   Layers,
   TrendingUp,
   Activity,
-  Clock
+  Clock,
+  Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
 import { useSignOut } from '@/hooks/useAuth'
 import { toast } from 'sonner'
+import { Menu } from 'lucide-react'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
 // ============================================
 // TYPES
@@ -187,11 +190,12 @@ const allNavItems: (NavItem | NavGroup)[] = [
 
 interface SidebarProps {
   className?: string
+  onNavigate?: () => void
 }
 
 import { Footer } from './Footer'
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const location = useLocation()
@@ -320,7 +324,7 @@ export function Sidebar({ className }: SidebarProps) {
                               )}
                             >
                               <ChildIcon className="h-4 w-4 shrink-0" />
-                              <span>{child.title}</span>
+                              <span onClick={onNavigate}>{child.title}</span>
                             </Link>
                           </li>
                         )
@@ -347,7 +351,7 @@ export function Sidebar({ className }: SidebarProps) {
                   <Icon className="h-5 w-5 shrink-0" />
                   {!isCollapsed && (
                     <>
-                      <span className="flex-1">{item.title}</span>
+                      <span className="flex-1" onClick={onNavigate}>{item.title}</span>
                       {item.badge && (
                         <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs">
                           {item.badge}
@@ -378,6 +382,21 @@ export function Sidebar({ className }: SidebarProps) {
                 Outlet: {user.kode_outlet}
               </p>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (onNavigate) onNavigate()
+                // Use window.location or router link
+              }}
+              className="w-full mt-2 h-7 text-xs"
+              asChild
+            >
+              <Link to="/change-password">
+                <Lock className="mr-2 h-3 w-3" />
+                Change Password
+              </Link>
+            </Button>
           </div>
         )}
         <Button
@@ -407,23 +426,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const appName = import.meta.env.VITE_APP_NAME || 'Warehouse Management System'
   const companyName = import.meta.env.VITE_COMPANY_NAME || ''
   const headerTitle = companyName ? `${appName} - ${companyName}` : appName
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      <Sidebar className="hidden md:flex" />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="flex h-16 items-center justify-between border-b bg-background px-6">
-          <div>
-            <h1 className="text-xl font-semibold">{headerTitle}</h1>
+        {/* Header */}
+        <header className="flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
+          <div className="flex items-center gap-4">
+            {/* Mobile Sidebar Trigger */}
+            <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72">
+                <Sidebar onNavigate={() => setIsMobileOpen(false)} className="w-full border-r-0" />
+              </SheetContent>
+            </Sheet>
+
+            <h1 className="text-xl font-semibold truncate md:text-2xl">{headerTitle}</h1>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
 

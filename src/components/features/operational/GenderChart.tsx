@@ -37,9 +37,9 @@ export function GenderChart({ data, loading }: GenderChartProps) {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[250px] w-full">
+                <div style={{ width: '100%', height: 250 }} className="w-full">
                     {data.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                             <PieChart>
                                 <Pie
                                     data={data}

@@ -5,6 +5,8 @@ import { PeakHoursHistoricalSection } from '@/components/features/peak-hours/Pea
 import { useAuthUser } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
+import { AIChatWidget } from '@/components/features/ai/AIChatWidget'
+
 export function PeakHoursDashboardPage() {
     const { user } = useAuthUser()
     const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
@@ -27,7 +29,7 @@ export function PeakHoursDashboardPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-8">
+            <div className="space-y-8 relative">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
                         Peak Hours Monitor
@@ -51,6 +53,16 @@ export function PeakHoursDashboardPage() {
                     userRole={user?.user_role}
                     userOutlet={user?.kode_outlet || undefined}
                     availableOutlets={availableOutlets}
+                />
+
+                {/* AI Chat Widget */}
+                <AIChatWidget
+                    pageName="Peak Hours Analysis"
+                    contextData={{
+                        userRole: user?.user_role,
+                        userOutlet: user?.kode_outlet,
+                        availableOutlets: availableOutlets
+                    }}
                 />
             </div>
         </DashboardLayout>

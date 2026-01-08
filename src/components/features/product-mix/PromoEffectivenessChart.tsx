@@ -27,13 +27,13 @@ export function PromoEffectivenessChart({ data }: PromoEffectivenessChartProps) 
                 <CardDescription>Usage Count vs Discount Value Given</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px]">
+                <div style={{ width: '100%', height: 300 }}>
                     {data.length === 0 ? (
                         <div className="flex items-center justify-center h-full text-slate-400 text-sm">
                             No promo data available for selected period
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                             <BarChart
                                 data={data}
                                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}

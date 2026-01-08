@@ -25,8 +25,8 @@ export function DiscountChart({ data, loading }: DiscountChartProps) {
                 <CardTitle>Discount Impact</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ width: '100%', height: 300 }} className="w-full">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                         <PieChart>
                             <Pie
                                 data={chartData}

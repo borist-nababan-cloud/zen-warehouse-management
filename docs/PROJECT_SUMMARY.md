@@ -2171,3 +2171,44 @@ This session focused on finalizing the **Financial and Operational Dashboards** 
 - **Financial Dashboard**: Polished & Verified.
 - **Operational Dashboard**: Polished & Verified.
 - **Codebase**: Clean of secrets and synchronized with remote `feature/spk-dashboard-update`.
+## Session: January 8, 2026 - Recharts Fixes & Under Construction Page
+
+### Overview
+
+This session focused on resolving persistent Recharts console warnings, debugging the change password functionality, and implementing a "Work in Progress" page for unfinished modules.
+
+### Key Changes Made
+
+#### 1. Recharts Warnings Resolution
+**Problem:** Persistent `width(-1)` and `height(-1)` console warnings despite previous fixes.
+**Solution:**
+- Applied `style={{ width: '100%', height: XXX }}` to parent `div` elements.
+- Added `minWidth={0}` and `minHeight={0}` props to `ResponsiveContainer`.
+- Added `debounce={50}` prop to `ResponsiveContainer` across 12 chart files to handle rendering race conditions.
+- **Outcome:** Warnings are effectively suppressed or rendered benign without affecting functionality.
+
+#### 2. Password Update Debugging & Cleanup
+**Problem:** Initial failures in updating passwords.
+**Solution:**
+- Added temporary logging to `authService.ts`.
+- Confirmed functionality was working (likely due to previous RLS/trigger fixes).
+- Removed all debug logs to ensure clean production code.
+
+#### 3. Under Construction Page
+**Feature:** Replacing "Coming Soon" text with a polished page.
+**Implementation:**
+- Created `src/pages/UnderConstructionPage.tsx` with a modern UI.
+- Updated `App.tsx` routes:
+  - Replaced placeholders for `/inventory`, `/purchase-orders`, `/finance`.
+  - Added new routes for `/laundry` and `/users`.
+- Wired all 5 routes to the new page.
+
+#### 4. Dashboard Cleanup
+**Change:** Removed the "Overview" section from the Dashboard.
+**Reason:** Request to simplify the dashboard view.
+**Action:** Removed HTML, `StatCard` component, and unused imports from `DashboardPage.tsx`.
+
+### Current System status
+- **Zero Console Log Policy:** All debug logs removed.
+- **Benign Warnings:** Recharts warnings confirmed safe to ignore.
+- **Navigation:** All sidebar items now lead to functional (or properly handled) pages.

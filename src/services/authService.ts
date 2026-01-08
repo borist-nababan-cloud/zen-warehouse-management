@@ -169,6 +169,31 @@ export async function signOut(): Promise<ApiResponse<void>> {
 }
 
 /**
+ * Update user password
+ * @param password - New password
+ * @returns ApiResponse indicating success or failure
+ */
+export async function updatePassword(password: string): Promise<ApiResponse<void>> {
+  try {
+    const { error } = await supabase.auth.updateUser({ password })
+
+    if (error) throw error
+
+    return {
+      data: null,
+      error: null,
+      isSuccess: true,
+    }
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Failed to update password',
+      isSuccess: false,
+    }
+  }
+}
+
+/**
  * Get the current session
  * @returns Current session or null
  */

@@ -32,8 +32,8 @@ export function PaymentMethodChart({ data, loading }: PaymentMethodChartProps) {
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col h-[300px] w-full gap-4">
-                    <div className="h-[180px] w-full shrink-0 relative">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div style={{ width: '100%', height: 180 }} className="w-full shrink-0 relative">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                             <PieChart>
                                 <Pie
                                     data={sortedData}
