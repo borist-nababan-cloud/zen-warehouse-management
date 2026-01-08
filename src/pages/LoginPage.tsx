@@ -131,7 +131,7 @@ export function LoginPage() {
                   <AlertCircle className="h-4 w-4" />
                   User Setup Required
                 </p>
-                <p className="mt-1">Users must be created in Supabase Studio and assigned a role before logging in.</p>
+                <p className="mt-1">Users must be created by Administrator and assigned a role before logging in.</p>
               </div>
             </CardContent>
 
