@@ -99,6 +99,8 @@ export interface MasterOutlet {
   province: string
   outlet_group_id: number  // References group_outlet.group_id
   active: boolean          // Active status
+  city: string
+  email: string
 }
 
 /**
@@ -141,6 +143,42 @@ export interface MasterBarang {
  */
 export interface MasterBarangWithType extends MasterBarang {
   master_type: MasterType | null
+  master_outlet: MasterOutlet | null
+}
+
+/**
+ * master_bank table - Bank master data
+ */
+export interface MasterBank {
+  kode_bank: string             // UUID
+  bank_name: string
+  desc: string | null
+  created_at: string
+}
+
+/**
+ * master_supplier table - Supplier master data
+ */
+export interface MasterSupplier {
+  kode_supplier: string         // UUID
+  name: string
+  address: string | null
+  city: string | null
+  phone: string | null
+  email: string | null
+  pic_name: string | null
+  created_at: string
+  kode_outlet: string | null
+  kode_bank: string | null      // UUID references master_bank
+  no_rekening: string | null
+  nama_rekening: string | null
+}
+
+/**
+ * MasterSupplier with relations joined
+ */
+export interface MasterSupplierWithBank extends MasterSupplier {
+  master_bank: MasterBank | null
   master_outlet: MasterOutlet | null
 }
 
@@ -192,6 +230,68 @@ export interface BarangPriceUnit extends MasterBarang {
   barang_price?: BarangPrice | null
   barang_unit?: BarangUnit | null
   master_outlet?: MasterOutlet | null
+}
+
+// ============================================
+// PROCUREMENT MODULE TYPES
+// ============================================
+
+export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'PARTIAL' | 'COMPLETED' | 'CANCELLED'
+
+export interface PurchaseOrder {
+  id: string                      // UUID PK
+  document_number: string         // e.g., "PO-2025-001"
+  kode_supplier: string           // UUID FK
+  kode_outlet: string             // FK
+  status: PurchaseOrderStatus
+  total_amount: number
+  expected_delivery_date: string  // date string YYYY-MM-DD
+  created_at?: string
+  created_by?: string
+  updated_by?: string
+  // Joins
+  master_supplier?: MasterSupplier | null
+  master_outlet?: MasterOutlet | null
+  purchase_order_items?: PurchaseOrderItem[]
+}
+
+export interface PurchaseOrderItem {
+  id: string                      // UUID PK
+  po_id: string                   // UUID FK
+  barang_id: number               // Bigint FK
+  qty_ordered: number
+  uom_purchase: string            // e.g. "BOX"
+  conversion_rate: number         // e.g. 12
+  price_per_unit: number          // Price per BOX
+  qty_received: number            // Tracks how many arrived so far
+  // Joins
+  master_barang?: MasterBarang | null
+}
+
+export interface GoodsReceipt {
+  id: string                      // UUID PK
+  document_number: string         // e.g., "GR-2025-001"
+  po_id: string                   // UUID FK
+  kode_outlet: string
+  supplier_delivery_note: string  // External Ref No
+  received_by: string             // UUID FK auth.uid()
+  received_at?: string
+  // Joins
+  purchase_orders?: PurchaseOrder | null
+  master_outlet?: MasterOutlet | null
+  goods_receipt_items?: GoodsReceiptItem[]
+  received_by_email?: string
+}
+
+export interface GoodsReceiptItem {
+  id: string                      // UUID PK
+  receipt_id: string              // UUID FK
+  po_item_id: string              // UUID FK
+  barang_id: number               // Bigint FK
+  qty_received: number            // Physical count in purchase UOM
+  conversion_rate: number
+  // Joins
+  purchase_order_items?: PurchaseOrderItem | null
 }
 
 // ============================================
@@ -286,12 +386,12 @@ export const ROLE_LABELS: Record<RoleId, string> = {
  * Role 9 (UNASSIGNED) has no access
  */
 export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
-  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product', 'price-unit'],      // admin_holding
+  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product', 'price-unit', 'supplier'],      // admin_holding
   2: ['dashboard', 'inventory', 'purchase-orders'],                           // staff_holding
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'product', 'price-unit'],                       // finance
-  6: ['dashboard', 'inventory', 'product', 'price-unit'],                     // outlet_admin
+  5: ['dashboard', 'finance', 'product', 'price-unit', 'supplier'],                       // finance
+  6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier'],                     // outlet_admin
   7: ['dashboard', 'inventory', 'purchase-orders'],                           // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - no access

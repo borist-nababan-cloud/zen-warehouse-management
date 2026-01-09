@@ -31,6 +31,7 @@ import {
   Activity,
   Clock,
   Lock,
+  Truck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -83,91 +84,106 @@ const navItems: NavItem[] = [
     title: 'Dashboard',
     path: '/dashboard',
     icon: Warehouse,
-    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],  // All roles except unassigned
+    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
   },
   {
     title: 'Inventory',
     path: '/inventory',
     icon: Package,
-    roleIds: [1, 2, 6, 7, 8],  // admin_holding, staff_holding, outlet_admin, warehouse_staff, superuser
-  },
-  {
-    title: 'Purchase Orders',
-    path: '/purchase-orders',
-    icon: FileText,
-    roleIds: [1, 2, 7, 8],  // admin_holding, staff_holding, warehouse_staff, superuser
-  },
-  {
-    title: 'Finance',
-    path: '/finance',
-    icon: DollarSign,
-    roleIds: [1, 5, 8],  // admin_holding, finance, superuser
-  },
-  {
-    title: 'Laundry',
-    path: '/laundry',
-    icon: Shirt,
-    roleIds: [3, 4, 8],  // laundry_admin, laundry_staff, superuser
+    roleIds: [1, 2, 6, 7, 8],
   },
   {
     title: 'Users',
     path: '/users',
     icon: Users,
-    roleIds: [1, 8],  // admin_holding, superuser
+    roleIds: [1, 8],
     badge: 'Admin',
   },
 ]
 
+// -- NEW GROUPS --
+
+const purchaseGroup: NavGroup = {
+  title: 'Purchase',
+  icon: FileText,
+  roleIds: [1, 2, 6, 7, 8], // Admin, Staff, Warehouse
+  children: [
+    { title: 'Purchase Order', path: '/procurement/purchase-orders', icon: FileText, roleIds: [1, 6, 7, 8] },
+    { title: 'Goods Receipt', path: '/procurement/goods-receipts', icon: Package, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Goods Issue', path: '/procurement/goods-issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Return', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Report PO', path: '/procurement/report-po', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Report GR', path: '/procurement/report-gr', icon: Activity, roleIds: [1, 2, 6, 7, 8] },
+  ]
+}
+
+const paymentGroup: NavGroup = {
+  title: 'Payment',
+  icon: DollarSign,
+  roleIds: [1, 5, 8], // Admin, Finance
+  children: [
+    { title: 'Payment', path: '/payment', icon: DollarSign, roleIds: [1, 5, 8] },
+    { title: 'Payment Report', path: '/payment/report', icon: FileText, roleIds: [1, 5, 8] },
+  ]
+}
+
+const laundryGroup: NavGroup = {
+  title: 'Laundry',
+  icon: Shirt,
+  roleIds: [3, 4, 8], // Laundry Roles
+  children: [
+    { title: 'Receipt Laundry', path: '/laundry/receipt', icon: Package, roleIds: [3, 4, 8] },
+    { title: 'Issue Laundry', path: '/laundry/issue', icon: Truck, roleIds: [3, 4, 8] },
+  ]
+}
+
 /**
  * Master Data Navigation Groups
- * Product management and related master data
  */
 const masterDataGroups: NavGroup[] = [
   {
     title: 'Master Data',
     icon: Boxes,
-    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],  // All authenticated users (Type is visible to all)
-    defaultOpen: true,
+    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
+    defaultOpen: false, // Changed to false to reduce clutter with new groups
     children: [
       {
         title: 'Type',
         path: '/master-type',
         icon: Layers,
-        roleIds: [1, 2, 3, 4, 5, 6, 7, 8],  // All authenticated users
+        roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
       },
       {
         title: 'Product',
         path: '/product',
         icon: Tag,
-        roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
+        roleIds: [1, 5, 6, 8],
       },
       {
         title: 'Price & Unit',
         path: '/price-unit',
         icon: DollarSign,
-        roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
+        roleIds: [1, 5, 6, 8],
       },
-      // Future submenus (placeholders)
-      // {
-      //   title: 'Inventory',  // This is for inventory master data, not transactions
-      //   path: '/inventory-master',
-      //   icon: Package,
-      //   roleIds: [1, 2, 6, 7, 8],
-      // },
+      {
+        title: 'Supplier',
+        path: '/supplier',
+        icon: Truck,
+        roleIds: [1, 5, 6, 8],
+      },
     ],
   },
 ]
 
 /**
  * PoS Dashboard Navigation Groups
- * Analytical dashboards
  */
 const posDashboardGroups: NavGroup[] = [
   {
     title: 'PoS Dashboard',
     icon: TrendingUp,
-    roleIds: [1, 5, 6, 8],  // admin_holding, finance, outlet_admin, superuser
-    defaultOpen: true,
+    roleIds: [1, 5, 6, 8],
+    defaultOpen: false,
     children: [
       { title: 'Financial', path: '/dashboard/financial', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
       { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [1, 5, 6, 8] },
@@ -180,6 +196,9 @@ const posDashboardGroups: NavGroup[] = [
 // Combine flat items and groups
 const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
+  purchaseGroup,
+  paymentGroup,
+  laundryGroup,
   ...posDashboardGroups,
   ...masterDataGroups,
 ]

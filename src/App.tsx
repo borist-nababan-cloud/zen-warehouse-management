@@ -17,7 +17,14 @@ import { FinancialDashboardPage } from './pages/FinancialDashboardPage'
 import { OperationalDashboardPage } from './pages/OperationalDashboardPage'
 import { ProductMixDashboardPage } from './pages/ProductMixDashboardPage'
 import { PeakHoursDashboardPage } from './pages/PeakHoursDashboardPage'
+import { SupplierPage } from '@/pages/SupplierPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
+import { PurchaseOrderCreatePage } from '@/pages/procurement/PurchaseOrderCreatePage'
+import { PurchaseOrderListPage } from '@/pages/procurement/PurchaseOrderListPage'
+import { PurchaseOrderPrintPage } from '@/pages/procurement/PurchaseOrderPrintPage'
+import { GoodsReceiptCreatePage } from '@/pages/procurement/GoodsReceiptCreatePage'
+import { GoodsReceiptListPage } from '@/pages/procurement/GoodsReceiptListPage'
+import { GoodsReceiptDetailPage } from '@/pages/procurement/GoodsReceiptDetailPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -135,6 +142,101 @@ function App() {
             }
           />
 
+          {/* Supplier Page - Master Data */}
+          <Route
+            path="/supplier"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <SupplierPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================================
+              PROCUREMENT MODULE (List Views Placeholder)
+              Create pages are defined above.
+             ========================================= */}
+          <Route
+            path="/procurement/purchase-orders"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 7, 8]}>
+                <PurchaseOrderListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/purchase-orders/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 7, 8]}>
+                <PurchaseOrderCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/purchase-orders/:id/print"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 7, 8]}>
+                <PurchaseOrderPrintPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/goods-receipts"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <GoodsReceiptListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/goods-receipt/:id"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <GoodsReceiptDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/goods-issue"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/procurement/return"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/procurement/report-po"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/procurement/report-gr"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+
+          {/* =========================================
+              PAYMENT MODULE
+             ========================================= */}
+          <Route
+            path="/payment"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/payment/report"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+
+          {/* =========================================
+              LAUNDRY MODULE
+             ========================================= */}
+          <Route
+            path="/laundry/receipt"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/laundry/issue"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+
           {/* Placeholder routes for future implementation */}
           {/* Placeholder routes for future implementation */}
           <Route
@@ -150,6 +252,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <UnderConstructionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/purchase-orders/create"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+                <PurchaseOrderCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/goods-receipt/create"
+            element={
+              <ProtectedRoute allowedRoles={[2, 7, 8]}>
+                <GoodsReceiptCreatePage />
               </ProtectedRoute>
             }
           />
@@ -221,7 +339,7 @@ function App() {
         {/* Toast Notifications */}
         <Toaster position="top-right" richColors />
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider >
   )
 }
 

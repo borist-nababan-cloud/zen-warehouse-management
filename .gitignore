@@ -38,8 +38,12 @@ frontendplan.md
 frontendplan.md
 
 # Database documentation
-database-docs/
+
 
 my-cred/
 screen-capture/
-docs/PROJECT_SUMMARY.md
+
+
+# Sensitive Documentation
+database-docs/
+docs/
