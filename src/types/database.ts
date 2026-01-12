@@ -236,7 +236,7 @@ export interface BarangPriceUnit extends MasterBarang {
 // PROCUREMENT MODULE TYPES
 // ============================================
 
-export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'PARTIAL' | 'COMPLETED' | 'CANCELLED'
+export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'PARTIAL' | 'COMPLETED' | 'CANCELLED' | 'PAID' | 'INVOICED'
 
 export interface PurchaseOrder {
   id: string                      // UUID PK
@@ -294,6 +294,23 @@ export interface GoodsReceiptItem {
   purchase_order_items?: PurchaseOrderItem | null
 }
 
+export interface ViewPoDetailsReceived {
+  po_item_id: string
+  po_id: string
+  kode_outlet: string
+  po_created_at: string
+  document_number: string
+  item_name: string
+  sku: string
+  uom_purchase: string
+  qty_ordered: number
+  qty_already_received: number
+  qty_remaining: number
+  price_per_unit: number
+  total_price_po: number
+  total_price_received: number
+}
+
 // ============================================
 // LEGACY TABLE TYPES (to be deprecated)
 // ============================================
@@ -308,6 +325,26 @@ export interface Location {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+// Finance Types
+export interface FinancialAccount {
+  id: string
+  kode_outlet: string
+  account_name: string
+  account_type: 'CASH' | 'BANK'
+  bank_name?: string
+  account_number?: string
+  balance: number
+  is_active: boolean
+}
+
+export interface FinanceTransactionCategory {
+  id: string
+  name: string
+  type: 'IN' | 'OUT'
+  description?: string
+  is_active: boolean
 }
 
 export interface Profile {

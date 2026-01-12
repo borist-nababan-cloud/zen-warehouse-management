@@ -241,20 +241,21 @@ export async function updatePrice(
   updated_by: string
 ): Promise<ApiResponse<BarangPrice>> {
   try {
+    console.log('[Service] Upserting Price', { barang_id, kode_outlet })
     const { data, error } = await supabase
       .from('barang_prices')
-      .update({
+      .upsert({
+        barang_id,
+        kode_outlet,
         buy_price,
         sell_price,
         updated_at: new Date().toISOString(),
         update_by: updated_by,
-      })
-      .eq('barang_id', barang_id)
-      .eq('kode_outlet', kode_outlet)
+      }, { onConflict: 'barang_id,kode_outlet' })
       .select()
-      .single()
 
     if (error) {
+      console.error('[Service] Upsert Price Error', error)
       return {
         data: null,
         error: error.message,
@@ -262,8 +263,16 @@ export async function updatePrice(
       }
     }
 
+    if (!data || data.length === 0) {
+      return {
+        data: null,
+        error: 'Failed to upsert price record',
+        isSuccess: false,
+      }
+    }
+
     return {
-      data,
+      data: data[0],
       error: null,
       isSuccess: true,
     }
@@ -293,20 +302,21 @@ export async function updateUnit(
   updated_by: string
 ): Promise<ApiResponse<BarangUnit>> {
   try {
+    console.log('[Service] Upserting Unit', { barang_id, kode_outlet })
     const { data, error } = await supabase
       .from('barang_units')
-      .update({
+      .upsert({
+        barang_id,
+        kode_outlet,
         purchase_uom,
         conversion_rate,
         updated_at: new Date().toISOString(),
         update_by: updated_by,
-      })
-      .eq('barang_id', barang_id)
-      .eq('kode_outlet', kode_outlet)
+      }, { onConflict: 'barang_id,kode_outlet' })
       .select()
-      .single()
 
     if (error) {
+      console.error('[Service] Upsert Unit Error', error)
       return {
         data: null,
         error: error.message,
@@ -314,8 +324,16 @@ export async function updateUnit(
       }
     }
 
+    if (!data || data.length === 0) {
+      return {
+        data: null,
+        error: 'Failed to upsert unit record',
+        isSuccess: false,
+      }
+    }
+
     return {
-      data,
+      data: data[0],
       error: null,
       isSuccess: true,
     }

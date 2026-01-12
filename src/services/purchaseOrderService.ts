@@ -260,3 +260,40 @@ export const updatePurchaseOrderItems = async (
         return { isSuccess: false, error: error.message || 'Failed to update Purchase Order' }
     }
 }
+
+export interface invoiceResult {
+    invoice_id: string;
+    total: number;
+}
+/**
+ * Create Purchase Invoice from PO
+ * Calls RPC 'generate_purchase_invoice'
+ */
+export async function createInvoice(
+    poId: string,
+    supplierInvNumber: string,
+    dueDate: string
+): Promise<ApiResponse<invoiceResult>> {
+    try {
+        const { data, error } = await supabase.rpc('generate_purchase_invoice', {
+            target_po_id: poId,
+            supplier_inv_ref: supplierInvNumber,
+            payment_due_date: dueDate
+        })
+
+        if (error) throw error
+
+        return {
+            data: data as invoiceResult,
+            isSuccess: true,
+            error: null
+        }
+    } catch (error: any) {
+        console.error('Create Invoice Error:', error)
+        return {
+            data: null,
+            error: error.message || 'Failed to create Invoice',
+            isSuccess: false
+        }
+    }
+}

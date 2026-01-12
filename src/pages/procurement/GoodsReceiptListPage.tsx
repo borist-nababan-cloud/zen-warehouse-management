@@ -57,7 +57,7 @@ export function GoodsReceiptListPage() {
                         </p>
                     </div>
                     {(user?.user_role === 2 || user?.user_role === 7 || user?.user_role === 8) && (
-                        <Button onClick={() => navigate('/procurement/goods-receipt/create')}>
+                        <Button onClick={() => navigate('/procurement/goods-receipts/create')}>
                             <Plus className="mr-2 h-4 w-4" />
                             Receive Goods
                         </Button>

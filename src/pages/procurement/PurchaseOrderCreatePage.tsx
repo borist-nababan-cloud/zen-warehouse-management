@@ -22,10 +22,18 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Trash2, Save, Send, Lock, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Save, Send, Lock, ArrowLeft, FileText } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from '@/components/ui/dialog'
 
 // Services & Hooks
-import { createPurchaseOrder, getPurchaseOrderById, updatePurchaseOrderItems } from '@/services/purchaseOrderService'
+import { createPurchaseOrder, getPurchaseOrderById, updatePurchaseOrderItems, createInvoice } from '@/services/purchaseOrderService'
 import { useSuppliers } from '@/hooks/useSupplier'
 import { MasterBarang, PurchaseOrder } from '@/types/database'
 import { supabase } from '@/lib/supabase'
@@ -60,7 +68,13 @@ export function PurchaseOrderCreatePage() {
 
     const [existingPo, setExistingPo] = useState<PurchaseOrder | null>(null)
 
-    const isReadOnly = existingPo?.status === 'PARTIAL' || existingPo?.status === 'COMPLETED' || existingPo?.status === 'CANCELLED'
+    const isReadOnly = existingPo?.status === 'PARTIAL' || existingPo?.status === 'COMPLETED' || existingPo?.status === 'CANCELLED' || existingPo?.status === 'INVOICED'
+
+    // Invoice Specific State
+    const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
+    const [invNumber, setInvNumber] = useState('')
+    const [invDueDate, setInvDueDate] = useState('')
+    const [isCreatingInvoice, setIsCreatingInvoice] = useState(false)
 
     // -- Data Fetching --
     const { data: suppliersData } = useSuppliers(user?.kode_outlet || '')
@@ -346,6 +360,27 @@ export function PurchaseOrderCreatePage() {
         }
     }
 
+    const handleCreateInvoice = async () => {
+        if (!invNumber || !invDueDate) {
+            toast.error('Please fill in all invoice fields')
+            return
+        }
+        if (!id) return
+
+        setIsCreatingInvoice(true)
+        const result = await createInvoice(id, invNumber, invDueDate)
+        setIsCreatingInvoice(false)
+
+        if (result.isSuccess) {
+            toast.success('Invoice created successfully!')
+            setIsInvoiceDialogOpen(false)
+            // Reload PO to update status
+            loadPoForEdit(id)
+        } else {
+            toast.error(result.error || 'Failed to create Invoice')
+        }
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6 max-w-6xl mx-auto">
@@ -554,7 +589,68 @@ export function PurchaseOrderCreatePage() {
                             This Order is {existingPo?.status} and cannot be edited.
                         </div>
                     )}
+
+                    {/* Invoice Link / Create Button */}
+                    {isEditMode && existingPo?.status !== 'DRAFT' && existingPo?.status !== 'INVOICED' && (
+                        <div className="ml-2 pl-2 border-l border-gray-300">
+                            <Button
+                                variant="secondary"
+                                className="bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                onClick={() => setIsInvoiceDialogOpen(true)}
+                            >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Create Invoice
+                            </Button>
+                        </div>
+                    )}
+
+                    {existingPo?.status === 'INVOICED' && (
+                        <div className="ml-2 pl-2 border-l border-gray-300">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <FileText className="w-3 h-3 mr-1" />
+                                Invoiced
+                            </span>
+                        </div>
+                    )}
                 </div>
+
+                {/* Create Invoice Dialog */}
+                <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Create Purchase Invoice</DialogTitle>
+                            <DialogDescription>
+                                Enter the supplier's invoice details to process this PO.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="inv-no">Supplier Invoice Number</Label>
+                                <Input
+                                    id="inv-no"
+                                    value={invNumber}
+                                    onChange={(e) => setInvNumber(e.target.value)}
+                                    placeholder="e.g. INV-2023-001"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="inv-due">Payment Due Date</Label>
+                                <Input
+                                    id="inv-due"
+                                    type="date"
+                                    value={invDueDate}
+                                    onChange={(e) => setInvDueDate(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsInvoiceDialogOpen(false)}>Cancel</Button>
+                            <Button onClick={handleCreateInvoice} disabled={isCreatingInvoice}>
+                                {isCreatingInvoice ? 'Creating...' : 'Create Invoice'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
             </div>
         </DashboardLayout >

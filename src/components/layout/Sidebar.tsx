@@ -32,6 +32,7 @@ import {
   Clock,
   Lock,
   Truck,
+  Landmark,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -103,17 +104,42 @@ const navItems: NavItem[] = [
 
 // -- NEW GROUPS --
 
-const purchaseGroup: NavGroup = {
-  title: 'Purchase',
+const goodsReceiptGroup: NavGroup = {
+  title: 'Goods Receipt',
   icon: FileText,
   roleIds: [1, 2, 6, 7, 8], // Admin, Staff, Warehouse
   children: [
     { title: 'Purchase Order', path: '/procurement/purchase-orders', icon: FileText, roleIds: [1, 6, 7, 8] },
-    { title: 'Goods Receipt', path: '/procurement/goods-receipts', icon: Package, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Goods Issue', path: '/procurement/goods-issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Return', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'GR Supplier', path: '/procurement/goods-receipts', icon: Package, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Invoicing PO', path: '/procurement/invoicing-po', icon: FileText, roleIds: [1, 6, 7, 8] },
+    { title: 'Settlement PO', path: '/procurement/settlement-po', icon: DollarSign, roleIds: [1, 6, 7, 8] },
+    { title: 'STO Return In', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Report PO', path: '/procurement/report-po', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Report GR', path: '/procurement/report-gr', icon: Activity, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Report GR Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [1, 2, 5, 6, 7, 8] },
+  ]
+}
+
+const goodsIssuedGroup: NavGroup = {
+  title: 'Goods Issued',
+  icon: Truck,
+  roleIds: [1, 2, 6, 7, 8],
+  children: [
+    { title: 'STO', path: '/goods-issued/sto', icon: Package, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'STO GI', path: '/procurement/goods-issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Return STO', path: '/goods-issued/return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'GI Return STO', path: '/goods-issued/gi-return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Report GI', path: '/goods-issued/report-gi', icon: Activity, roleIds: [1, 2, 6, 7, 8] },
+  ]
+}
+
+const financeGroup: NavGroup = {
+  title: 'Financial',
+  icon: Landmark,
+  roleIds: [1, 3, 6], // Admin, Laundry Admin, Outlet Admin
+  children: [
+    { title: 'Accounts', path: '/finance/accounts', icon: DollarSign, roleIds: [1, 3, 6] },
+    { title: 'Money In/Out', path: '/finance/general-transactions', icon: TrendingUp, roleIds: [1, 3, 6] },
+    { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [1, 3, 6] },
   ]
 }
 
@@ -132,8 +158,8 @@ const laundryGroup: NavGroup = {
   icon: Shirt,
   roleIds: [3, 4, 8], // Laundry Roles
   children: [
-    { title: 'Receipt Laundry', path: '/laundry/receipt', icon: Package, roleIds: [3, 4, 8] },
-    { title: 'Issue Laundry', path: '/laundry/issue', icon: Truck, roleIds: [3, 4, 8] },
+    { title: 'Laundry Out', path: '/laundry/out', icon: Truck, roleIds: [3, 4, 8] },
+    { title: 'Laundry In', path: '/laundry/in', icon: Package, roleIds: [3, 4, 8] },
   ]
 }
 
@@ -196,7 +222,9 @@ const posDashboardGroups: NavGroup[] = [
 // Combine flat items and groups
 const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
-  purchaseGroup,
+  financeGroup,
+  goodsReceiptGroup,
+  goodsIssuedGroup,
   paymentGroup,
   laundryGroup,
   ...posDashboardGroups,

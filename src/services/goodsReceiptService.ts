@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase'
-import { ApiResponse, GoodsReceipt, GoodsReceiptItem } from '@/types/database'
+import { ApiResponse, GoodsReceipt, GoodsReceiptItem, ViewPoDetailsReceived } from '@/types/database'
 
 export async function getGoodsReceipts(kodeOutlet: string): Promise<ApiResponse<GoodsReceipt[]>> {
     try {
@@ -106,9 +106,30 @@ export async function getGoodsReceiptById(id: string): Promise<ApiResponse<Goods
  */
 export async function createGoodsReceipt(
   header: Omit<GoodsReceipt, 'id' | 'created_at'>,
-  items: Omit<GoodsReceiptItem, 'id' | 'receipt_id'>[]
+  items: Omit<GoodsReceiptItem, 'id' | 'receipt_id'>[],
+  newPoStatus: 'PARTIAL' | 'COMPLETED'
 ): Promise<ApiResponse<GoodsReceipt>> {
   try {
+    // 0. Fetch Current PO Items & Status (Snapshot)
+    // We need to verify status IS 'ISSUED' or 'PARTIAL' before we allow receiving.
+    const { data: poCheck, error: poCheckError } = await supabase
+        .from('purchase_orders')
+        .select('status, purchase_order_items (id, qty_ordered, qty_received)')
+        .eq('id', header.po_id)
+        .single()
+    
+    if (poCheckError || !poCheck) throw new Error('Purchase Order not found')
+    
+    // Strict Status Check
+    if (poCheck.status !== 'ISSUED' && poCheck.status !== 'PARTIAL') {
+         throw new Error(`Cannot create Receipt. Purchase Order status is '${poCheck.status}' (Must be ISSUED or PARTIAL)`)
+    }
+
+    const currentPoItems = poCheck.purchase_order_items
+    if (!currentPoItems || currentPoItems.length === 0) {
+        throw new Error('Purchase Order Items not found for verification')
+    }
+
     // 1. Insert Header
     const { data: grData, error: grError } = await supabase
       .from('goods_receipts')
@@ -133,60 +154,46 @@ export async function createGoodsReceipt(
       throw itemsError
     }
 
-    // 3. Update PO Items (qty_received) & PO Status
-    // We need to loop or do bulk update. For now, loop is safer for logic.
-    // Also we need to check if ALL items are fully received to set COMPLETED.
-
-    // A. Fetch current PO items to compare totals
-    const { data: currentPoItems, error: fetchError } = await supabase
+    // 2.5 Fetch Updated PO Items (Post-Insert Snapshot) -> To detect if a Trigger already updated the values
+    const { data: postPoItems, error: postFetchError } = await supabase
       .from('purchase_order_items')
       .select('id, qty_ordered, qty_received')
       .eq('po_id', header.po_id)
-    
-    if (fetchError) throw fetchError
 
-    let allCompleted = true
+    if (postFetchError) throw postFetchError
 
-    // B. Update each item's qty_received
+    // 3. Update PO Items (qty_received)
+    // Idempotent Logic: Check if DB value is already correct.
     for (const item of items) {
-      const match = currentPoItems?.find(p => p.id === item.po_item_id)
-      if (match) {
-        const newTotalReceived = (match.qty_received || 0) + Number(item.qty_received)
+      const preMatch = currentPoItems.find(p => p.id === item.po_item_id)
+      const postMatch = postPoItems?.find(p => p.id === item.po_item_id)
+      
+      if (preMatch) {
+        // Enforce number type for calculation
+        const oldQty = Number(preMatch.qty_received || 0)
+        const incomingQty = Number(item.qty_received)
+        const targetQty = oldQty + incomingQty
         
-        // Update PO Item
-        await supabase
-          .from('purchase_order_items')
-          .update({ qty_received: newTotalReceived })
-          .eq('id', item.po_item_id)
+        let currentDbQty = oldQty // Default to old if postMatch missing for some reason
+        if (postMatch) {
+            currentDbQty = Number(postMatch.qty_received || 0)
+        }
+
+        // Only update if the DB value is NOT what we expect
+        if (currentDbQty !== targetQty) {
+             console.log(`[GR Service] Manual Update Required for Item ${item.po_item_id}. DB: ${currentDbQty}, Target: ${targetQty}`)
+             await supabase
+              .from('purchase_order_items')
+              .update({ qty_received: targetQty })
+              .eq('id', item.po_item_id)
+        }
       }
     }
 
-    // C. Re-evaluate PO Status
-    // We need fresh data or calculate loosely. Let's calculate loosely based on 'currentPoItems' + 'items' updates
-    // Better: We just updated DB. Let's rely on logic:
-    // For each PO Item in DB (fetched earlier), add the NEWLY received qty (if any) and check if >= ordered.
-    
-    // Create a map of incoming updates
-    const incomingQtyMap = new Map<string, number>()
-    items.forEach(i => incomingQtyMap.set(i.po_item_id, Number(i.qty_received)))
-
-    if (currentPoItems) {
-      for (const poItem of currentPoItems) {
-        const incoming = incomingQtyMap.get(poItem.id) || 0
-        const oldReceived = poItem.qty_received || 0
-        const total = oldReceived + incoming
-        const ordered = poItem.qty_ordered
-
-        if (total < ordered) allCompleted = false
-      }
-    }
-
-    const newStatus = allCompleted ? 'COMPLETED' : 'PARTIAL'
-    
-    // D. Update PO Status
+    // D. Update PO Status with Client Provided Status
     await supabase
       .from('purchase_orders')
-      .update({ status: newStatus })
+      .update({ status: newPoStatus })
       .eq('id', header.po_id)
 
     return {
@@ -203,4 +210,93 @@ export async function createGoodsReceipt(
       isSuccess: false,
     }
   }
+}
+
+/**
+ * Get PO Details from Server-Side View
+ * Used for Goods Receipt Creation to ensure accurate calculations
+ */
+export async function getPoDetailsFromView(poId: string): Promise<ApiResponse<ViewPoDetailsReceived[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('view_po_details_received')
+      .select('*')
+      .eq('po_id', poId)
+    
+    if (error) throw error
+
+    return {
+      data: data as ViewPoDetailsReceived[],
+      isSuccess: true,
+      error: null
+    }
+
+
+  } catch (error: any) {
+    console.error('Error fetching PO Details View:', error)
+    return {
+      data: null,
+      error: error.message,
+      isSuccess: false
+    }
+  }
+}
+
+/**
+ * Get Report GR Supplier Data
+ * Supports filtering by Date Range and Outlet
+ */
+interface ReportGrFilter {
+    startDate?: Date
+    endDate?: Date
+    outletCode?: string
+}
+
+export async function getReportGrSupplier(filter: ReportGrFilter): Promise<ApiResponse<ViewPoDetailsReceived[]>> {
+    try {
+        let query = supabase
+            .from('view_po_details_received')
+            .select('*')
+            
+        // Apply Filters
+        if (filter.outletCode) {
+            query = query.eq('kode_outlet', filter.outletCode)
+        }
+
+        if (filter.startDate) {
+            // Start of day
+            const startStr = filter.startDate.toISOString()
+            query = query.gte('po_created_at', startStr)
+        }
+
+        if (filter.endDate) {
+             // End of day (roughly 23:59:59 if just date passed, or just use next day lt)
+             // Simply using the date string often defaults to 00:00, so let's ensure we cover the day.
+             const nextDay = new Date(filter.endDate)
+             nextDay.setDate(nextDay.getDate() + 1)
+             const endStr = nextDay.toISOString()
+             query = query.lt('po_created_at', endStr)
+        }
+
+        // Default Sort
+        query = query.order('po_created_at', { ascending: false })
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        return {
+            data: data as ViewPoDetailsReceived[],
+            isSuccess: true,
+            error: null
+        }
+
+    } catch (error: any) {
+        console.error('Error fetching Report GR:', error)
+        return {
+            data: null,
+            isSuccess: false,
+            error: error.message
+        }
+    }
 }

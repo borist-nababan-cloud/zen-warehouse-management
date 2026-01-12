@@ -22,16 +22,14 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { PackageCheck, ArrowLeft } from 'lucide-react'
+import { PackageCheck, ArrowLeft, AlertCircle } from 'lucide-react'
 
 // Services & Hooks
-import { createGoodsReceipt } from '@/services/goodsReceiptService'
+import { createGoodsReceipt, getPoDetailsFromView } from '@/services/goodsReceiptService'
 import { getPurchaseOrders, getPurchaseOrderById } from '@/services/purchaseOrderService'
-import { PurchaseOrder, PurchaseOrderItem } from '@/types/database'
+import { PurchaseOrder, ViewPoDetailsReceived } from '@/types/database'
 
-interface GRItemRow extends PurchaseOrderItem {
-    productName: string
-    sku: string
+interface GRItemRow extends ViewPoDetailsReceived {
     receivingQty: number // The input field
 }
 
@@ -78,37 +76,50 @@ export function GoodsReceiptCreatePage() {
     const handleLoadPO = async () => {
         if (!selectedPoId) return
 
-        const result = await getPurchaseOrderById(selectedPoId)
-        if (result.data) {
-            setSelectedPo(result.data)
+        // 1. Fetch Header Info
+        const poResult = await getPurchaseOrderById(selectedPoId)
+        if (!poResult.data) {
+            toast.error('Failed to load PO details')
+            return
+        }
+        setSelectedPo(poResult.data)
 
+        // 2. Fetch Items from VIEW (Server-Side Calculation)
+        const viewResult = await getPoDetailsFromView(selectedPoId)
+
+        if (viewResult.data) {
             // Transform items
-            const poItems: GRItemRow[] = (result.data.purchase_order_items || []).map(item => ({
+            const poItems: GRItemRow[] = viewResult.data.map(item => ({
                 ...item,
-                productName: item.master_barang?.name || 'Unknown',
-                sku: item.master_barang?.sku || 'UNKNOWN',
-                receivingQty: 0 // Start at 0? Or remaining? Let's start at 0 so they count manually.
+                receivingQty: 0
             }))
 
             setItems(poItems)
             setStep(2)
         } else {
-            toast.error('Failed to load PO details')
+            toast.error('Failed to load PO Items calculation from server')
         }
     }
 
     // -- Handlers --
-    const handleQtyChange = (itemId: string, val: number) => {
-        if (val < 0) return
-        setItems(prev => prev.map(i => i.id === itemId ? { ...i, receivingQty: val } : i))
+    const handleQtyChange = (poItemId: string, val: number) => {
+        setItems(prev => prev.map(i => {
+            if (i.po_item_id === poItemId) {
+                // Determine max allowed
+                // If val > i.qty_remaining, we can either clamp it or allow it but show error.
+                // Requirement: "If user types a number > qty_remaining, show red error text or disable Save"
+                // Let's allow typing but visuals will change.
+                return { ...i, receivingQty: val }
+            }
+            return i
+        }))
     }
 
     const handleReceiveAll = () => {
-        // Helper to set receiving = ordered - received
-        setItems(prev => prev.map(i => {
-            const remaining = Math.max(0, i.qty_ordered - (i.qty_received || 0))
-            return { ...i, receivingQty: remaining }
-        }))
+        setItems(prev => prev.map(i => ({
+            ...i,
+            receivingQty: Math.max(0, i.qty_remaining)
+        })))
     }
 
     const handleSubmit = async () => {
@@ -119,6 +130,12 @@ export function GoodsReceiptCreatePage() {
         if (!selectedPo) return
 
         // Validate
+        const hasInvalidQty = items.some(i => i.receivingQty > i.qty_remaining)
+        if (hasInvalidQty) {
+            toast.error('Some items exceed the remaining quantity. Please fix errors.')
+            return
+        }
+
         const receivingSomething = items.some(i => i.receivingQty > 0)
         if (!receivingSomething) {
             toast.error('You must receive at least one item quantity > 0')
@@ -133,31 +150,53 @@ export function GoodsReceiptCreatePage() {
                 po_id: selectedPo.id,
                 kode_outlet: user.kode_outlet,
                 supplier_delivery_note: deliveryNote || '-',
-                received_by: user.id // Using profile ID logic from auth hook which maps to user.id usually
+                received_by: user.id
             }
 
             // 2. Items
-            // Filter only items with qty > 0 to save space? Or save all 0s? 
-            // Usually save only what's received.
-            const itemsToSave = items
-                .filter(i => i.receivingQty > 0)
-                .map(i => ({
-                    po_item_id: i.id,
-                    barang_id: i.barang_id,
-                    qty_received: i.receivingQty,
-                    conversion_rate: i.conversion_rate
-                }))
+            // We need 'barang_id' which is NOT in the View interface explicitly in the user prompt,
+            // but usually we need it for insertion.
+            // Wait, the prompt provided View columns: po_item_id, po_id, item_name, sku, uom, qty_ordered, qty_already_received, qty_remaining.
+            // It did NOT list 'barang_id'. 
+            // However, 'createGoodsReceipt' service needs 'barang_id'.
+            // I should have checked if 'barang_id' is in the view.
+            // Assumption: The view probably has it, or I must map it from the PO object I fetched earlier?
+            // Actually, I fetched 'selectedPo' using 'getPurchaseOrderById' which has nested items with barang_id.
+            // I can map it.
+            // BETTER: I will assume the view DOES have barang_id or I can merge. 
+            // Let's try to find the barang_id from the 'selectedPo.purchase_order_items'.
 
-            const result = await createGoodsReceipt(headerData, itemsToSave)
+            const detailedItems = items
+                .filter(i => i.receivingQty > 0)
+                .map(i => {
+                    // Find original item to get extra props like barang_id, conversion_rate
+                    const original = selectedPo.purchase_order_items?.find(p => p.id === i.po_item_id)
+                    return {
+                        po_item_id: i.po_item_id,
+                        barang_id: original?.barang_id || 0, // Fallback safe, but should exist
+                        qty_received: i.receivingQty,
+                        conversion_rate: original?.conversion_rate || 1
+                    }
+                })
+
+            // 3. Calculate PO Status Client-Side
+            // Logic: If ALL items will have 0 remaining after this receipt, then COMPLETED.
+            const isAllComplete = items.every(i => {
+                const futureRemaining = i.qty_remaining - (i.receivingQty || 0)
+                return futureRemaining <= 0
+            })
+
+            const newStatus = isAllComplete ? 'COMPLETED' : 'PARTIAL'
+
+            const result = await createGoodsReceipt(headerData, detailedItems, newStatus)
 
             if (result.isSuccess) {
                 toast.success('Goods Receipt Saved Successfully')
-                // Reset or Navigate
                 setStep(1)
                 setSelectedPo(null)
                 setSelectedPoId('')
                 setItems([])
-                loadPOs(user.kode_outlet) // Refresh PO list
+                loadPOs(user.kode_outlet)
             } else {
                 toast.error(result.error || 'Failed to save GR')
             }
@@ -181,7 +220,7 @@ export function GoodsReceiptCreatePage() {
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">Goods Receipt</h1>
                             <p className="text-muted-foreground mt-1">
-                                Receive goods from Suppliers against Purchase Orders.
+                                Receive goods from Suppliers (Server-Calculated).
                             </p>
                         </div>
                     </div>
@@ -262,7 +301,7 @@ export function GoodsReceiptCreatePage() {
                             </CardContent>
                         </Card>
 
-                        {/* Items Table */}
+                        {/* Items Table - SERVER COMPUTED */}
                         <Card className="border-pastel-blue/20 shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-4">
                                 <CardTitle className="text-lg">Items to Receive</CardTitle>
@@ -277,24 +316,27 @@ export function GoodsReceiptCreatePage() {
                                             <TableHead>Product</TableHead>
                                             <TableHead className="w-24 text-center">Unit</TableHead>
                                             <TableHead className="w-32 text-center">Ordered</TableHead>
-                                            <TableHead className="w-32 text-center">Prev. Rcvd</TableHead>
-                                            <TableHead className="w-32 text-center">Total Rcvd</TableHead>
+                                            <TableHead className="w-32 text-center bg-gray-50">Already Received</TableHead>
+                                            <TableHead className="w-32 text-center bg-green-50 font-bold text-green-700">Remaining</TableHead>
                                             <TableHead className="w-40 text-center bg-blue-50/50">Receive Now</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {items.map(item => {
-                                            const prev = item.qty_received || 0
-                                            const current = item.receivingQty || 0
-                                            const total = prev + current
-                                            const isOver = total > item.qty_ordered
+                                            const isOver = item.receivingQty > item.qty_remaining
+                                            const isComplete = item.qty_remaining === 0
 
                                             return (
-                                                <TableRow key={item.id} className={isOver ? 'bg-red-50' : ''}>
+                                                <TableRow key={item.po_item_id} className={isComplete ? 'bg-gray-50/50' : ''}>
                                                     <TableCell>
-                                                        <div className="font-medium">{item.productName}</div>
+                                                        <div className="font-medium">{item.item_name}</div>
                                                         <div className="text-xs text-muted-foreground">{item.sku}</div>
-                                                        {isOver && <div className="text-xs text-red-600 font-bold mt-1">Over Limit! Max: {item.qty_ordered}</div>}
+                                                        {isOver && (
+                                                            <div className="text-xs text-red-600 font-bold flex items-center gap-1 mt-1">
+                                                                <AlertCircle className="w-3 h-3" />
+                                                                Max: {item.qty_remaining}
+                                                            </div>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
@@ -302,15 +344,21 @@ export function GoodsReceiptCreatePage() {
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="text-center font-medium">{item.qty_ordered}</TableCell>
-                                                    <TableCell className="text-center text-muted-foreground">{prev}</TableCell>
-                                                    <TableCell className={`text-center font-bold ${isOver ? 'text-red-600' : 'text-gray-900'}`}>{total}</TableCell>
+                                                    <TableCell className="text-center text-muted-foreground bg-gray-50/50 font-mono">
+                                                        {item.qty_already_received}
+                                                    </TableCell>
+                                                    <TableCell className="text-center font-bold text-green-700 bg-green-50/30">
+                                                        {item.qty_remaining}
+                                                    </TableCell>
                                                     <TableCell className="text-center bg-blue-50/30">
                                                         <Input
                                                             type="number"
                                                             min="0"
+                                                            max={item.qty_remaining}
+                                                            disabled={isComplete}
                                                             className={`h-9 w-28 mx-auto text-center font-bold ${isOver ? 'border-red-500 text-red-600 focus-visible:ring-red-500' : 'text-blue-800'}`}
                                                             value={item.receivingQty}
-                                                            onChange={(e) => handleQtyChange(item.id, Number(e.target.value))}
+                                                            onChange={(e) => handleQtyChange(item.po_item_id, Number(e.target.value))}
                                                         />
                                                     </TableCell>
                                                 </TableRow>
@@ -326,7 +374,7 @@ export function GoodsReceiptCreatePage() {
                                 size="lg"
                                 className="bg-green-600 hover:bg-green-700 text-white min-w-[200px]"
                                 onClick={handleSubmit}
-                                disabled={isSubmitting || items.some(i => ((i.qty_received || 0) + (i.receivingQty || 0)) > i.qty_ordered)}
+                                disabled={isSubmitting || items.some(i => i.receivingQty > i.qty_remaining)}
                             >
                                 <PackageCheck className="w-5 h-5 mr-2" />
                                 {isSubmitting ? 'Saving...' : 'Confirm Receipt'}

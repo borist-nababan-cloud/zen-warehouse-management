@@ -6,25 +6,31 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
+import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query'
+import { Toaster, toast } from 'sonner'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ProductPage } from '@/pages/ProductPage'
 import { MasterTypePage } from '@/pages/MasterTypePage'
 import { PriceUnitManagerPage } from '@/pages/PriceUnitManagerPage'
 import { FinancialDashboardPage } from './pages/FinancialDashboardPage'
+import { FinancialAccountsPage } from './pages/finance/FinancialAccountsPage'
+import { GeneralTransactionsPage } from './pages/finance/GeneralTransactionsPage'
+import { SupplierPaydownPage } from './pages/finance/SupplierPaydownPage'
 import { OperationalDashboardPage } from './pages/OperationalDashboardPage'
 import { ProductMixDashboardPage } from './pages/ProductMixDashboardPage'
 import { PeakHoursDashboardPage } from './pages/PeakHoursDashboardPage'
 import { SupplierPage } from '@/pages/SupplierPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
+import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
 import { PurchaseOrderCreatePage } from '@/pages/procurement/PurchaseOrderCreatePage'
 import { PurchaseOrderListPage } from '@/pages/procurement/PurchaseOrderListPage'
 import { PurchaseOrderPrintPage } from '@/pages/procurement/PurchaseOrderPrintPage'
 import { GoodsReceiptCreatePage } from '@/pages/procurement/GoodsReceiptCreatePage'
 import { GoodsReceiptListPage } from '@/pages/procurement/GoodsReceiptListPage'
 import { GoodsReceiptDetailPage } from '@/pages/procurement/GoodsReceiptDetailPage'
+import { InvoicingPoPage } from '@/pages/procurement/InvoicingPoPage'
+import { ReportGrSupplierPage } from '@/pages/procurement/ReportGrSupplierPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -41,6 +47,22 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
+  queryCache: new QueryCache({
+    onError: (error) => {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      // Suppress specific session errors to prevent spamming toasts
+      if (
+        errorMsg.includes('Failed to load session') ||
+        errorMsg.includes('Invalid Refresh Token') ||
+        errorMsg.includes('Refresh Token Not Found')
+      ) {
+        console.warn('Session error suppressed:', errorMsg)
+        return
+      }
+      // Show other errors
+      toast.error(`Error: ${errorMsg}`)
+    },
+  }),
 })
 
 // ============================================
@@ -58,6 +80,14 @@ function App() {
             element={
               <PublicRoute>
                 <LoginPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/unauthorized"
+            element={
+              <PublicRoute redirectTo="/dashboard">
+                <UnauthorizedPage />
               </PublicRoute>
             }
           />
@@ -197,6 +227,10 @@ function App() {
             }
           />
           <Route
+            path="/procurement/settlement-po"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
             path="/procurement/goods-issue"
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
@@ -210,6 +244,30 @@ function App() {
           />
           <Route
             path="/procurement/report-gr"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8]}>
+                <ReportGrSupplierPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================================
+              GOODS ISSUED MODULE
+             ========================================= */}
+          <Route
+            path="/goods-issued/sto"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/goods-issued/return-sto"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/goods-issued/gi-return-sto"
+            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/goods-issued/report-gi"
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
 
@@ -229,11 +287,11 @@ function App() {
               LAUNDRY MODULE
              ========================================= */}
           <Route
-            path="/laundry/receipt"
+            path="/laundry/out"
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
           <Route
-            path="/laundry/issue"
+            path="/laundry/in"
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
 
@@ -263,11 +321,40 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/procurement/goods-receipts/create" element={
+            <ProtectedRoute>
+              <GoodsReceiptCreatePage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/procurement/invoicing-po" element={
+            <ProtectedRoute>
+              <InvoicingPoPage />
+            </ProtectedRoute>
+          } />
+
+          {/* Reports */}
           <Route
-            path="/procurement/goods-receipt/create"
+            path="/finance/accounts"
             element={
-              <ProtectedRoute allowedRoles={[2, 7, 8]}>
-                <GoodsReceiptCreatePage />
+              <ProtectedRoute allowedRoles={[1, 3, 6]}>
+                <FinancialAccountsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/general-transactions"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 6]}>
+                <GeneralTransactionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/paydown"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 6]}>
+                <SupplierPaydownPage />
               </ProtectedRoute>
             }
           />
