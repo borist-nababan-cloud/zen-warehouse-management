@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuthUser } from '@/hooks/useAuth'
 import { getCompletedPurchaseOrders, createPurchaseInvoice } from '@/services/purchaseInvoiceService'
 import { getPoDetailsFromView } from '@/services/goodsReceiptService'
@@ -24,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
 // Simple Custom Modal Component to avoid missing dependency
 function SimpleModal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
     if (!isOpen) return null
@@ -43,13 +43,6 @@ function SimpleModal({ isOpen, onClose, title, children }: { isOpen: boolean; on
 }
 import { FileText, Loader2, Calendar as CalendarIcon } from 'lucide-react'
 
-// Helper to format date YYYY-MM-DD for input type="date"
-function formatDateForInput(date: Date) {
-    return date.toISOString().split('T')[0]
-}
-
-import { format } from 'date-fns'
-
 export function InvoicingPoPage() {
     const { user } = useAuthUser()
 
@@ -67,10 +60,10 @@ export function InvoicingPoPage() {
     const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState('')
     const [dueDate, setDueDate] = useState<string>('')
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (outletCode: string) => {
         setIsLoading(true)
         try {
-            const result = await getCompletedPurchaseOrders('111') // Hardcoded holding
+            const result = await getCompletedPurchaseOrders(outletCode)
             if (result.isSuccess && result.data) {
                 setOrders(result.data)
             } else {
@@ -100,8 +93,10 @@ export function InvoicingPoPage() {
     }
 
     useEffect(() => {
-        fetchOrders()
-    }, [])
+        if (user?.kode_outlet) {
+            fetchOrders(user.kode_outlet)
+        }
+    }, [user?.kode_outlet])
 
     const handleOpenModal = (po: PurchaseOrder) => {
         setSelectedPo(po)
@@ -133,7 +128,7 @@ export function InvoicingPoPage() {
             toast.success(`Invoice created successfully! Total: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(result.data))}`)
             setIsModalOpen(false)
             // Refresh list
-            if (user?.kode_outlet) fetchOrders()
+            if (user?.kode_outlet) fetchOrders(user.kode_outlet)
         } else {
             toast.error(`Failed to create invoice: ${result.error}`)
         }

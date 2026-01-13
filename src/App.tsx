@@ -28,9 +28,15 @@ import { PurchaseOrderListPage } from '@/pages/procurement/PurchaseOrderListPage
 import { PurchaseOrderPrintPage } from '@/pages/procurement/PurchaseOrderPrintPage'
 import { GoodsReceiptCreatePage } from '@/pages/procurement/GoodsReceiptCreatePage'
 import { GoodsReceiptListPage } from '@/pages/procurement/GoodsReceiptListPage'
+import { GoodsReceiptPrintPage } from '@/pages/procurement/GoodsReceiptPrintPage'
 import { GoodsReceiptDetailPage } from '@/pages/procurement/GoodsReceiptDetailPage'
 import { InvoicingPoPage } from '@/pages/procurement/InvoicingPoPage'
 import { ReportGrSupplierPage } from '@/pages/procurement/ReportGrSupplierPage'
+import { RecipeListPage } from '@/pages/production/RecipeListPage'
+import { RecipeFormPage } from '@/pages/production/RecipeFormPage'
+import { ProductionRunPage } from '@/pages/production/ProductionRunPage'
+import { ShrinkageFormPage } from '@/pages/inventory/ShrinkageFormPage'
+import { StockOpnamePage } from '@/pages/inventory/StockOpnamePage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -227,6 +233,48 @@ function App() {
             }
           />
           <Route
+            path="/procurement/goods-receipt/:id/print"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <GoodsReceiptPrintPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Production Module */}
+          <Route
+            path="/production/recipes"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+                <RecipeListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production/recipes/create"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+                <RecipeFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production/recipes/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+                <RecipeFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production/run"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+                <ProductionRunPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/procurement/settlement-po"
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
@@ -332,6 +380,26 @@ function App() {
               <InvoicingPoPage />
             </ProtectedRoute>
           } />
+
+          {/* =========================================
+              INVENTORY MODULE
+             ========================================= */}
+          <Route
+            path="/inventory/shrinkage"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <ShrinkageFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/stock-opname"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StockOpnamePage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Reports */}
           <Route

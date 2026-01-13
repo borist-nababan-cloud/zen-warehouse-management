@@ -33,6 +33,10 @@ import {
   Lock,
   Truck,
   Landmark,
+  Factory,
+  BookOpen,
+  ClipboardList,
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -89,9 +93,13 @@ const navItems: NavItem[] = [
   },
   {
     title: 'Inventory',
-    path: '/inventory',
+    path: '#', // Group header
     icon: Package,
     roleIds: [1, 2, 6, 7, 8],
+    children: [
+      { title: 'Stock Opname', path: '/inventory/stock-opname', icon: ClipboardList, roleIds: [1, 2, 6, 7, 8] },
+      { title: 'Shrinkage / Write-off', path: '/inventory/shrinkage', icon: AlertTriangle, roleIds: [1, 2, 6, 7, 8] }
+    ]
   },
   {
     title: 'Users',
@@ -129,6 +137,16 @@ const goodsIssuedGroup: NavGroup = {
     { title: 'Return STO', path: '/goods-issued/return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
     { title: 'GI Return STO', path: '/goods-issued/gi-return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Report GI', path: '/goods-issued/report-gi', icon: Activity, roleIds: [1, 2, 6, 7, 8] },
+  ]
+}
+
+const productionGroup: NavGroup = {
+  title: 'Production',
+  icon: Factory,
+  roleIds: [1, 6, 8],
+  children: [
+    { title: 'Recipe Manager', path: '/production/recipes', icon: BookOpen, roleIds: [1, 6, 8] },
+    { title: 'Production Run', path: '/production/run', icon: ClipboardList, roleIds: [1, 6, 8] },
   ]
 }
 
@@ -225,6 +243,7 @@ const allNavItems: (NavItem | NavGroup)[] = [
   financeGroup,
   goodsReceiptGroup,
   goodsIssuedGroup,
+  productionGroup,
   paymentGroup,
   laundryGroup,
   ...posDashboardGroups,

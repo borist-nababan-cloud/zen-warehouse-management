@@ -144,6 +144,7 @@ export interface MasterBarang {
 export interface MasterBarangWithType extends MasterBarang {
   master_type: MasterType | null
   master_outlet: MasterOutlet | null
+  barang_units?: BarangUnit[] | null
 }
 
 /**
@@ -230,6 +231,67 @@ export interface BarangPriceUnit extends MasterBarang {
   barang_price?: BarangPrice | null
   barang_unit?: BarangUnit | null
   master_outlet?: MasterOutlet | null
+}
+
+// ============================================
+// INVENTORY MODULE TYPES
+// ============================================
+
+export interface InventoryShrinkageLog {
+  id: string
+  document_number: string
+  transaction_date: string
+  kode_outlet: string
+  barang_id: number
+  shrinkage_category_id: string
+  qty_lost: number
+  notes: string | null
+  created_by: string
+  created_at: string
+}
+
+export interface MasterShrinkageCategory {
+  id: string
+  name: string
+  description: string | null
+  kode_outlet: string
+  is_active: boolean
+}
+
+export type StockOpnameStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED'
+
+export interface StockOpnameHeader {
+  id: string
+  document_number: string
+  kode_outlet: string
+  opname_date: string
+  status: StockOpnameStatus
+  notes: string | null
+  created_by: string
+  created_at: string
+}
+
+export interface StockOpnameItem {
+  id: string
+  header_id: string
+  barang_id: number
+  system_qty: number
+  actual_qty: number
+  difference: number // Generated column in DB
+  notes: string | null
+  // Joins
+  master_barang?: MasterBarang | null
+}
+
+export interface InventoryBalance {
+  barang_id: number
+  kode_outlet: string
+  opening_balance: number
+  qty_on_hand: number
+  last_movement_at: string
+  date_ob: string | null
+  // Joins
+  master_barang?: MasterBarang | null
 }
 
 // ============================================

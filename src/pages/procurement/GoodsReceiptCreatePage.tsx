@@ -52,14 +52,14 @@ export function GoodsReceiptCreatePage() {
     useEffect(() => {
         if (user?.kode_outlet) {
             loadPOs(user.kode_outlet)
-        }
 
-        // Auto-generate Doc No
-        const today = new Date()
-        const yyyy = today.getFullYear()
-        const mm = String(today.getMonth() + 1).padStart(2, '0')
-        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-        setDocumentNumber(`GR-${yyyy}${mm}-${random}`)
+            // Auto-generate Doc No
+            const today = new Date()
+            const yyyy = today.getFullYear()
+            const mm = String(today.getMonth() + 1).padStart(2, '0')
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+            setDocumentNumber(`GR-${user.kode_outlet}-${yyyy}${mm}-${random}`)
+        }
 
     }, [user?.kode_outlet])
 

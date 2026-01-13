@@ -198,7 +198,13 @@ export function ProductPage() {
   const { canSeeAll } = useCanSeeAllOutlets()
 
   // Queries
-  const { data, isLoading, error, refetch } = useProductsPaginated(page, 100)
+  // Filter by own outlet strictly as requested
+  const { data, isLoading, error, refetch } = useProductsPaginated(
+    page,
+    100,
+    false, // includeDeleted
+    user?.kode_outlet || undefined
+  )
   const { data: typesResponse, isLoading: typesLoading, error: typesError } = useAllTypes()
   const types = typesResponse?.data || []
 

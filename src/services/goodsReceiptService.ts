@@ -70,7 +70,7 @@ export async function getGoodsReceiptById(id: string): Promise<ApiResponse<Goods
         *,
         purchase_orders (
           document_number,
-          master_supplier (name)
+          master_supplier (name, address, phone)
         ),
         master_outlet (name_outlet, city, alamat, no_telp),
         goods_receipt_items (
