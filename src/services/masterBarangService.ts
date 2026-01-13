@@ -52,7 +52,8 @@ function getCurrentKodeOutlet(): string | null {
 export async function getProductsPaginated(
   page: number = 0,
   pageSize: number = 100,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
+  kodeOutlet?: string
 ): Promise<PaginatedResponse<MasterBarangWithType>> {
   try {
     // Build query with joins
@@ -61,8 +62,14 @@ export async function getProductsPaginated(
       .select(`
         *,
         master_type:master_type(*),
-        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)
+        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*),
+        barang_units(*)
       `, { count: 'exact' })
+
+    // Filter by outlet if provided (strict filter)
+    if (kodeOutlet) {
+      query = query.eq('kode_outlet', kodeOutlet)
+    }
 
     // Filter out deleted items unless explicitly requested
     if (!includeDeleted) {
@@ -115,7 +122,8 @@ export async function getProductById(
       .select(`
         *,
         master_type:master_type(*),
-        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)
+        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*),
+        barang_units(*)
       `)
       .eq('kode_outlet', kodeOutlet)
       .eq('id', id)
@@ -151,7 +159,8 @@ export async function getProductsByOutlet(
       .select(`
         *,
         master_type:master_type(*),
-        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*)
+        master_outlet:master_outlet!master_barang_kode_outlet_fkey(*),
+        barang_units(*)
       `)
       .eq('kode_outlet', kodeOutlet)
       .eq('deleted', false)

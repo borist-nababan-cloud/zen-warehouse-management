@@ -15,7 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Plus, FileText } from 'lucide-react'
+import { Plus, FileText, Printer } from 'lucide-react'
 import { format } from 'date-fns'
 
 export function GoodsReceiptListPage() {
@@ -87,18 +87,19 @@ export function GoodsReceiptListPage() {
                                         <TableHead>Delivery Note</TableHead>
                                         <TableHead>Received By</TableHead>
                                         <TableHead>Item Count</TableHead>
+                                        <TableHead className="w-[100px]">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 Loading...
                                             </TableCell>
                                         </TableRow>
                                     ) : filteredReceipts.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 No receipts found.
                                             </TableCell>
                                         </TableRow>
@@ -126,8 +127,21 @@ export function GoodsReceiptListPage() {
                                                 <TableCell>{gr.supplier_delivery_note || '-'}</TableCell>
                                                 <TableCell>{gr.received_by_email || gr.received_by || '-'}</TableCell>
                                                 <TableCell className="text-muted-foreground text-xs">
-                                                    {/* Future: count items if joined, for now just show generic */}
                                                     View Detail
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            window.open(`/procurement/goods-receipt/${gr.id}/print`, '_blank')
+                                                        }}
+                                                    >
+                                                        <Printer className="h-4 w-4" />
+                                                        <span className="sr-only">Print</span>
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))

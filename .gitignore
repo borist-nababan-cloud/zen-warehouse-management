@@ -44,7 +44,9 @@ my-cred/
 screen-capture/
 
 
-# Sensitive Documentation
-database-docs/
-docs/
 
+# Sensitive Documentation
+!
+docs/
+!docs/PROJECT_SUMMARY.md
+!docs/perintah.md

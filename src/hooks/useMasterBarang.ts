@@ -48,11 +48,12 @@ export const masterBarangQueryKeys = {
 export function useProductsPaginated(
   page: number = 0,
   pageSize: number = 100,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
+  kodeOutlet?: string
 ) {
   return useQuery({
-    queryKey: masterBarangQueryKeys.list({ page, pageSize, includeDeleted }),
-    queryFn: () => getProductsPaginated(page, pageSize, includeDeleted),
+    queryKey: masterBarangQueryKeys.list({ page, pageSize, includeDeleted, kodeOutlet }),
+    queryFn: () => getProductsPaginated(page, pageSize, includeDeleted, kodeOutlet),
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 }
