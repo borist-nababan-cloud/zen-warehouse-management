@@ -40,13 +40,7 @@ frontendplan.md
 # Database documentation
 
 
-my-cred/
-screen-capture/
-
-
-
 # Sensitive Documentation
-!
 docs/
-!docs/PROJECT_SUMMARY.md
-!docs/perintah.md
+database-docs/
+my-cred/
