@@ -15,10 +15,7 @@ export async function getPurchaseOrders(kodeOutlet: string): Promise<ApiResponse
       `)
       .order('created_at', { ascending: false })
 
-    if (kodeOutlet && kodeOutlet !== '111') {
-      // If NOT holding, filter by outlet
-      // If holding (111), they generally see everything or they can filter. 
-      // For simplicity, let's filter strict for non-holding.
+    if (kodeOutlet) {
       query = query.eq('kode_outlet', kodeOutlet)
     }
 

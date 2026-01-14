@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table'
 import { Plus, FileText, Printer } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 export function GoodsReceiptListPage() {
     const navigate = useNavigate()
@@ -36,13 +37,16 @@ export function GoodsReceiptListPage() {
         const res = await getGoodsReceipts(user?.kode_outlet || '')
         if (res.data) {
             setReceipts(res.data)
+        } else if (res.error) {
+            console.error('[GoodsReceiptList] Fetch Error:', res.error)
+            toast.error(`Failed to load: ${res.error}`)
         }
         setLoading(false)
     }
 
     const filteredReceipts = receipts.filter(gr =>
         gr.document_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        gr.purchase_orders?.document_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (gr.purchase_orders?.document_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         gr.supplier_delivery_note?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
@@ -100,7 +104,19 @@ export function GoodsReceiptListPage() {
                                     ) : filteredReceipts.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center">
-                                                No receipts found.
+                                                <div className="flex flex-col items-center justify-center gap-2">
+                                                    <span>No receipts found.</span>
+                                                    <div className="text-xs text-muted-foreground bg-muted p-2 rounded max-w-md text-left font-mono">
+                                                        <p className="font-bold">Debug Info:</p>
+                                                        <p>Outlet: {user?.kode_outlet || 'N/A'}</p>
+                                                        <p>Role: {user?.user_role || 'N/A'}</p>
+                                                        <p>User ID: {user?.id || 'N/A'}</p>
+                                                        {loading ? <p>Loading...</p> : <p>Data Count: {receipts.length}</p>}
+                                                        <p className="mt-1 text-red-500 font-bold whitespace-pre-wrap">
+                                                            Last Error: {receipts.length === 0 && !loading && 'No items returned from DB (Check RLS)'}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : (

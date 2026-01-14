@@ -144,15 +144,21 @@ export async function signIn(
  */
 export async function signOut(): Promise<ApiResponse<void>> {
   try {
-    // Clear localStorage
+    // 1. Clear localStorage immediately
     localStorage.removeItem(STORAGE_KEY_KODE_OUTLET)
     localStorage.removeItem(STORAGE_KEY_USER_ROLE)
     localStorage.removeItem(STORAGE_KEY_USER_EMAIL)
 
-    // Sign out from Supabase
+    // 2. Clear any other app-specific storage if needed
+    localStorage.clear() // Optional: clear everything to be safe, or stick to specific keys
+
+    // 3. Attempt Supabase Sign Out (Best Effort)
+    // We don't want to throw here if it fails (e.g., 403 Forbidden because already invalid)
     const { error } = await supabase.auth.signOut()
 
-    if (error) throw error
+    if (error) {
+      console.warn('Supabase signOut warning (handled):', error.message)
+    }
 
     return {
       data: null,
@@ -160,10 +166,12 @@ export async function signOut(): Promise<ApiResponse<void>> {
       isSuccess: true,
     }
   } catch (error) {
+    console.error('SignOut logic error:', error)
+    // Even if something crashes, we consider logout successful for the UI
     return {
       data: null,
-      error: error instanceof Error ? error.message : 'Failed to sign out',
-      isSuccess: false,
+      error: null, 
+      isSuccess: true,
     }
   }
 }
@@ -531,6 +539,5 @@ export function isCurrentUserSuperuser(): boolean {
  */
 export function isCurrentUserHolding(): boolean {
   const role = getStoredUserRole()
-  const kodeOutlet = getStoredKodeOutlet()
-  return role === 8 || kodeOutlet === '111'
+  return role === 8
 }

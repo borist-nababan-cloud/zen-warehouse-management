@@ -20,7 +20,6 @@ import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { HOLDING_OUTLET_CODE } from '@/types/database'
 import { Search, Save, Lock, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import type { BarangPriceUnit, PriceUnitUpdateData } from '@/types/database'
@@ -69,7 +68,9 @@ interface EditableRowProps {
 }
 
 function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChange, onSave }: EditableRowProps) {
-  const isHQManaged = item.kode_outlet === HOLDING_OUTLET_CODE && userOutletCode !== HOLDING_OUTLET_CODE
+  // If Item Outlet != User Outlet, it's "Managed by Owner" (Read Only)
+  // Previously specific to HQ, now general: if I don't own it, I can't edit it.
+  const isManagedByOwner = item.kode_outlet !== userOutletCode
 
   // Local state for formatted inputs to handle typing
   const [buyPriceDisplay, setBuyPriceDisplay] = useState(formatNumber(editState.buy_price))
@@ -127,7 +128,7 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
 
       {/* Owner Outlet */}
       <td className="px-4 py-2 text-sm whitespace-nowrap">
-        {item.kode_outlet === HOLDING_OUTLET_CODE ? (
+        {item.kode_outlet === '111' ? (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
             {item.master_outlet?.name_outlet || 'HOLDING'}
           </span>
@@ -186,10 +187,10 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
 
       {/* Status/Actions */}
       <td className="px-4 py-2 text-sm whitespace-nowrap">
-        {isHQManaged ? (
+        {isManagedByOwner ? (
           <span className="inline-flex items-center gap-1 text-amber-600 text-xs font-medium">
             <Lock className="h-3 w-3" />
-            HQ
+            Owner
           </span>
         ) : (
           <div className="flex items-center gap-2">
@@ -412,7 +413,7 @@ export function PriceUnitManagerPage() {
               <CardContent className="pt-4 pb-4">
                 <p className="text-xs text-muted-foreground">Outlet</p>
                 <p className="text-2xl font-bold">
-                  {user?.kode_outlet === HOLDING_OUTLET_CODE ? 'HQ' : user?.kode_outlet || '-'}
+                  {user?.kode_outlet || '-'}
                 </p>
               </CardContent>
             </Card>

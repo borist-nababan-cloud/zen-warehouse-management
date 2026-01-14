@@ -99,7 +99,7 @@ export function StockOpnamePage() {
             })
 
             const res = await createStockOpname({
-                kode_outlet: user?.kode_outlet || '111',
+                kode_outlet: user?.kode_outlet || '',
                 items: itemsToSubmit,
                 notes: 'Batch Opname via Web'
             })
@@ -144,7 +144,7 @@ export function StockOpnamePage() {
             }
 
             const res = await createStockOpname({
-                kode_outlet: user?.kode_outlet || '111',
+                kode_outlet: user?.kode_outlet || '',
                 items: [{
                     barang_id: itemModel.barang_id,
                     system_qty: itemModel.qty_on_hand,

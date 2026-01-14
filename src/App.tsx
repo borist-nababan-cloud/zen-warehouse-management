@@ -13,13 +13,13 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { ProductPage } from '@/pages/ProductPage'
 import { MasterTypePage } from '@/pages/MasterTypePage'
 import { PriceUnitManagerPage } from '@/pages/PriceUnitManagerPage'
-import { FinancialDashboardPage } from './pages/FinancialDashboardPage'
+import { FinancialDashboardPage } from './pages/posdashboard/FinancialDashboardPage'
 import { FinancialAccountsPage } from './pages/finance/FinancialAccountsPage'
 import { GeneralTransactionsPage } from './pages/finance/GeneralTransactionsPage'
 import { SupplierPaydownPage } from './pages/finance/SupplierPaydownPage'
-import { OperationalDashboardPage } from './pages/OperationalDashboardPage'
-import { ProductMixDashboardPage } from './pages/ProductMixDashboardPage'
-import { PeakHoursDashboardPage } from './pages/PeakHoursDashboardPage'
+import { OperationalDashboardPage } from './pages/posdashboard/OperationalDashboardPage'
+import { ProductMixDashboardPage } from './pages/posdashboard/ProductMixDashboardPage'
+import { PeakHoursDashboardPage } from './pages/posdashboard/PeakHoursDashboardPage'
 import { SupplierPage } from '@/pages/SupplierPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
@@ -37,6 +37,16 @@ import { RecipeFormPage } from '@/pages/production/RecipeFormPage'
 import { ProductionRunPage } from '@/pages/production/ProductionRunPage'
 import { ShrinkageFormPage } from '@/pages/inventory/ShrinkageFormPage'
 import { StockOpnamePage } from '@/pages/inventory/StockOpnamePage'
+
+import StoCreatePage from '@/pages/sto/StoCreatePage'
+import StoGoodsIssuePage from '@/pages/sto/StoGoodsIssuePage'
+import StoApprovalPage from '@/pages/sto/StoApprovalPage'
+import StoGoodsReceiptPage from '@/pages/sto/StoGoodsReceiptPage'
+import StoInvoicingPage from '@/pages/sto/StoInvoicingPage'
+import StoPaydownPage from '@/pages/finance/StoPaydownPage'
+import StoListPage from '@/pages/sto/StoListPage'
+import { StoDetailPage } from '@/pages/sto/StoDetailPage'
+import { StoPrintPage } from '@/pages/sto/StoPrintPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -300,24 +310,85 @@ function App() {
           />
 
           {/* =========================================
-              GOODS ISSUED MODULE
+              STO MODULE (Stock Transfer)
              ========================================= */}
           <Route
-            path="/goods-issued/sto"
-            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+            path="/sto/create"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+                <StoCreatePage />
+              </ProtectedRoute>
+            }
           />
           <Route
-            path="/goods-issued/return-sto"
-            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+            path="/sto"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StoListPage />
+              </ProtectedRoute>
+            }
           />
           <Route
-            path="/goods-issued/gi-return-sto"
-            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+            path="/sto/:id"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StoDetailPage />
+              </ProtectedRoute>
+            }
           />
           <Route
-            path="/goods-issued/report-gi"
-            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+            path="/sto/:id/print"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StoPrintPage />
+              </ProtectedRoute>
+            }
           />
+          <Route
+            path="/sto/issue"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StoGoodsIssuePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/approval"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 6, 8]}>
+                <StoApprovalPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/receipt"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StoGoodsReceiptPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/invoicing"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
+                <StoInvoicingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/sto-paydown"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
+                <StoPaydownPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================================
+              GOODS ISSUED MODULE
+             ========================================= */}
+
 
           {/* =========================================
               PAYMENT MODULE

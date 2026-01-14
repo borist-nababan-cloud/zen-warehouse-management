@@ -86,6 +86,18 @@ interface NavGroup {
  */
 const navItems: NavItem[] = [
   {
+    title: 'POS Dashboard',
+    path: '#',
+    icon: Activity,
+    roleIds: [1, 5, 6, 8],
+    children: [
+      { title: 'Financial', path: '/dashboard/financial', icon: DollarSign, roleIds: [1, 5, 6, 8] },
+      { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [1, 5, 6, 8] },
+      { title: 'Product Mix', path: '/dashboard/product-mix', icon: Boxes, roleIds: [1, 5, 6, 8] },
+      { title: 'Peak Hours', path: '/dashboard/peak-hours', icon: Clock, roleIds: [1, 5, 6, 8] },
+    ]
+  },
+  {
     title: 'Dashboard',
     path: '/dashboard',
     icon: Warehouse,
@@ -120,8 +132,8 @@ const goodsReceiptGroup: NavGroup = {
     { title: 'Purchase Order', path: '/procurement/purchase-orders', icon: FileText, roleIds: [1, 6, 7, 8] },
     { title: 'GR Supplier', path: '/procurement/goods-receipts', icon: Package, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Invoicing PO', path: '/procurement/invoicing-po', icon: FileText, roleIds: [1, 6, 7, 8] },
-    { title: 'Settlement PO', path: '/procurement/settlement-po', icon: DollarSign, roleIds: [1, 6, 7, 8] },
-    { title: 'STO Return In', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    // { title: 'Settlement PO', path: '/procurement/settlement-po', icon: DollarSign, roleIds: [1, 6, 7, 8] },
+    // { title: 'STO Return In', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Report PO', path: '/procurement/report-po', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Report GR Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [1, 2, 5, 6, 7, 8] },
   ]
@@ -132,11 +144,24 @@ const goodsIssuedGroup: NavGroup = {
   icon: Truck,
   roleIds: [1, 2, 6, 7, 8],
   children: [
-    { title: 'STO', path: '/goods-issued/sto', icon: Package, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'STO GI', path: '/procurement/goods-issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Return STO', path: '/goods-issued/return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'GI Return STO', path: '/goods-issued/gi-return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    // { title: 'STO', path: '/goods-issued/sto', icon: Package, roleIds: [1, 2, 6, 7, 8] },
+    // { title: 'STO GI', path: '/procurement/goods-issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
+    // { title: 'Return STO', path: '/goods-issued/return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Return Supplier', path: '/goods-issued/gi-return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Report GI', path: '/goods-issued/report-gi', icon: Activity, roleIds: [1, 2, 6, 7, 8] },
+  ]
+}
+
+const stockTransferGroup: NavGroup = {
+  title: 'Stock Transfer',
+  icon: Boxes,
+  roleIds: [1, 2, 6, 7, 8],
+  children: [
+    { title: 'Transfer Orders', path: '/sto', icon: FileText, roleIds: [1, 6, 8] },
+    { title: 'Approval Inbox', path: '/sto/approval', icon: Users, roleIds: [1, 3, 6, 8] },
+    { title: 'Goods Issue', path: '/sto/issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Goods Receipt', path: '/sto/receipt', icon: Package, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'STO Invoicing', path: '/sto/invoicing', icon: DollarSign, roleIds: [1, 3, 5, 6, 8] },
   ]
 }
 
@@ -158,6 +183,7 @@ const financeGroup: NavGroup = {
     { title: 'Accounts', path: '/finance/accounts', icon: DollarSign, roleIds: [1, 3, 6] },
     { title: 'Money In/Out', path: '/finance/general-transactions', icon: TrendingUp, roleIds: [1, 3, 6] },
     { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [1, 3, 6] },
+    { title: 'STO Paydown', path: '/finance/sto-paydown', icon: Boxes, roleIds: [1, 3, 6] },
   ]
 }
 
@@ -243,6 +269,7 @@ const allNavItems: (NavItem | NavGroup)[] = [
   financeGroup,
   goodsReceiptGroup,
   goodsIssuedGroup,
+  stockTransferGroup,
   productionGroup,
   paymentGroup,
   laundryGroup,

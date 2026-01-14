@@ -15,7 +15,7 @@ export async function getGoodsReceipts(kodeOutlet: string): Promise<ApiResponse<
             `)
             .order('received_at', { ascending: false })
 
-        if (kodeOutlet && kodeOutlet !== '111') {
+        if (kodeOutlet) {
             query = query.eq('kode_outlet', kodeOutlet)
         }
 

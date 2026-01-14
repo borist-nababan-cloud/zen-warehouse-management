@@ -22,7 +22,7 @@ export async function getSuppliers(kode_outlet: string): Promise<ApiResponse<Mas
     // Apply outlet filter if not holding seeing all
     // Usually RLS handles this, but explicit filter doesn't hurt
     // We'll trust RLS primarily, but if the caller passes kode_outlet, we can use it
-    if (kode_outlet && kode_outlet !== '111') {
+    if (kode_outlet) {
         query = query.eq('kode_outlet', kode_outlet)
     }
 
@@ -50,13 +50,17 @@ export async function getSuppliers(kode_outlet: string): Promise<ApiResponse<Mas
  */
 export async function createSupplier(supplierData: Omit<MasterSupplier, 'kode_supplier' | 'created_at'>): Promise<ApiResponse<MasterSupplier>> {
   try {
+    // Sanitize data: Ensure empty strings for UUID fields are null
+    const payload = {
+      ...supplierData,
+      kode_bank: supplierData.kode_bank === '' ? null : supplierData.kode_bank,
+      // Table doesn't have default for created_at, so we must provide it
+      created_at: new Date().toISOString() 
+    }
+
     const { data, error } = await supabase
       .from('master_supplier')
-      .insert({
-        ...supplierData,
-        // Table doesn't have default for created_at, so we must provide it
-        created_at: new Date().toISOString() 
-      })
+      .insert(payload)
       .select()
       .single()
 
@@ -82,9 +86,15 @@ export async function createSupplier(supplierData: Omit<MasterSupplier, 'kode_su
  */
 export async function updateSupplier(kode_supplier: string, supplierData: Partial<MasterSupplier>): Promise<ApiResponse<MasterSupplier>> {
   try {
+    // Sanitize data
+    const payload = { ...supplierData }
+    if (payload.kode_bank === '') {
+        payload.kode_bank = null
+    }
+
     const { data, error } = await supabase
       .from('master_supplier')
-      .update(supplierData)
+      .update(payload)
       .eq('kode_supplier', kode_supplier)
       .select()
       .single()

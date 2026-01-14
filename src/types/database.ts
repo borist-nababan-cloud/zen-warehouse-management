@@ -19,6 +19,8 @@
  * 8  - SUPERUSER          (ALL ACCESS, no outlet restriction)
  * 9  - UNASSIGNED         (Default for new users, should be blocked)
  */
+
+
 export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 /**
@@ -101,6 +103,7 @@ export interface MasterOutlet {
   active: boolean          // Active status
   city: string
   email: string
+  can_sto?: boolean        // Capable of STO transfers
 }
 
 /**
@@ -145,6 +148,7 @@ export interface MasterBarangWithType extends MasterBarang {
   master_type: MasterType | null
   master_outlet: MasterOutlet | null
   barang_units?: BarangUnit[] | null
+  barang_prices?: BarangPrice[] | null
 }
 
 /**
@@ -374,6 +378,98 @@ export interface ViewPoDetailsReceived {
 }
 
 // ============================================
+// STOCK TRANSFER ORDER (STO) TYPES
+// ============================================
+
+export type StoStatus = 'DRAFT' | 'ISSUED' | 'SHIPPED' | 'RECEIVED' | 'COMPLETED' | 'CANCELLED'
+export type StoRecipientStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED'
+
+export interface StoOrder {
+  id: string
+  document_number: string
+  from_outlet: string
+  to_outlet: string
+  sender_status: StoStatus // DRAFT -> ISSUED -> SHIPPED
+  recipient_status: StoRecipientStatus // PENDING -> ACCEPTED/REJECTED -> COMPLETED
+  shipping_cost: number
+  total_items_price: number
+  grand_total: number
+  created_at: string
+  created_by: string
+  // Joins
+  from_master_outlet?: MasterOutlet | null
+  to_master_outlet?: MasterOutlet | null
+  sto_items?: StoItem[]
+}
+
+export interface StoItem {
+  id: string
+  sto_id: string
+  barang_id: number
+  qty_requested: number
+  price_unit: number
+  subtotal: number
+  // Joins
+  master_barang?: MasterBarang | null
+}
+
+export interface StoShipment {
+  id: string
+  sto_id: string
+  document_number: string
+  shipped_at: string
+  shipped_by: string
+  // Joins
+  sto_shipment_items?: StoShipmentItem[]
+}
+
+export interface StoShipmentItem {
+  id: string
+  shipment_id: string
+  sto_item_id: string
+  barang_id: number
+  qty_shipped: number
+  // Joins
+  sto_item?: StoItem | null
+  master_barang?: MasterBarang | null
+}
+
+export interface StoReceipt {
+  id: string
+  sto_id: string
+  document_number: string
+  received_at: string
+  received_by: string
+  // Joins
+  sto_receipt_items?: StoReceiptItem[]
+}
+
+export interface StoReceiptItem {
+  id: string
+  receipt_id: string
+  sto_item_id: string
+  barang_id: number
+  qty_received: number
+  // Joins
+  sto_item?: StoItem | null
+  master_barang?: MasterBarang | null
+}
+
+export interface StoInvoice {
+  id: string
+  document_number: string
+  sto_id: string
+  owe_to_outlet_id: string // Outlet we owe money to (Sender)
+  total_amount: number
+  due_date: string
+  status: 'UNPAID' | 'PAID'
+  created_at: string
+  // Joins
+  sto_order?: StoOrder | null
+}
+
+
+// ============================================
 // LEGACY TABLE TYPES (to be deprecated)
 // ============================================
 
@@ -533,10 +629,7 @@ export function isHoldingRole(roleId: RoleId): boolean {
   return roleId === 1 || roleId === 2 || roleId === 8
 }
 
-/**
- * Get outlet code for holding
- */
-export const HOLDING_OUTLET_CODE = '111'
+
 
 // ============================================
 // LOCATION TYPE LABELS (Legacy)

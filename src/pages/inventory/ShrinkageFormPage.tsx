@@ -72,7 +72,7 @@ export function ShrinkageFormPage() {
 
             const result = await createShrinkageLog({
                 barang_id: parseInt(selectedProduct),
-                kode_outlet: user?.kode_outlet || '111',
+                kode_outlet: user?.kode_outlet || '',
                 shrinkage_category_id: selectedCategory,
                 qty_lost: qtyLost,
                 notes: description,

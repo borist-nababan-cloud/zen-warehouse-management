@@ -425,9 +425,6 @@ export async function updatePriceUnit(
  * @returns True if user can edit
  */
 export function canEditProduct(userOutletCode: string, productOutletCode: string): boolean {
-  // Holding ('111') can edit everything
-  if (userOutletCode === '111') return true
-
   // Users can edit their own outlet's products
   return userOutletCode === productOutletCode
 }
@@ -436,5 +433,5 @@ export function canEditProduct(userOutletCode: string, productOutletCode: string
  * Get outlet label for display
  */
 export function getOutletLabel(kode_outlet: string): string {
-  return kode_outlet === '111' ? 'Holding (HQ)' : kode_outlet
+  return kode_outlet
 }

@@ -160,7 +160,8 @@ export async function getProductsByOutlet(
         *,
         master_type:master_type(*),
         master_outlet:master_outlet!master_barang_kode_outlet_fkey(*),
-        barang_units(*)
+        barang_units(*),
+        barang_prices(*)
       `)
       .eq('kode_outlet', kodeOutlet)
       .eq('deleted', false)
