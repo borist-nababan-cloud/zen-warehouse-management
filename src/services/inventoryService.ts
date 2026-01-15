@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { ApiResponse, InventoryShrinkageLog, StockOpnameHeader, MasterShrinkageCategory, InventoryBalance } from '@/types/database'
+import { ApiResponse, InventoryShrinkageLog, StockOpnameHeader, MasterShrinkageCategory, InventoryBalance, InventoryReportItem, ShrinkageReportItem, OpnameVarianceItem } from '@/types/database'
 
 // ==========================================
 // SHRINKAGE
@@ -171,4 +171,86 @@ export async function createStockOpname(payload: OpnamePayload): Promise<ApiResp
 
     // Return header with updated status logic (conceptually completed)
     return { data: { ...header, status: 'COMPLETED' } as StockOpnameHeader, error: null, isSuccess: true }
+}
+
+// ==========================================
+// REPORTS
+// ==========================================
+
+export async function getInventoryReport(kode_outlet?: string): Promise<ApiResponse<InventoryReportItem[]>> {
+    let query = supabase
+        .from('view_inventory_report')
+        .select('*')
+        .order('item_name', { ascending: true })
+
+    if (kode_outlet && kode_outlet !== 'ALL') {
+        query = query.eq('kode_outlet', kode_outlet)
+    }
+
+    const { data, error } = await query
+
+    if (error) return { data: null, error: error.message, isSuccess: false }
+    return { data: data as InventoryReportItem[], error: null, isSuccess: true }
+}
+
+export async function getShrinkageReport(outletCode: string, startDate?: string, endDate?: string): Promise<ApiResponse<ShrinkageReportItem[]>> {
+    let query = supabase
+        .from('view_report_shrinkage_analysis')
+        .select('*')
+        .eq('kode_outlet', outletCode)
+        .order('transaction_date', { ascending: false })
+
+    if (startDate) {
+        query = query.gte('transaction_date', startDate)
+    }
+    if (endDate) {
+        query = query.lte('transaction_date', endDate)
+    }
+
+    const { data, error } = await query
+
+    if (error) return { data: null, error: error.message, isSuccess: false }
+    return { data: data as ShrinkageReportItem[], error: null, isSuccess: true }
+}
+
+// ==========================================
+// OPNAME VARIANCE REPORT
+// ==========================================
+
+export async function getOpnameVarianceReport(
+  outletCode?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<ApiResponse<OpnameVarianceItem[]>> {
+  try {
+    let query = supabase
+      .from('view_report_opname_variance')
+      .select('*')
+      .order('opname_date', { ascending: false })
+
+    if (outletCode && outletCode !== 'ALL') {
+      query = query.eq('kode_outlet', outletCode)
+    }
+
+    if (startDate && endDate) {
+      query = query.gte('opname_date', startDate).lte('opname_date', endDate)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return {
+      data: data as OpnameVarianceItem[],
+      error: null,
+      isSuccess: true,
+    }
+  } catch (error: any) {
+    console.error('Error fetching opname variance report:', error)
+    return {
+      data: null,
+      error: error.message,
+      isSuccess: false,
+    }
+  }
 }

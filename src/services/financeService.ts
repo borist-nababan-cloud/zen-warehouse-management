@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase'
-import { ApiResponse, FinanceTransactionCategory } from '@/types/database'
+import { ApiResponse, FinanceTransactionCategory, ApAgingItem, CashFlowItem } from '@/types/database'
 
 export interface FinancialAccount {
   id: string
@@ -287,7 +287,66 @@ export async function processPaydown(params: PaydownParams): Promise<ApiResponse
 
     return { data, error: null, isSuccess: true }
   } catch (error: any) {
-    console.error('Error processing paydown:', error)
     return { data: null, error: error.message, isSuccess: false }
   }
 }
+
+// ==========================================
+// REPORTS (AP AGING)
+// ==========================================
+
+export async function getApAgingReport(outletCode: string): Promise<ApiResponse<ApAgingItem[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('view_report_ap_aging')
+      .select('*')
+      .eq('debtor_outlet', outletCode)
+      .order('bucket_60_plus', { ascending: false })
+
+    if (error) throw error
+
+    return { data: data as ApAgingItem[], error: null, isSuccess: true }
+  } catch (error: any) {
+    console.error('Error fetching AP Aging Report:', error)
+    return { data: null, error: error.message, isSuccess: false }
+  }
+}
+
+// ==========================================
+// REPORTS (CASH FLOW)
+// ==========================================
+
+export async function getCashFlowReport(
+    outletCode: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<CashFlowItem[]>> {
+    try {
+      let query = supabase
+        .from('view_report_cash_flow')
+        .select('*')
+        .eq('kode_outlet', outletCode)
+        .order('created_at', { ascending: false })
+  
+      if (startDate && endDate) {
+        query = query.gte('created_at', startDate).lte('created_at', endDate)
+      }
+  
+      const { data, error } = await query
+  
+      if (error) throw error
+  
+      return {
+        data: data as CashFlowItem[],
+        error: null,
+        isSuccess: true,
+      }
+    } catch (error: any) {
+      console.error('Error fetching Cash Flow Report:', error)
+      return {
+        data: null,
+        error: error.message,
+        isSuccess: false,
+      }
+    }
+  }

@@ -37,6 +37,12 @@ import { RecipeFormPage } from '@/pages/production/RecipeFormPage'
 import { ProductionRunPage } from '@/pages/production/ProductionRunPage'
 import { ShrinkageFormPage } from '@/pages/inventory/ShrinkageFormPage'
 import { StockOpnamePage } from '@/pages/inventory/StockOpnamePage'
+import InventoryReportPage from '@/pages/inventory/InventoryReportPage'
+import InventoryQtyReportPage from '@/pages/inventory/InventoryQtyReportPage'
+import ShrinkageReportPage from '@/pages/inventory/ShrinkageReportPage'
+import StockOpnameVariancePage from '@/pages/inventory/StockOpnameVariancePage'
+import ApAgingReportPage from '@/pages/finance/ApAgingReportPage'
+import CashFlowReportPage from '@/pages/finance/CashFlowReportPage'
 
 import StoCreatePage from '@/pages/sto/StoCreatePage'
 import StoGoodsIssuePage from '@/pages/sto/StoGoodsIssuePage'
@@ -472,7 +478,48 @@ function App() {
             }
           />
 
+          <Route
+            path="/inventory/report"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <InventoryReportPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Reports */}
+          <Route
+            path="/inventory/report-qty"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <InventoryQtyReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/report-shrinkage"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <ShrinkageReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/report-opname-variance"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <StockOpnameVariancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/report-cash-flow"
+            element={
+              <ProtectedRoute allowedRoles={[3, 5, 6, 8]}>
+                <CashFlowReportPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/finance/accounts"
             element={
@@ -486,6 +533,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 3, 6]}>
                 <GeneralTransactionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/report-ap-aging"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 6]}>
+                <ApAgingReportPage />
               </ProtectedRoute>
             }
           />

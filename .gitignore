@@ -40,7 +40,10 @@ frontendplan.md
 # Database documentation
 
 
+
 # Sensitive Documentation
 docs/
 database-docs/
 my-cred/
+scripts/*.cjs
+scripts/*.js

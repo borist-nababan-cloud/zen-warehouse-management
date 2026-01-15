@@ -19,6 +19,7 @@ import {
   DollarSign,
   Shirt,
   Users,
+  Receipt,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -36,7 +37,10 @@ import {
   Factory,
   BookOpen,
   ClipboardList,
-  AlertTriangle
+  AlertTriangle,
+  AlertOctagon,
+  Scale,
+  Banknote
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -110,7 +114,11 @@ const navItems: NavItem[] = [
     roleIds: [1, 2, 6, 7, 8],
     children: [
       { title: 'Stock Opname', path: '/inventory/stock-opname', icon: ClipboardList, roleIds: [1, 2, 6, 7, 8] },
-      { title: 'Shrinkage / Write-off', path: '/inventory/shrinkage', icon: AlertTriangle, roleIds: [1, 2, 6, 7, 8] }
+      { title: 'Shrinkage / Write-off', path: '/inventory/shrinkage', icon: AlertTriangle, roleIds: [1, 2, 6, 7, 8] },
+      { title: 'Report Inventory', path: '/inventory/report', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
+      { title: 'Report Qty Inventory', path: '/inventory/report-qty', icon: Boxes, roleIds: [1, 2, 6, 7, 8] },
+      { title: 'Report Shrinkage', path: '/inventory/report-shrinkage', icon: AlertOctagon, roleIds: [1, 2, 6, 7, 8] },
+      { title: 'Report Opname Variance', path: '/inventory/report-opname-variance', icon: Scale, roleIds: [1, 2, 6, 7, 8] }
     ]
   },
   {
@@ -178,10 +186,12 @@ const productionGroup: NavGroup = {
 const financeGroup: NavGroup = {
   title: 'Financial',
   icon: Landmark,
-  roleIds: [1, 3, 6], // Admin, Laundry Admin, Outlet Admin
+  roleIds: [1, 3, 5, 6, 8], // Admin, Laundry Admin, Outlet Admin, Finance, Superuser
   children: [
     { title: 'Accounts', path: '/finance/accounts', icon: DollarSign, roleIds: [1, 3, 6] },
-    { title: 'Money In/Out', path: '/finance/general-transactions', icon: TrendingUp, roleIds: [1, 3, 6] },
+    { title: 'General Transactions', path: '/finance/general-transactions', icon: Receipt, roleIds: [1, 3, 6] },
+    { title: 'Report AP Aging', path: '/finance/report-ap-aging', icon: Clock, roleIds: [1, 3, 5, 8] },
+    { title: 'Report Cash Flow', path: '/finance/report-cash-flow', icon: Banknote, roleIds: [3, 5, 6, 8] },
     { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [1, 3, 6] },
     { title: 'STO Paydown', path: '/finance/sto-paydown', icon: Boxes, roleIds: [1, 3, 6] },
   ]

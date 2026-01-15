@@ -681,3 +681,68 @@ export const STORAGE_KEYS = {
   USER_ROLE: 'user_role',
   USER_EMAIL: 'user_email',
 } as const
+
+// ============================================
+// REPORTING TYPES
+// ============================================
+
+export interface InventoryReportItem {
+  kode_outlet: string
+  name_outlet?: string
+  sku: string
+  item_name: string
+  purchase_uom: string
+  qty_on_hand: number
+  buy_price: number
+  sell_price: number
+  valuation_buy_total: number
+  valuation_sell_total: number
+}
+
+export interface ApAgingItem {
+  kode_supplier: string
+  debtor_outlet: string
+  creditor_name: string
+  invoice_count: number
+  total_outstanding: number
+  bucket_current: number
+  bucket_1_30: number
+  bucket_31_60: number
+  bucket_60_plus: number
+}
+
+export interface ShrinkageReportItem {
+  transaction_date: string
+  category_name: string
+  item_name: string
+  sku: string
+  qty_lost: number
+  total_loss_value: number
+  reported_by: string
+  notes: string
+  kode_outlet: string
+}
+
+export interface OpnameVarianceItem {
+  document_number: string
+  opname_date: string
+  kode_outlet: string
+  sku: string
+  item_name: string
+  system_qty: number
+  actual_qty: number
+  difference: number
+  unit_cost: number
+  variance_value: number
+}
+
+export interface CashFlowItem {
+  created_at: string
+  account_name: string
+  transaction_type: string
+  description: string
+  money_in: number
+  money_out: number
+  balance_after: number
+  kode_outlet: string
+}

@@ -12,7 +12,7 @@
  Target Server Version : 150008 (150008)
  File Encoding         : 65001
 
- Date: 14/01/2026 15:41:16
+ Date: 15/01/2026 11:41:10
 */
 
 
@@ -2245,6 +2245,124 @@ CREATE VIEW "public"."view_promo_stats" AS  SELECT pd.id_payment,
   WHERE pd.kodepromo IS NOT NULL AND pd.kodepromo::text <> ''::text AND pd.vpromo > 0::numeric;
 
 -- ----------------------------
+-- View structure for view_inventory_report
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."view_inventory_report";
+CREATE VIEW "public"."view_inventory_report" AS  SELECT inv.kode_outlet,
+    o.name_outlet,
+    inv.barang_id,
+    m.sku,
+    m.name AS item_name,
+    m.image1_url,
+    COALESCE(u.base_uom, 'PCS'::text) AS base_uom,
+    COALESCE(u.purchase_uom, 'PCS'::text) AS purchase_uom,
+    inv.qty_on_hand,
+    COALESCE(p.buy_price, 0::numeric) AS buy_price,
+    COALESCE(p.sell_price, 0::numeric) AS sell_price,
+    (inv.qty_on_hand * COALESCE(p.buy_price, 0::numeric))::numeric(15,2) AS valuation_buy_total,
+    (inv.qty_on_hand * COALESCE(p.sell_price, 0::numeric))::numeric(15,2) AS valuation_sell_total
+   FROM inventory_balance inv
+     JOIN master_outlet o ON inv.kode_outlet = o.kode_outlet
+     JOIN master_barang m ON inv.barang_id = m.id
+     LEFT JOIN barang_prices p ON inv.barang_id = p.barang_id AND inv.kode_outlet = p.kode_outlet
+     LEFT JOIN barang_units u ON inv.barang_id = u.barang_id AND inv.kode_outlet = u.kode_outlet;
+
+-- ----------------------------
+-- View structure for view_report_ap_aging
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."view_report_ap_aging";
+CREATE VIEW "public"."view_report_ap_aging" AS  SELECT COALESCE(l.kode_supplier::text, l.ref_outlet_id) AS kode_supplier,
+    COALESCE(m.name, o.name_outlet, 'Unknown Creditor'::text) AS creditor_name,
+    l.kode_outlet AS debtor_outlet,
+    count(l.id) AS invoice_count,
+    sum(l.original_amount - l.paid_amount) AS total_outstanding,
+    sum(
+        CASE
+            WHEN l.due_date >= CURRENT_DATE THEN l.original_amount - l.paid_amount
+            ELSE 0::numeric
+        END) AS bucket_current,
+    sum(
+        CASE
+            WHEN l.due_date < CURRENT_DATE AND l.due_date >= (CURRENT_DATE - '30 days'::interval) THEN l.original_amount - l.paid_amount
+            ELSE 0::numeric
+        END) AS bucket_1_30,
+    sum(
+        CASE
+            WHEN l.due_date < (CURRENT_DATE - '30 days'::interval) AND l.due_date >= (CURRENT_DATE - '60 days'::interval) THEN l.original_amount - l.paid_amount
+            ELSE 0::numeric
+        END) AS bucket_31_60,
+    sum(
+        CASE
+            WHEN l.due_date < (CURRENT_DATE - '60 days'::interval) THEN l.original_amount - l.paid_amount
+            ELSE 0::numeric
+        END) AS bucket_60_plus
+   FROM finance_ap_ledger l
+     LEFT JOIN master_supplier m ON l.kode_supplier = m.kode_supplier
+     LEFT JOIN master_outlet o ON l.ref_outlet_id = o.kode_outlet
+  WHERE l.is_paid = false
+  GROUP BY (COALESCE(l.kode_supplier::text, l.ref_outlet_id)), (COALESCE(m.name, o.name_outlet, 'Unknown Creditor'::text)), l.kode_outlet;
+
+-- ----------------------------
+-- View structure for view_report_shrinkage_analysis
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."view_report_shrinkage_analysis";
+CREATE VIEW "public"."view_report_shrinkage_analysis" AS  SELECT l.kode_outlet,
+    l.transaction_date,
+    c.name AS category_name,
+    b.sku,
+    b.name AS item_name,
+    l.qty_lost,
+    COALESCE(p.buy_price, 0::numeric) AS cost_per_unit,
+    l.qty_lost * COALESCE(p.buy_price, 0::numeric) AS total_loss_value,
+    l.notes,
+    u.full_name AS reported_by
+   FROM inventory_shrinkage_logs l
+     JOIN master_shrinkage_categories c ON l.shrinkage_category_id = c.id
+     JOIN master_barang b ON l.barang_id = b.id
+     LEFT JOIN barang_prices p ON l.barang_id = p.barang_id AND l.kode_outlet = p.kode_outlet
+     LEFT JOIN profiles u ON l.created_by::text = u.id;
+
+-- ----------------------------
+-- View structure for view_report_production_yield
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."view_report_production_yield";
+CREATE VIEW "public"."view_report_production_yield" AS  SELECT pr.document_number,
+    pr.transaction_date,
+    pr.kode_outlet,
+    out_b.name AS finished_good_name,
+    out_table.qty_produced,
+    out_table.calculated_hpp AS unit_cost_result,
+    out_table.qty_produced * out_table.calculated_hpp AS total_production_cost,
+    ( SELECT count(*) AS count
+           FROM production_run_ingredients
+          WHERE production_run_ingredients.run_id = pr.id) AS ingredient_count,
+    pr.status
+   FROM production_runs pr
+     JOIN production_run_outputs out_table ON pr.id = out_table.run_id
+     JOIN master_barang out_b ON out_table.barang_id = out_b.id
+  WHERE pr.status = 'COMPLETED'::text;
+
+-- ----------------------------
+-- View structure for view_report_opname_variance
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."view_report_opname_variance";
+CREATE VIEW "public"."view_report_opname_variance" AS  SELECT soh.document_number,
+    soh.opname_date,
+    soh.kode_outlet,
+    b.sku,
+    b.name AS item_name,
+    soi.system_qty,
+    soi.actual_qty,
+    soi.difference,
+    COALESCE(p.buy_price, 0::numeric) AS unit_cost,
+    soi.difference * COALESCE(p.buy_price, 0::numeric) AS variance_value
+   FROM stock_opname_items soi
+     JOIN stock_opname_headers soh ON soi.header_id = soh.id
+     JOIN master_barang b ON soi.barang_id = b.id
+     LEFT JOIN barang_prices p ON soi.barang_id = p.barang_id AND soh.kode_outlet = p.kode_outlet
+  WHERE soh.status = 'COMPLETED'::text AND soi.difference <> 0::numeric;
+
+-- ----------------------------
 -- View structure for view_po_details_received
 -- ----------------------------
 DROP VIEW IF EXISTS "public"."view_po_details_received";
@@ -2267,6 +2385,29 @@ CREATE VIEW "public"."view_po_details_received" AS  SELECT poi.id AS po_item_id,
      JOIN purchase_orders po ON poi.po_id = po.id;
 
 -- ----------------------------
+-- View structure for view_report_cash_flow
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."view_report_cash_flow";
+CREATE VIEW "public"."view_report_cash_flow" AS  SELECT fal.created_at,
+    mfa.kode_outlet,
+    mfa.account_name,
+    mfa.account_type,
+    fal.transaction_type,
+    fal.description,
+        CASE
+            WHEN fal.amount > 0::numeric THEN fal.amount
+            ELSE 0::numeric
+        END AS money_in,
+        CASE
+            WHEN fal.amount < 0::numeric THEN abs(fal.amount)
+            ELSE 0::numeric
+        END AS money_out,
+    fal.balance_after
+   FROM finance_account_ledger fal
+     JOIN master_financial_accounts mfa ON fal.account_id = mfa.id
+  ORDER BY fal.created_at DESC;
+
+-- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."barang_price_history_id_seq"
@@ -2278,14 +2419,14 @@ SELECT setval('"public"."barang_price_history_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."barang_prices_id_seq"
 OWNED BY "public"."barang_prices"."id";
-SELECT setval('"public"."barang_prices_id_seq"', 88, true);
+SELECT setval('"public"."barang_prices_id_seq"', 93, true);
 
 -- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."barang_units_id_seq"
 OWNED BY "public"."barang_units"."id";
-SELECT setval('"public"."barang_units_id_seq"', 88, true);
+SELECT setval('"public"."barang_units_id_seq"', 93, true);
 
 -- ----------------------------
 -- Alter sequences owned by
