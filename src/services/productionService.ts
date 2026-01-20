@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { ApiResponse } from '@/types/database'
+import { ApiResponse, ViewReportProductionYield } from '@/types/database'
 import { RecipeItem } from './recipeService'
 
 export interface CreateProductionRunParams {
@@ -122,6 +122,45 @@ export async function getIngredientsWithCost(outletCode: string, ingredients: Re
 
     } catch (error: any) {
         console.error('Error fetching ingredient costs:', error)
+        return {
+            data: null,
+            error: error.message,
+            isSuccess: false
+        }
+    }
+}
+
+export async function getProductionYieldReport(
+    kodeOutlet: string,
+    startDate?: string,
+    endDate?: string
+): Promise<ApiResponse<ViewReportProductionYield[]>> {
+    try {
+        let query = supabase
+            .from('view_report_production_yield')
+            .select('*')
+            .eq('kode_outlet', kodeOutlet)
+            .order('transaction_date', { ascending: false })
+
+        if (startDate) {
+            query = query.gte('transaction_date', startDate)
+        }
+
+        if (endDate) {
+            query = query.lte('transaction_date', endDate)
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        return {
+            data: data as ViewReportProductionYield[],
+            error: null,
+            isSuccess: true
+        }
+    } catch (error: any) {
+        console.error('Error fetching production yield report:', error)
         return {
             data: null,
             error: error.message,

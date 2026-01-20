@@ -35,6 +35,7 @@ import { ReportGrSupplierPage } from '@/pages/procurement/ReportGrSupplierPage'
 import { RecipeListPage } from '@/pages/production/RecipeListPage'
 import { RecipeFormPage } from '@/pages/production/RecipeFormPage'
 import { ProductionRunPage } from '@/pages/production/ProductionRunPage'
+import { ProductionCostYieldPage } from '@/pages/production/ProductionCostYieldPage'
 import { ShrinkageFormPage } from '@/pages/inventory/ShrinkageFormPage'
 import { StockOpnamePage } from '@/pages/inventory/StockOpnamePage'
 import InventoryReportPage from '@/pages/inventory/InventoryReportPage'
@@ -43,6 +44,11 @@ import ShrinkageReportPage from '@/pages/inventory/ShrinkageReportPage'
 import StockOpnameVariancePage from '@/pages/inventory/StockOpnameVariancePage'
 import ApAgingReportPage from '@/pages/finance/ApAgingReportPage'
 import CashFlowReportPage from '@/pages/finance/CashFlowReportPage'
+import { OutstandingPoReportPage } from '@/pages/procurement/OutstandingPoReportPage'
+import { SupplierPerformanceReportPage } from '@/pages/procurement/SupplierPerformanceReportPage'
+import PoReportPage from '@/pages/procurement/PoReportPage'
+import InvoicesReportPage from '@/pages/finance/InvoicesReportPage'
+import PurchaseInvoicePrint from '@/pages/finance/PurchaseInvoicePrint'
 
 import StoCreatePage from '@/pages/sto/StoCreatePage'
 import StoGoodsIssuePage from '@/pages/sto/StoGoodsIssuePage'
@@ -291,6 +297,14 @@ function App() {
             }
           />
           <Route
+            path="/production/cost-yield"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <ProductionCostYieldPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/procurement/settlement-po"
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
@@ -303,8 +317,28 @@ function App() {
             element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
           />
           <Route
+            path="/procurement/report-outstanding-po"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <OutstandingPoReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/procurement/report-supplier-performance"
+            element={
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+                <SupplierPerformanceReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/procurement/report-po"
-            element={<ProtectedRoute><UnderConstructionPage /></ProtectedRoute>}
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+                <PoReportPage />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/procurement/report-gr"
@@ -557,6 +591,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 5, 8]}>
                 <UnderConstructionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/invoices-report"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
+                <InvoicesReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/invoices/print/:invoiceId"
+            element={
+              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
+                <PurchaseInvoicePrint />
               </ProtectedRoute>
             }
           />

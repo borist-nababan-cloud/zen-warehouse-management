@@ -142,6 +142,8 @@ const goodsReceiptGroup: NavGroup = {
     { title: 'Invoicing PO', path: '/procurement/invoicing-po', icon: FileText, roleIds: [1, 6, 7, 8] },
     // { title: 'Settlement PO', path: '/procurement/settlement-po', icon: DollarSign, roleIds: [1, 6, 7, 8] },
     // { title: 'STO Return In', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Outstanding PO Report', path: '/procurement/report-outstanding-po', icon: AlertOctagon, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Supplier Performance', path: '/procurement/report-supplier-performance', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
     { title: 'Report PO', path: '/procurement/report-po', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
     { title: 'Report GR Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [1, 2, 5, 6, 7, 8] },
   ]
@@ -180,6 +182,7 @@ const productionGroup: NavGroup = {
   children: [
     { title: 'Recipe Manager', path: '/production/recipes', icon: BookOpen, roleIds: [1, 6, 8] },
     { title: 'Production Run', path: '/production/run', icon: ClipboardList, roleIds: [1, 6, 8] },
+    { title: 'Cost & Yield Report', path: '/production/cost-yield', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
   ]
 }
 
@@ -192,6 +195,7 @@ const financeGroup: NavGroup = {
     { title: 'General Transactions', path: '/finance/general-transactions', icon: Receipt, roleIds: [1, 3, 6] },
     { title: 'Report AP Aging', path: '/finance/report-ap-aging', icon: Clock, roleIds: [1, 3, 5, 8] },
     { title: 'Report Cash Flow', path: '/finance/report-cash-flow', icon: Banknote, roleIds: [3, 5, 6, 8] },
+    { title: 'Invoices Report', path: '/finance/invoices-report', icon: FileText, roleIds: [1, 3, 5, 6, 8] },
     { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [1, 3, 6] },
     { title: 'STO Paydown', path: '/finance/sto-paydown', icon: Boxes, roleIds: [1, 3, 6] },
   ]

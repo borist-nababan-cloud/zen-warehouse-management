@@ -16,3 +16,12 @@ export const formatCurrency = (amount: number) => {
     maximumFractionDigits: 0,
   }).format(amount)
 }
+
+export const formatDate = (dateString: string | Date | null | undefined) => {
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}

@@ -470,6 +470,51 @@ export interface StoInvoice {
 
 
 // ============================================
+// FINANCE & INVOICE TYPES
+// ============================================
+
+export interface PurchaseInvoice {
+  id: string
+  document_number: string
+  supplier_invoice_number: string
+  invoice_date: string
+  due_date: string
+  kode_supplier: string
+  kode_outlet: string
+  po_id: string
+  status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
+  total_amount: number
+  notes: string | null
+  created_at: string
+  // Joins
+  master_supplier?: MasterSupplier
+  purchase_orders?: PurchaseOrder
+}
+
+export interface FinancePaymentOut {
+  id: string
+  document_number: string
+  payment_date: string
+  account_id: string
+  amount: number
+  notes: string | null
+  created_at: string
+  // Joins
+  master_financial_accounts?: FinancialAccount
+}
+
+export interface FinancePaymentAllocation {
+  id: string
+  payment_id: string
+  invoice_id: string
+  amount_paid: number
+  created_at: string
+  // Joins
+  finance_payments_out?: FinancePaymentOut
+}
+
+
+// ============================================
 // LEGACY TABLE TYPES (to be deprecated)
 // ============================================
 
@@ -744,5 +789,66 @@ export interface CashFlowItem {
   money_in: number
   money_out: number
   balance_after: number
+  kode_outlet: string
+}
+
+export interface ViewReportProductionYield {
+  document_number: string
+  transaction_date: string // Date string
+  finished_good_name: string
+  qty_produced: number
+  unit_cost_result: number
+  total_production_cost: number
+  ingredient_count: number
+  created_by_name: string
+  kode_outlet: string
+}
+
+export interface ViewReportPoOutstanding {
+  document_number: string
+  created_at?: never // Ensure we don't accidentally use this
+  po_created_at: string
+  supplier_name: string
+  supplier_phone: string | null
+  item_name: string
+  qty_ordered: number
+  qty_received: number
+  qty_remaining: number
+  estimated_pending_value: number
+  kode_outlet: string
+}
+
+export interface ViewReportSupplierPerformance {
+  supplier_name: string
+  total_pos: number
+  total_qty_ordered: number
+  total_qty_received: number
+  fulfillment_rate_percent: number
+  total_spend: number
+  kode_outlet: string
+}
+
+export interface ViewReportPurchaseInvoices {
+  invoice_id: string
+  invoice_date: string
+  invoice_doc_number: string
+  supplier_invoice_number: string
+  supplier_name: string
+  po_doc_number: string
+  po_id: string
+  status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
+  total_amount: number
+  kode_outlet: string
+}
+
+export interface ViewReportPurchaseOrders {
+  po_id: string
+  po_date: string
+  po_doc_number: string
+  supplier_name: string
+  status: PurchaseOrderStatus
+  expected_delivery_date: string | null
+  grand_total: number
+  linked_invoice_id: string | null
   kode_outlet: string
 }

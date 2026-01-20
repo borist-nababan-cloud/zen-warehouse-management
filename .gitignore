@@ -47,3 +47,4 @@ database-docs/
 my-cred/
 scripts/*.cjs
 scripts/*.js
+*.sql
