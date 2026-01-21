@@ -1,13 +1,8 @@
-
 import { supabase } from '@/lib/supabase'
 import { 
   StoOrder, 
-  StoItem, 
-  StoShipment, 
-  StoReceipt, 
   StoStatus, 
-  StoRecipientStatus, 
-  StoInvoice 
+  StoRecipientStatus
 } from '@/types/database'
 
 export interface CreateStoPayload {
@@ -261,7 +256,7 @@ export const stoService = {
   },
 
   // 7. Create Invoice (Admin Recipient)
-  async createInvoice(stoId: string, createdBy: string) { // createdBy typically unused in sto_invoices based on schema, but good to have
+  async createInvoice(stoId: string, _createdBy: string) { // createdBy typically unused in sto_invoices based on schema, but good to have
     // Fetch STO to calculate totals
     const sto = await this.getStoDetail(stoId)
     if (!sto) throw new Error("STO not found")

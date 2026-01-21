@@ -350,6 +350,7 @@ export interface GoodsReceipt {
   master_outlet?: MasterOutlet | null
   goods_receipt_items?: GoodsReceiptItem[]
   received_by_email?: string
+  notes?: string | null
 }
 
 export interface GoodsReceiptItem {

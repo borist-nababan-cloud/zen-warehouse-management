@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useProductsPaginated } from '@/hooks/useMasterBarang'
 import { getShrinkageCategories, createShrinkageLog } from '@/services/inventoryService'
@@ -19,12 +18,12 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, AlertTriangle, Save } from 'lucide-react'
 import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
+
 import { toast } from 'sonner'
 import { MasterShrinkageCategory } from '@/types/database'
 
 export function ShrinkageFormPage() {
-    const navigate = useNavigate()
+    // const navigate = useNavigate()
     const { user } = useAuthUser()
     const [isSubmitting, setIsSubmitting] = useState(false)
 

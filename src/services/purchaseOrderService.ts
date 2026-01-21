@@ -232,6 +232,7 @@ export const updatePurchaseOrderItems = async (
                 const { error } = await supabase
                     .from('purchase_order_items')
                     .insert({ ...payload, qty_received: 0 })
+                if (error) throw error
             }
         }
 

@@ -13,7 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Plus, BookOpen, ChevronRight, Pencil } from 'lucide-react'
+import { Plus, BookOpen, Pencil } from 'lucide-react'
 
 export function RecipeListPage() {
     const navigate = useNavigate()

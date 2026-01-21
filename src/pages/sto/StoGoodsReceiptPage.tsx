@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ClipboardCheck, PackageCheck, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,7 +16,7 @@ import { stoService } from '@/services/stoService'
 import { useAuthUser } from '@/hooks/useAuth'
 import { StoOrder } from '@/types/database'
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
+
 
 
 
@@ -63,7 +63,7 @@ export default function StoGoodsReceiptPage() {
                     // Find if already in list (if multiple shipments send same item? Shouldn't happen in simple 1-batch flow)
                     // Just push for now
                     // Need to match with master_barang info from sto_items
-                    const stoItem = fullSto.sto_items?.find(i => i.id === shipItem.sto_item_id)
+                    // const stoItem = fullSto.sto_items?.find(i => i.id === shipItem.sto_item_id)
 
                     itemsToReceive.push({
                         sto_item_id: shipItem.sto_item_id,

@@ -159,6 +159,7 @@ export function useCanAccessMenu(menu: string) {
     7: ['dashboard', 'inventory', 'purchase-orders'],
     8: ['*'],
     9: [],
+    10: ['dashboard', 'finance'],
   }
 
   const permissions = role ? menuPermissions[role] : []

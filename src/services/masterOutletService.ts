@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase'
-import { MasterOutlet, PaginatedResponse } from '@/types/database'
+import { MasterOutlet } from '@/types/database'
 
 export const masterOutletService = {
   async getAllOutlets(filterCanSto: boolean = false) {
