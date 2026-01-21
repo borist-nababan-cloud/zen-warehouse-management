@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { useAuthUser } from '@/hooks/useAuth'
 import { getInvoicesReport } from '@/services/invoiceService'
-import { ViewReportPurchaseInvoices } from '@/types/database'
+import { masterOutletService } from '@/services/masterOutletService'
+import { ViewReportPurchaseInvoices, MasterOutlet } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Printer, FileText, Search, CreditCard, Filter } from 'lucide-react'
+import { Printer, FileText, Search, CreditCard, Filter, Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function InvoicesReportPage() {
@@ -38,16 +39,49 @@ export default function InvoicesReportPage() {
     const [loading, setLoading] = useState(true)
 
     // Filters
-    const [startDate, setStartDate] = useState<string>('')
-    const [endDate, setEndDate] = useState<string>('')
+    // Default dates: Start of month to Today
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    // Format as yyyy-MM-dd for HTML input
+    const formatDateInput = (d: Date) => d.toISOString().split('T')[0]
+
+    const [startDate, setStartDate] = useState<string>(formatDateInput(firstDay))
+    const [endDate, setEndDate] = useState<string>(formatDateInput(today))
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('ALL')
+    const [outlets, setOutlets] = useState<MasterOutlet[]>([])
+
+    // Roles who can see ALL outlets: 5 (Finance) and 8 (Superuser)
+    const canSeeAllOutlets = user?.user_role === 5 || user?.user_role === 8
+
 
     useEffect(() => {
-        if (user?.kode_outlet) {
+        if (canSeeAllOutlets) {
+            masterOutletService.getAllWhOutlet().then(setOutlets).catch(console.error)
+        }
+    }, [canSeeAllOutlets])
+
+    useEffect(() => {
+        if (user) {
+            // Initialize outlet filter for regular users
+            if (!canSeeAllOutlets && user.kode_outlet) {
+                setSelectedOutlet(user.kode_outlet)
+            }
+        }
+    }, [user])
+
+    // ... (keep existing effects)
+
+    // ... (around line 226)
+
+
+    useEffect(() => {
+        if (user) {
             fetchData()
         }
-    }, [user?.kode_outlet, startDate, endDate])
+    }, [user, startDate, endDate, selectedOutlet])
 
     // Client-side search and status filter effect
     useEffect(() => {
@@ -62,9 +96,9 @@ export default function InvoicesReportPage() {
         if (searchTerm) {
             const lowerInfo = searchTerm.toLowerCase()
             filtered = filtered.filter(item =>
-                item.invoice_doc_number.toLowerCase().includes(lowerInfo) ||
+                item.invoice_doc.toLowerCase().includes(lowerInfo) ||
                 item.supplier_name.toLowerCase().includes(lowerInfo) ||
-                (item.po_doc_number && item.po_doc_number.toLowerCase().includes(lowerInfo)) ||
+                (item.po_doc && item.po_doc.toLowerCase().includes(lowerInfo)) ||
                 (item.supplier_invoice_number && item.supplier_invoice_number.toLowerCase().includes(lowerInfo))
             )
         }
@@ -73,17 +107,16 @@ export default function InvoicesReportPage() {
     }, [searchTerm, statusFilter, originalData])
 
     const fetchData = async () => {
-        if (!user?.kode_outlet) return
-
         setLoading(true)
         try {
-            // If dates are provided, use them. Otherwise fetching all might be too much, 
-            // but for now let's assume reasonable dataset or let user filter.
-            // PERINTAH.MD says: Filters: Date Range.
-            // Let's rely on service to handle "fetch latest" if dates are empty, or just blank.
-            // Actually getInvoicesReport accepts optional dates.
+            // Determine outlet code to send
+            let outletFilter = selectedOutlet
+            // Safety: If not privileged, force their own outlet
+            if (!canSeeAllOutlets && user?.kode_outlet) {
+                outletFilter = user.kode_outlet
+            }
 
-            const res = await getInvoicesReport(user.kode_outlet, startDate || undefined, endDate || undefined)
+            const res = await getInvoicesReport(outletFilter, startDate || undefined, endDate || undefined)
 
             if (res.isSuccess && res.data) {
                 setOriginalData(res.data)
@@ -91,7 +124,7 @@ export default function InvoicesReportPage() {
             } else {
                 toast.error(res.error || 'Failed to load report')
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error:', error)
             toast.error('An unexpected error occurred')
         } finally {
@@ -101,6 +134,56 @@ export default function InvoicesReportPage() {
 
     const getTotalAmount = () => {
         return data.reduce((sum, item) => sum + (item.total_amount || 0), 0)
+    }
+
+    const exportToCSV = () => {
+        if (data.length === 0) {
+            toast.error("No data to export")
+            return
+        }
+
+        // Define headers
+        const headers = [
+            "Date",
+            "Invoice #",
+            "Supplier Invoice #",
+            "Supplier",
+            "PO Number",
+            "Outlet",
+            "Due Date",
+            "Status",
+            "Total Amount"
+        ]
+
+        // Map data to CSV rows
+        const csvRows = data.map(item => [
+            formatDate(item.invoice_date),
+            `"${item.invoice_doc}"`, // Quote to handle potential commas
+            `"${item.supplier_invoice_number || ''}"`,
+            `"${item.supplier_name}"`,
+            `"${item.po_doc || ''}"`,
+            `"${item.kode_outlet || ''}"`,
+            item.payment_due_date ? formatDate(item.payment_due_date) : '',
+            item.status,
+            item.total_amount
+        ])
+
+        // Combine headers and rows
+        const csvContent = [
+            headers.join(","),
+            ...csvRows.map(row => row.join(","))
+        ].join("\n")
+
+        // Create download link
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.setAttribute("href", url)
+        link.setAttribute("download", `Invoices_Report_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = "hidden"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     // Status Badge Helpers
@@ -117,11 +200,17 @@ export default function InvoicesReportPage() {
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Purchase Invoices Report</h1>
-                    <p className="text-slate-500">
-                        Monitor, track, and print your purchase invoices history.
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Purchase Invoices Report</h1>
+                        <p className="text-slate-500">
+                            Monitor, track, and print your purchase invoices history.
+                        </p>
+                    </div>
+                    <Button onClick={exportToCSV} variant="outline" className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50">
+                        <Download className="h-4 w-4" />
+                        Export CSV
+                    </Button>
                 </div>
 
                 {/* Filters */}
@@ -133,7 +222,7 @@ export default function InvoicesReportPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label htmlFor="start-date">Start Date</Label>
                                 <Input
@@ -154,19 +243,27 @@ export default function InvoicesReportPage() {
                                     className="border-slate-300 focus:border-indigo-500"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="search">Search</Label>
-                                <div className="relative">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                                    <Input
-                                        id="search"
-                                        placeholder="Search invoice, supplier, or PO..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-9 border-slate-300 focus:border-indigo-500"
-                                    />
+
+                            {/* Outlet Filter for privileged roles */}
+                            {canSeeAllOutlets && (
+                                <div className="space-y-2">
+                                    <Label>Outlet</Label>
+                                    <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                        <SelectTrigger className="border-slate-300">
+                                            <SelectValue placeholder="All Outlets" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">All Outlets</SelectItem>
+                                            {outlets.map((outlet) => (
+                                                <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                    {outlet.name_outlet} ({outlet.kode_outlet})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                            </div>
+                            )}
+
                             <div className="space-y-2">
                                 <Label htmlFor="status-filter">Status</Label>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -183,10 +280,24 @@ export default function InvoicesReportPage() {
                                 </Select>
                             </div>
                         </div>
+
+                        <div className="mt-4">
+                            <Label htmlFor="search" className="mb-2 block">Search</Label>
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                                <Input
+                                    id="search"
+                                    placeholder="Search invoice, supplier, or PO..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 border-slate-300 focus:border-indigo-500 w-full md:w-1/2"
+                                />
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 
-                {/* Summary Cards (Quick Stats based on filtered view) */}
+                {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card className="bg-indigo-50 border-indigo-100 shadow-sm">
                         <CardContent className="p-6">
@@ -222,6 +333,7 @@ export default function InvoicesReportPage() {
                         <TableHeader className="bg-slate-50/80">
                             <TableRow>
                                 <TableHead>Date</TableHead>
+                                <TableHead>Outlet</TableHead>
                                 <TableHead>Invoice #</TableHead>
                                 <TableHead>Supplier</TableHead>
                                 <TableHead>PO Number</TableHead>
@@ -233,11 +345,16 @@ export default function InvoicesReportPage() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">Loading...</TableCell>
+                                    <TableCell colSpan={8} className="h-24 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                                            <span className="text-slate-500">Loading data...</span>
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
                             ) : data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center text-slate-500">
+                                    <TableCell colSpan={8} className="h-24 text-center text-slate-500">
                                         No invoices found matching your criteria.
                                     </TableCell>
                                 </TableRow>
@@ -247,8 +364,11 @@ export default function InvoicesReportPage() {
                                         <TableCell className="font-medium text-slate-600">
                                             {formatDate(row.invoice_date)}
                                         </TableCell>
+                                        <TableCell className="text-xs text-slate-500">
+                                            {row.kode_outlet}
+                                        </TableCell>
                                         <TableCell className="font-mono text-xs text-slate-500">
-                                            {row.invoice_doc_number}
+                                            {row.invoice_doc}
                                             {row.supplier_invoice_number && (
                                                 <div className="text-[10px] text-slate-400 mt-0.5">Ref: {row.supplier_invoice_number}</div>
                                             )}
@@ -257,7 +377,7 @@ export default function InvoicesReportPage() {
                                             {row.supplier_name}
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-slate-500">
-                                            {row.po_doc_number || '-'}
+                                            {row.po_doc || '-'}
                                         </TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(row.status)}`}>
@@ -276,7 +396,6 @@ export default function InvoicesReportPage() {
                                                     title="Print Invoice"
                                                     className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
                                                     onClick={() => {
-                                                        // Opens /finance/invoices/print/:id in new tab
                                                         const url = `/finance/invoices/print/${row.invoice_id}`
                                                         window.open(url, '_blank')
                                                     }}
@@ -290,12 +409,10 @@ export default function InvoicesReportPage() {
                                                     size="icon"
                                                     title="View/Print PO"
                                                     className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50"
-                                                    disabled={!row.po_id}
+                                                    disabled={!row.purchase_order_id}
                                                     onClick={() => {
-                                                        if (row.po_id) {
-                                                            // Reuse existing PO print: /procurement/purchase-orders/:id/print or similar
-                                                            // Checking existing routes: /procurement/purchase-orders/:id/print
-                                                            const url = `/procurement/purchase-orders/${row.po_id}/print`
+                                                        if (row.purchase_order_id) {
+                                                            const url = `/procurement/purchase-orders/${row.purchase_order_id}/print`
                                                             window.open(url, '_blank')
                                                         }
                                                     }}
@@ -312,7 +429,8 @@ export default function InvoicesReportPage() {
                 </div>
 
                 <div className="text-center text-xs text-slate-400 mt-4">
-                    Showing {data.length} records
+                    Showing {data.length} records.
+                    {canSeeAllOutlets && " Admin View Enabled."}
                 </div>
             </div>
         </DashboardLayout>

@@ -1,8 +1,7 @@
-
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getInvoicePrintDetails, getInvoicePaymentHistory, InvoicePrintDetails } from '@/services/invoiceService'
-import { FinancePaymentAllocation } from '@/types/database'
+import { getInvoicePrintDetails, getInvoiceReportById, InvoicePrintDetails } from '@/services/invoiceService'
+import { ViewReportPurchaseInvoices } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -12,7 +11,7 @@ export default function PurchaseInvoicePrint() {
     const { invoiceId } = useParams<{ invoiceId: string }>()
     const navigate = useNavigate()
     const [invoice, setInvoice] = useState<InvoicePrintDetails | null>(null)
-    const [payments, setPayments] = useState<FinancePaymentAllocation[]>([])
+    const [reportView, setReportView] = useState<ViewReportPurchaseInvoices | null>(null) // Use view for payment history
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -20,15 +19,17 @@ export default function PurchaseInvoicePrint() {
 
         const fetchData = async () => {
             try {
+                // 1. Fetch Print Details (Items, Supplier, PO)
                 const invRes = await getInvoicePrintDetails(invoiceId)
                 if (invRes.isSuccess && invRes.data) {
                     setInvoice(invRes.data)
 
-                    // Only fetch payments if status is PAID or PARTIAL
+                    // 2. Fetch View Data (Payment History from JSON)
+                    // We fetch this regardless of status to be safe, or check status matches
                     if (invRes.data.status === 'PAID' || invRes.data.status === 'PARTIAL') {
-                        const payRes = await getInvoicePaymentHistory(invoiceId)
-                        if (payRes.isSuccess && payRes.data) {
-                            setPayments(payRes.data)
+                        const viewRes = await getInvoiceReportById(invoiceId)
+                        if (viewRes.isSuccess && viewRes.data) {
+                            setReportView(viewRes.data)
                         }
                     }
                 }
@@ -58,9 +59,18 @@ export default function PurchaseInvoicePrint() {
         <div className="min-h-screen bg-slate-100 p-8 print:p-0 print:bg-white">
             {/* Navigation & Actions - Hidden on Print */}
             <div className="max-w-[210mm] mx-auto mb-6 flex items-center justify-between print:hidden">
-                <Button variant="outline" onClick={() => navigate(-1)} className="gap-2">
+                <Button variant="outline" onClick={() => {
+                    if (window.history.length > 1) {
+                        navigate(-1)
+                    } else {
+                        // If opened in new tab/window, close it; otherwise fallback to invoices list
+                        window.close()
+                        // Fallback in case window.close() is blocked
+                        setTimeout(() => navigate('/finance/invoices'), 100)
+                    }
+                }} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    Back
+                    Close
                 </Button>
                 <Button onClick={handlePrint} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                     <Printer className="h-4 w-4" />
@@ -84,7 +94,7 @@ export default function PurchaseInvoicePrint() {
                     <div className="text-right">
                         <h2 className="text-lg font-bold text-slate-700 mb-1">Bill To (Outlet)</h2>
                         <div className="text-sm text-slate-600">
-                            <p className="font-medium">{invoice.kode_outlet}</p>
+                            <p className="font-medium">{po?.kode_outlet || '-'}</p>
                             {/* If we had full outlet details joined, we'd show address here */}
                             <p>Holding / Warehouse</p>
                         </div>
@@ -96,7 +106,7 @@ export default function PurchaseInvoicePrint() {
                     <div>
                         <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">Supplier Details</h3>
                         <div className="text-sm text-slate-700">
-                            <p className="font-bold text-base">{supplier?.name || `Unknown Supplier ${invoice.kode_supplier ? `(${invoice.kode_supplier})` : ''}`}</p>
+                            <p className="font-bold text-base">{supplier?.name || `Unknown Supplier`}</p>
                             {supplier?.address && <p>{supplier.address}</p>}
                             {supplier?.city && <p>{supplier.city}</p>}
                             {supplier?.phone && <p>Phone: {supplier.phone}</p>}
@@ -115,7 +125,7 @@ export default function PurchaseInvoicePrint() {
                             </div>
                             <div className="flex justify-between border-b border-slate-50 pb-1">
                                 <span className="text-slate-500">Due Date</span>
-                                <span className="font-medium">{formatDate(invoice.due_date)}</span>
+                                <span className="font-medium">{invoice.payment_due_date ? formatDate(invoice.payment_due_date) : '-'}</span>
                             </div>
                         </div>
                     </div>
@@ -175,45 +185,42 @@ export default function PurchaseInvoicePrint() {
                 </div>
 
                 {/* Payment History (Conditional) */}
-                {payments.length > 0 && (
-                    <div className="border-t-2 border-slate-100 pt-8 mt-8 break-inside-avoid">
-                        <h3 className="font-bold text-slate-700 mb-4 bg-slate-50 inline-block px-3 py-1 rounded">Payment History</h3>
-                        <Table>
-                            <TableHeader className="bg-slate-50">
-                                <TableRow>
-                                    <TableHead className="text-xs">Payment Date</TableHead>
-                                    <TableHead className="text-xs">Method</TableHead>
-                                    <TableHead className="text-xs">Reference</TableHead>
-                                    <TableHead className="text-xs">Notes</TableHead>
-                                    <TableHead className="text-xs text-right">Amount Paid</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {payments.map((p, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell>{formatDate(p.finance_payments_out?.payment_date)}</TableCell>
-                                        <TableCell>
-                                            {p.finance_payments_out?.master_financial_accounts?.account_name}
-                                            <span className="text-xs text-slate-400 ml-1">
-                                                ({p.finance_payments_out?.master_financial_accounts?.account_type})
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="font-mono text-xs">{p.finance_payments_out?.document_number}</TableCell>
-                                        <TableCell className="text-xs italic text-slate-500">{p.finance_payments_out?.notes || '-'}</TableCell>
-                                        <TableCell className="text-right font-medium">{formatCurrency(p.amount_paid)}</TableCell>
+                {
+                    reportView?.payment_history && reportView.payment_history.length > 0 && (
+                        <div className="border-t-2 border-slate-100 pt-8 mt-8 break-inside-avoid">
+                            <h3 className="font-bold text-slate-700 mb-4 bg-slate-50 inline-block px-3 py-1 rounded">Payment History</h3>
+                            <Table>
+                                <TableHeader className="bg-slate-50">
+                                    <TableRow>
+                                        <TableHead className="text-xs">Payment Date</TableHead>
+                                        <TableHead className="text-xs">Method</TableHead>
+                                        <TableHead className="text-xs">Reference</TableHead>
+                                        <TableHead className="text-xs text-right">Amount Paid</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                )}
+                                </TableHeader>
+                                <TableBody>
+                                    {reportView.payment_history.map((p, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell>{formatDate(p.payment_date)}</TableCell>
+                                            <TableCell>
+                                                {p.method}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">{p.document_number}</TableCell>
+                                            <TableCell className="text-right font-medium">{formatCurrency(p.amount)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )
+                }
 
                 {/* Footer */}
                 <div className="mt-12 pt-8 border-t border-dashed border-slate-200 text-center text-slate-400 text-xs">
-                    <p>Generated by Warehouse Management System</p>
+                    <p>Generated by {import.meta.env.VITE_APP_NAME || 'Warehouse Management System'}</p>
                     <p>Printed on {new Date().toLocaleString('id-ID')}</p>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }

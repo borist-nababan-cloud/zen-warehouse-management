@@ -37,6 +37,10 @@ const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
 }
 
+import { masterOutletService } from '@/services/masterOutletService'
+import { MasterOutlet } from '@/types/database'
+
+// at top of component
 export function ReportGrSupplierPage() {
     const { user } = useAuthUser()
     const [data, setData] = useState<ViewPoDetailsReceived[]>([])
@@ -46,18 +50,24 @@ export function ReportGrSupplierPage() {
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const [selectedOutlet, setSelectedOutlet] = useState<string>('ALL')
+    const [outlets, setOutlets] = useState<MasterOutlet[]>([])
 
     // Roles who can see ALL outlets: 5 (Finance) and 8 (Superuser)
-    // Note: User prompt mentioned role 1,2,6,7 cannot see all. 5 and 8 can.
     const canSeeAllOutlets = user?.user_role === 5 || user?.user_role === 8
+
+    useEffect(() => {
+        if (canSeeAllOutlets) {
+            masterOutletService.getAllWhOutlet().then(setOutlets).catch(console.error)
+        }
+    }, [canSeeAllOutlets])
 
     useEffect(() => {
         // Initialize filters based on user
         if (user) {
-            // Default date range: current month? or just empty
+            // Default date range: current month
             const today = new Date()
             setEndDate(format(today, 'yyyy-MM-dd'))
-            // setStartDate(format(new Date(today.setDate(today.getDate() - 30)), 'yyyy-MM-dd')) // Last 30 days default
+            setStartDate(format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd'))
 
             if (!canSeeAllOutlets && user.kode_outlet) {
                 setSelectedOutlet(user.kode_outlet)
@@ -139,6 +149,10 @@ export function ReportGrSupplierPage() {
                                 />
                             </div>
 
+
+
+
+
                             {canSeeAllOutlets && (
                                 <div className="space-y-2">
                                     <Label>Outlet</Label>
@@ -148,16 +162,11 @@ export function ReportGrSupplierPage() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="ALL">All Outlets</SelectItem>
-                                            {/* Ideally we fetch outlet list here, hardcoding '111' for now or just text input? 
-                                                For now let's allow typing or standard codes if known. 
-                                                If we want a dropdown we need master_outlet data. 
-                                                I'll stick to a simple input or just ALL/111 for MVP if list not available locally.
-                                                Actually, let's just show ALL vs Current User Outlet logic if we don't have outlet list handy.
-                                                Wait, if I am admin I want to see everything.
-                                            */}
-                                            <SelectItem value="111">Celcius Panakukkang (111)</SelectItem>
-                                            <SelectItem value="112">Celcius Pettarani (112)</SelectItem>
-                                            <SelectItem value="113">Celcius Hertasning (113)</SelectItem>
+                                            {outlets.map((outlet) => (
+                                                <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                    {outlet.name_outlet} ({outlet.kode_outlet})
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>

@@ -33,5 +33,16 @@ export const masterOutletService = {
 
     if (error) throw error
     return data as MasterOutlet
+  },
+
+  async getAllWhOutlet() {
+    const { data, error } = await supabase
+      .from('master_outlet')
+      .select('*')
+      .eq('can_sto', true)
+      .order('name_outlet', { ascending: true })
+
+    if (error) throw error
+    return data as MasterOutlet[]
   }
 }

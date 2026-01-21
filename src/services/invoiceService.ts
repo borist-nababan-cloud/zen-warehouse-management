@@ -15,7 +15,8 @@ export interface InvoicePrintDetails extends PurchaseInvoice {
 
 export async function getInvoicePrintDetails(invoiceId: string): Promise<ApiResponse<InvoicePrintDetails>> {
   try {
-    // 1. Fetch Invoice Header Only (No Joins to avoid 400 if FK missing)
+    // 1. Fetch Invoice Header Only
+    // Use proper column names based on schema: purchase_order_id, etc.
     const { data: invoice, error: invoiceError } = await supabase
       .from('purchase_invoices')
       .select('*')
@@ -28,59 +29,43 @@ export async function getInvoicePrintDetails(invoiceId: string): Promise<ApiResp
         return { data: null, error: 'Invoice not found', isSuccess: false }
     }
 
-    // 2. Fetch Supplier Manually
-    let supplier = null
-    console.log('Invoice Supplier Code:', invoice.kode_supplier)
-
-    if (invoice.kode_supplier) {
-        // Try fetching by kode_supplier (UUID per types)
-        const { data: supplierData } = await supabase
-            .from('master_supplier')
-            .select('*')
-            .eq('kode_supplier', invoice.kode_supplier)
-            .single()
-        
-        if (supplierData) {
-             supplier = supplierData
-        } else {
-             console.warn('Supplier not found by kode_supplier, trying ID fallback')
-            const { data: supplierDataById } = await supabase
-                .from('master_supplier')
-                .select('*')
-                .eq('id', invoice.kode_supplier)
-                .single()
-            if (supplierDataById) {
-                supplier = supplierDataById
-            } else {
-                console.error('Supplier not found by ID either for code:', invoice.kode_supplier)
-            }
-        }
-    } else {
-        console.warn('Invoice has no kode_supplier')
-    }
-
-    // 3. Fetch PO Manually
+    // 2. Fetch PO Manually using purchase_order_id
     let purchaseOrder = null
-    if (invoice.po_id) {
+    let supplier = null
+    let items: any[] = []
+
+    if (invoice.purchase_order_id) {
         const { data: poData } = await supabase
             .from('purchase_orders')
-            .select('document_number, expected_delivery_date')
-            .eq('id', invoice.po_id)
+            .select('*') // Select all to get kode_supplier and kode_outlet
+            .eq('id', invoice.purchase_order_id)
             .single()
+        
         purchaseOrder = poData
-    }
 
-    // 4. Fetch Items from Purchase Order Items (linked via PO)
-    let items: any[] = []
-    
-    if (invoice.po_id) {
-        const { data: poItems, error: itemsError } = await supabase
-          .from('purchase_order_items')
-          .select('*')
-          .eq('po_id', invoice.po_id)
+        if (purchaseOrder) {
+             // 3. Fetch Supplier using PO's kode_supplier
+             if (purchaseOrder.kode_supplier) {
+                const { data: supplierData } = await supabase
+                    .from('master_supplier')
+                    .select('*')
+                    .eq('kode_supplier', purchaseOrder.kode_supplier)
+                    .single()
+                
+                if (supplierData) {
+                    supplier = supplierData
+                }
+             }
 
-        if (itemsError) throw itemsError
-        items = poItems || []
+             // 4. Fetch Items using purchase_order_id (which is po_id in items table)
+             const { data: poItems, error: itemsError } = await supabase
+                .from('purchase_order_items')
+                .select('*')
+                .eq('po_id', invoice.purchase_order_id)
+
+             if (itemsError) throw itemsError
+             items = poItems || []
+        }
     }
 
     // 5. Fetch Barang for items manually
@@ -102,6 +87,7 @@ export async function getInvoicePrintDetails(invoiceId: string): Promise<ApiResp
 
     const result: InvoicePrintDetails = {
       ...invoice,
+      // Map legacy/helper fields if needed by UI, or ensure UI uses these nested objects
       master_supplier: supplier,
       purchase_orders: purchaseOrder,
       items: itemsWithBarang || []
@@ -121,6 +107,7 @@ export async function getInvoicePaymentHistory(invoiceId: string): Promise<ApiRe
       .from('finance_payment_allocations')
       .select('*')
       .eq('invoice_id', invoiceId)
+      .order('id', { ascending: true })
 
     if (allocError) throw allocError
 
@@ -178,8 +165,11 @@ export async function getInvoicesReport(
     let query = supabase
       .from('view_report_purchase_invoices')
       .select('*')
-      .eq('kode_outlet', outletCode)
       .order('invoice_date', { ascending: false })
+
+    if (outletCode && outletCode !== 'ALL') {
+      query = query.eq('kode_outlet', outletCode)
+    }
 
     if (startDate) {
       query = query.gte('invoice_date', startDate)
@@ -189,6 +179,7 @@ export async function getInvoicesReport(
       query = query.lte('invoice_date', endDate)
     }
 
+
     const { data, error } = await query
 
     if (error) throw error
@@ -196,6 +187,23 @@ export async function getInvoicesReport(
     return { data: data as ViewReportPurchaseInvoices[], error: null, isSuccess: true }
   } catch (error: any) {
     console.error('Error fetching invoices report:', error)
+    return { data: null, error: error.message, isSuccess: false }
+  }
+}
+
+export async function getInvoiceReportById(invoiceId: string): Promise<ApiResponse<ViewReportPurchaseInvoices>> {
+  try {
+    const { data, error } = await supabase
+      .from('view_report_purchase_invoices')
+      .select('*')
+      .eq('invoice_id', invoiceId)
+      .single()
+
+    if (error) throw error
+
+    return { data: data as ViewReportPurchaseInvoices, error: null, isSuccess: true }
+  } catch (error: any) {
+    console.error('Error fetching invoice report details:', error)
     return { data: null, error: error.message, isSuccess: false }
   }
 }

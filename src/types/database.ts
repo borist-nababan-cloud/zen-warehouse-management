@@ -475,13 +475,12 @@ export interface StoInvoice {
 
 export interface PurchaseInvoice {
   id: string
+  parent_invoice_id?: string // For recursiveness if needed, or null
   document_number: string
   supplier_invoice_number: string
   invoice_date: string
-  due_date: string
-  kode_supplier: string
-  kode_outlet: string
-  po_id: string
+  payment_due_date: string | null
+  purchase_order_id: string
   status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
   total_amount: number
   notes: string | null
@@ -507,8 +506,7 @@ export interface FinancePaymentAllocation {
   id: string
   payment_id: string
   invoice_id: string
-  amount_paid: number
-  created_at: string
+  allocated_amount: number
   // Joins
   finance_payments_out?: FinancePaymentOut
 }
@@ -831,14 +829,23 @@ export interface ViewReportSupplierPerformance {
 export interface ViewReportPurchaseInvoices {
   invoice_id: string
   invoice_date: string
-  invoice_doc_number: string
+  invoice_doc: string           // Was invoice_doc_number
   supplier_invoice_number: string
   supplier_name: string
-  po_doc_number: string
-  po_id: string
+  kode_supplier: string         // Added
+  po_doc: string                // Was po_doc_number
+  purchase_order_id: string     // Was po_id
   status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
   total_amount: number
+  total_paid_amount: number | null // Added
+  payment_due_date: string | null // Added
   kode_outlet: string
+  payment_history: {               // Added JSON column
+    payment_date: string
+    document_number: string
+    method: string
+    amount: number
+  }[] | null
 }
 
 export interface ViewReportPurchaseOrders {
