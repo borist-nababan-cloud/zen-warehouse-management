@@ -372,6 +372,15 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
             // Handle NavGroup (Master Data with submenus)
             if (isNavGroup(item)) {
+              // Check if group has any visible children for current user
+              const visibleChildren = item.children.filter((child) =>
+                user?.user_role === 8 || (user && child.roleIds.includes(user.user_role))
+              )
+
+              if (visibleChildren.length === 0) {
+                return null
+              }
+
               const isOpen = openGroups[item.title] ?? item.defaultOpen ?? false
               const hasActiveChild = item.children.some((child) =>
                 child.path ? isActivePath(child.path) : false
