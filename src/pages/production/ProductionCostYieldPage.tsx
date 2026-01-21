@@ -7,7 +7,18 @@ import { ProductionSummaryCards } from '@/features/production/components/Product
 import { ProductionYieldTable } from '@/features/production/components/ProductionYieldTable'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Store, Download } from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { masterOutletService } from '@/services/masterOutletService'
+import { toast } from 'sonner'
 
 export const ProductionCostYieldPage = () => {
     const { user } = useAuthUser()
@@ -20,18 +31,38 @@ export const ProductionCostYieldPage = () => {
     })
     const [searchQuery, setSearchQuery] = useState('')
 
+    // Outlet Logic
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('')
+    const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
+    const canSelectOutlet = user?.user_role === 5 || user?.user_role === 8
+
+    React.useEffect(() => {
+        if (!canSelectOutlet && user?.kode_outlet) {
+            setSelectedOutlet(user.kode_outlet)
+        } else if (canSelectOutlet) {
+            setSelectedOutlet('ALL')
+        }
+    }, [user, canSelectOutlet])
+
+    React.useEffect(() => {
+        if (canSelectOutlet) {
+            masterOutletService.getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch(err => console.error(err))
+        }
+    }, [canSelectOutlet])
+
     // Fetch Data
     const { data: apiResponse, isLoading, error } = useQuery({
-        queryKey: ['production-yield-report', user?.kode_outlet, dateRange.start, dateRange.end],
+        queryKey: ['production-yield-report', selectedOutlet, dateRange.start, dateRange.end],
         queryFn: () => {
-            if (!user?.kode_outlet) throw new Error('No outlet assigned')
             return getProductionYieldReport(
-                user.kode_outlet,
+                selectedOutlet || user?.kode_outlet || '',
                 dateRange.start,
                 dateRange.end
             )
         },
-        enabled: !!user?.kode_outlet,
+        enabled: !!selectedOutlet,
     })
 
     // Filter and Compute Data
@@ -61,6 +92,44 @@ export const ProductionCostYieldPage = () => {
 
     const handleDateChange = (start: string, end: string) => {
         setDateRange({ start, end })
+    }
+
+    const handleExportCsv = () => {
+        if (filteredData.length === 0) {
+            toast.error('No data to export')
+            return
+        }
+
+        const headers = ['Date', 'Outlet', 'Doc Number', 'Product Name', 'Yield (Qty)', 'Unit Cost', 'Total Cost', 'Ingredients Count', 'Creator']
+        const csvRows = [headers.join(',')]
+
+        filteredData.forEach(row => {
+            const outletName = availableOutlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet || '-'
+
+            const values = [
+                format(new Date(row.transaction_date), 'yyyy-MM-dd'),
+                `"${outletName}"`,
+                `"${row.document_number}"`,
+                `"${row.finished_good_name}"`,
+                row.qty_produced,
+                row.unit_cost_result,
+                row.total_production_cost,
+                row.ingredient_count,
+                `"${row.created_by_name}"`
+            ]
+            csvRows.push(values.join(','))
+        })
+
+        const csvContent = csvRows.join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `Production_Cost_Yield_${dateRange.start}_${dateRange.end}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
     }
 
     if (isLoading) {
@@ -96,6 +165,38 @@ export const ProductionCostYieldPage = () => {
                     </p>
                 </div>
 
+                {/* Outlet Selector & Controls */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-end justify-between bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="flex-1 w-full md:max-w-xs">
+                        {canSelectOutlet && (
+                            <div className="space-y-2">
+                                <Label>Outlet</Label>
+                                <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                    <SelectTrigger className="w-full bg-white">
+                                        <div className="flex items-center gap-2">
+                                            <Store className="h-4 w-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Select Outlet" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        {availableOutlets.map((outlet) => (
+                                            <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                {outlet.name_outlet}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </div>
+
+                    <Button variant="outline" onClick={handleExportCsv} className="gap-2">
+                        <Download className="h-4 w-4" />
+                        Export CSV
+                    </Button>
+                </div>
+
                 <ProductionReportFilters
                     startDate={dateRange.start}
                     endDate={dateRange.end}
@@ -112,8 +213,10 @@ export const ProductionCostYieldPage = () => {
 
                 <ProductionYieldTable
                     data={filteredData}
+                    showOutlet={canSelectOutlet && selectedOutlet === 'ALL'}
+                    outlets={availableOutlets}
                 />
             </div>
-        </DashboardLayout>
+        </DashboardLayout >
     )
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, Truck, Package } from 'lucide-react'
 import { toast } from 'sonner'
@@ -49,7 +49,7 @@ export default function StoCreatePage() {
     const { user, isLoading: isAuthLoading } = useAuthUser()
     const queryClient = useQueryClient()
 
-    console.log('StoCreatePage render:', { user, isAuthLoading })
+
 
     // State
     const [toOutlet, setToOutlet] = useState<string>('')
@@ -282,7 +282,7 @@ export default function StoCreatePage() {
                                                 </TableRow>
                                             ) : (
                                                 items.map((item, index) => (
-                                                    <TableRow key={`${item.barang_id}-${index}`}>
+                                                    <TableRow key={`${item.barang_id} -${index} `}>
                                                         <TableCell className="font-mono text-xs">{item.sku}</TableCell>
                                                         <TableCell className="font-medium">{item.name}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(item.price_unit)}</TableCell>

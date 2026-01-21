@@ -8,7 +8,6 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
-    CardDescription
 } from '@/components/ui/card'
 import {
     Table,
@@ -29,13 +28,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { toast } from 'sonner'
-import { FileText, Loader2, Filter, Download } from 'lucide-react'
+import { Loader2, Filter } from 'lucide-react'
 import { format } from 'date-fns'
-
-// Helper for currency formatting
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
-}
 
 import { masterOutletService } from '@/services/masterOutletService'
 import { MasterOutlet } from '@/types/database'
@@ -212,7 +206,11 @@ export function ReportGrSupplierPage() {
                                                 <TableCell>
                                                     {item.po_created_at ? format(new Date(item.po_created_at), 'dd/MM/yyyy') : '-'}
                                                 </TableCell>
-                                                {canSeeAllOutlets && <TableCell>{item.kode_outlet}</TableCell>}
+                                                {canSeeAllOutlets && (
+                                                    <TableCell>
+                                                        {outlets.find(o => o.kode_outlet === item.kode_outlet)?.name_outlet || item.kode_outlet}
+                                                    </TableCell>
+                                                )}
                                                 <TableCell>{item.item_name}</TableCell>
                                                 <TableCell className="text-xs text-muted-foreground">{item.sku}</TableCell>
                                                 <TableCell className="text-right font-medium">

@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/layout/Sidebar'
 import { useAuthUser } from '@/hooks/useAuth'
 import { reportService } from '@/services/reportService'
 import { ViewReportPurchaseOrders } from '@/types/database'
+import { masterOutletService } from '@/services/masterOutletService'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,8 +30,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Printer, FileText, Search, TrendingUp, Filter, Wallet } from 'lucide-react'
+import { Printer, FileText, Search, TrendingUp, Filter, Wallet, Store, Download } from 'lucide-react'
 import { toast } from 'sonner'
+import { startOfMonth, endOfMonth, format } from 'date-fns'
 
 export default function PoReportPage() {
     const { user } = useAuthUser()
@@ -38,17 +40,46 @@ export default function PoReportPage() {
     const [originalData, setOriginalData] = useState<ViewReportPurchaseOrders[]>([])
     const [loading, setLoading] = useState(true)
 
-    // Filters
+    // Filter States
     const [startDate, setStartDate] = useState<string>('')
     const [endDate, setEndDate] = useState<string>('')
+
+    // Initialize Default Dates
+    useEffect(() => {
+        const today = new Date()
+        setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'))
+        setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'))
+    }, [])
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
 
+    // Outlet Logic
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('')
+    const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
+    const canSelectOutlet = user?.user_role === 5 || user?.user_role === 8
+
     useEffect(() => {
-        if (user?.kode_outlet) {
+        if (!canSelectOutlet && user?.kode_outlet) {
+            setSelectedOutlet(user.kode_outlet)
+        } else if (canSelectOutlet) {
+            setSelectedOutlet('ALL')
+        }
+    }, [user, canSelectOutlet])
+
+    useEffect(() => {
+        if (canSelectOutlet) {
+            masterOutletService.getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch(err => console.error(err))
+        }
+    }, [canSelectOutlet])
+
+    // Data Fetching Trigger
+    useEffect(() => {
+        if (selectedOutlet) {
             fetchData()
         }
-    }, [user?.kode_outlet, startDate, endDate])
+    }, [selectedOutlet, startDate, endDate])
 
     useEffect(() => {
         let filtered = [...originalData]
@@ -69,11 +100,12 @@ export default function PoReportPage() {
     }, [searchTerm, statusFilter, originalData])
 
     const fetchData = async () => {
-        if (!user?.kode_outlet) return
+        // if (!user?.kode_outlet) return // removed to allow ALL check handling inside logic
+        if (!selectedOutlet) return
 
         setLoading(true)
         try {
-            const res = await reportService.getPoReport(user.kode_outlet, startDate || undefined, endDate || undefined)
+            const res = await reportService.getPoReport(selectedOutlet, startDate || undefined, endDate || undefined)
 
             if (res.isSuccess && res.data) {
                 setOriginalData(res.data)
@@ -101,6 +133,40 @@ export default function PoReportPage() {
         }
     }
 
+    const handleExportCsv = () => {
+        if (data.length === 0) {
+            toast.error('No data to export')
+            return
+        }
+
+        const headers = ['Date', 'Outlet', 'PO Doc', 'Supplier', 'Status', 'Expected Date', 'Grand Total']
+        const csvRows = [headers.join(',')]
+
+        data.forEach(row => {
+            const values = [
+                formatDate(row.po_date),
+                `"${row.kode_outlet}"`,
+                `"${row.po_doc_number}"`,
+                `"${row.supplier_name}"`,
+                row.status,
+                formatDate(row.expected_delivery_date),
+                row.grand_total
+            ]
+            csvRows.push(values.join(','))
+        })
+
+        const csvContent = csvRows.join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `PO_Report_${startDate}_${endDate}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+    }
+
     const totalValue = data.reduce((acc, curr) => acc + (curr.grand_total || 0), 0)
 
     return (
@@ -120,6 +186,10 @@ export default function PoReportPage() {
                             <Filter className="h-4 w-4 text-emerald-500" />
                             Filters & Search
                         </CardTitle>
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={handleExportCsv}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export CSV
+                        </Button>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -143,6 +213,30 @@ export default function PoReportPage() {
                                     className="border-slate-300 focus:border-emerald-500"
                                 />
                             </div>
+
+                            {/* Outlet Filter for Role 5 & 8 */}
+                            {canSelectOutlet && (
+                                <div className="space-y-2">
+                                    <Label>Outlet</Label>
+                                    <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                        <SelectTrigger className="w-full bg-white border-slate-300">
+                                            <div className="flex items-center gap-2">
+                                                <Store className="h-4 w-4 text-muted-foreground" />
+                                                <SelectValue placeholder="Select Outlet" />
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                            {availableOutlets.map((outlet) => (
+                                                <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                    {outlet.name_outlet}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
                             <div className="space-y-2">
                                 <Label htmlFor="search">Search</Label>
                                 <div className="relative">
@@ -212,6 +306,9 @@ export default function PoReportPage() {
                         <TableHeader className="bg-slate-50/80">
                             <TableRow>
                                 <TableHead>Date</TableHead>
+                                {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                    <TableHead>Outlet</TableHead>
+                                )}
                                 <TableHead>PO Doc</TableHead>
                                 <TableHead>Supplier</TableHead>
                                 <TableHead>Status</TableHead>
@@ -237,6 +334,11 @@ export default function PoReportPage() {
                                         <TableCell className="font-medium text-slate-600">
                                             {formatDate(row.po_date)}
                                         </TableCell>
+                                        {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {availableOutlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet}
+                                            </TableCell>
+                                        )}
                                         <TableCell className="font-mono text-xs text-slate-500">
                                             {row.po_doc_number}
                                         </TableCell>

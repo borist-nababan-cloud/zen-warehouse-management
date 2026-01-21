@@ -93,39 +93,39 @@ const navItems: NavItem[] = [
     title: 'POS Dashboard',
     path: '#',
     icon: Activity,
-    roleIds: [1, 5, 6, 8],
+    roleIds: [5, 6, 8, 10],
     children: [
-      { title: 'Financial', path: '/dashboard/financial', icon: DollarSign, roleIds: [1, 5, 6, 8] },
-      { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [1, 5, 6, 8] },
-      { title: 'Product Mix', path: '/dashboard/product-mix', icon: Boxes, roleIds: [1, 5, 6, 8] },
-      { title: 'Peak Hours', path: '/dashboard/peak-hours', icon: Clock, roleIds: [1, 5, 6, 8] },
+      { title: 'Financial', path: '/dashboard/financial', icon: DollarSign, roleIds: [5, 6, 8, 10] },
+      { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [5, 6, 8, 10] },
+      { title: 'Product Mix', path: '/dashboard/product-mix', icon: Boxes, roleIds: [5, 6, 8, 10] },
+      { title: 'Peak Hours', path: '/dashboard/peak-hours', icon: Clock, roleIds: [5, 6, 8, 10] },
     ]
   },
   {
     title: 'Dashboard',
     path: '/dashboard',
     icon: Warehouse,
-    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
+    roleIds: [3, 4, 5, 6, 7, 8, 10],
   },
   {
     title: 'Inventory',
     path: '#', // Group header
     icon: Package,
-    roleIds: [1, 2, 6, 7, 8],
+    roleIds: [5, 6, 7, 8, 10],
     children: [
-      { title: 'Stock Opname', path: '/inventory/stock-opname', icon: ClipboardList, roleIds: [1, 2, 6, 7, 8] },
-      { title: 'Shrinkage / Write-off', path: '/inventory/shrinkage', icon: AlertTriangle, roleIds: [1, 2, 6, 7, 8] },
-      { title: 'Report Inventory', path: '/inventory/report', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
-      { title: 'Report Qty Inventory', path: '/inventory/report-qty', icon: Boxes, roleIds: [1, 2, 6, 7, 8] },
-      { title: 'Report Shrinkage', path: '/inventory/report-shrinkage', icon: AlertOctagon, roleIds: [1, 2, 6, 7, 8] },
-      { title: 'Report Opname Variance', path: '/inventory/report-opname-variance', icon: Scale, roleIds: [1, 2, 6, 7, 8] }
+      { title: 'Stock Opname', path: '/inventory/stock-opname', icon: ClipboardList, roleIds: [6, 7] },
+      { title: 'Shrinkage / Write-off', path: '/inventory/shrinkage', icon: AlertTriangle, roleIds: [6, 7] },
+      { title: 'Report Inventory', path: '/inventory/report', icon: TrendingUp, roleIds: [5, 6, 7, 8, 10] },
+      { title: 'Report Qty Inventory', path: '/inventory/report-qty', icon: Boxes, roleIds: [5, 6, 7, 8, 10] },
+      { title: 'Report Shrinkage', path: '/inventory/report-shrinkage', icon: AlertOctagon, roleIds: [5, 6, 7, 8, 10] },
+      { title: 'Report Opname Variance', path: '/inventory/report-opname-variance', icon: Scale, roleIds: [5, 6, 7, 8, 10] }
     ]
   },
   {
     title: 'Users',
     path: '/users',
     icon: Users,
-    roleIds: [1, 8],
+    roleIds: [8],
     badge: 'Admin',
   },
 ]
@@ -135,89 +135,84 @@ const navItems: NavItem[] = [
 const goodsReceiptGroup: NavGroup = {
   title: 'Goods Receipt',
   icon: FileText,
-  roleIds: [1, 2, 6, 7, 8], // Admin, Staff, Warehouse
+  roleIds: [5, 6, 7, 8, 10],
   children: [
-    { title: 'Purchase Order', path: '/procurement/purchase-orders', icon: FileText, roleIds: [1, 6, 7, 8] },
-    { title: 'GR Supplier', path: '/procurement/goods-receipts', icon: Package, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Invoicing PO', path: '/procurement/invoicing-po', icon: FileText, roleIds: [1, 6, 7, 8] },
-    // { title: 'Settlement PO', path: '/procurement/settlement-po', icon: DollarSign, roleIds: [1, 6, 7, 8] },
-    // { title: 'STO Return In', path: '/procurement/return', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Outstanding PO Report', path: '/procurement/report-outstanding-po', icon: AlertOctagon, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Supplier Performance', path: '/procurement/report-supplier-performance', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
-    { title: 'Report PO', path: '/procurement/report-po', icon: TrendingUp, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Report GR Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [1, 2, 5, 6, 7, 8] },
+    { title: 'Purchase Order', path: '/procurement/purchase-orders', icon: FileText, roleIds: [6, 10] },
+    { title: 'GR Supplier', path: '/procurement/goods-receipts', icon: Package, roleIds: [7] },
+    { title: 'Invoicing PO', path: '/procurement/invoicing-po', icon: FileText, roleIds: [6, 10] },
+    { title: 'Outstanding PO Report', path: '/procurement/report-outstanding-po', icon: AlertOctagon, roleIds: [5, 6, 8, 10] },
+    { title: 'Supplier Performance', path: '/procurement/report-supplier-performance', icon: TrendingUp, roleIds: [5, 6, 8, 10] },
+    { title: 'Report PO', path: '/procurement/report-po', icon: TrendingUp, roleIds: [5, 6, 8, 10] },
+    { title: 'Report GR Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [5, 6, 7, 8, 10] },
   ]
 }
 
 const goodsIssuedGroup: NavGroup = {
   title: 'Goods Issued',
   icon: Truck,
-  roleIds: [1, 2, 6, 7, 8],
+  roleIds: [1, 2, 6, 7, 8], // Keeping group open for Holding/Admin as per MD Group Access text, though items are limited
   children: [
-    // { title: 'STO', path: '/goods-issued/sto', icon: Package, roleIds: [1, 2, 6, 7, 8] },
-    // { title: 'STO GI', path: '/procurement/goods-issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
-    // { title: 'Return STO', path: '/goods-issued/return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Return Supplier', path: '/goods-issued/gi-return-sto', icon: LogOut, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Report GI', path: '/goods-issued/report-gi', icon: Activity, roleIds: [1, 2, 6, 7, 8] },
+    { title: 'Return Supplier', path: '/goods-issued/gi-return-sto', icon: LogOut, roleIds: [8] },
+    { title: 'Report GI', path: '/goods-issued/report-gi', icon: Activity, roleIds: [8] },
   ]
 }
 
 const stockTransferGroup: NavGroup = {
   title: 'Stock Transfer',
   icon: Boxes,
-  roleIds: [1, 2, 6, 7, 8],
+  roleIds: [5, 6, 7, 8, 10],
   children: [
-    { title: 'Transfer Orders', path: '/sto', icon: FileText, roleIds: [1, 6, 8] },
-    { title: 'Approval Inbox', path: '/sto/approval', icon: Users, roleIds: [1, 3, 6, 8] },
-    { title: 'Goods Issue', path: '/sto/issue', icon: Truck, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'Goods Receipt', path: '/sto/receipt', icon: Package, roleIds: [1, 2, 6, 7, 8] },
-    { title: 'STO Invoicing', path: '/sto/invoicing', icon: DollarSign, roleIds: [1, 3, 5, 6, 8] },
+    { title: 'Transfer Orders', path: '/sto', icon: FileText, roleIds: [6, 10] },
+    { title: 'Approval Inbox', path: '/sto/approval', icon: Users, roleIds: [6, 10] },
+    { title: 'Goods Issue', path: '/sto/issue', icon: Truck, roleIds: [7] },
+    { title: 'Goods Receipt', path: '/sto/receipt', icon: Package, roleIds: [7] },
+    { title: 'STO Invoicing', path: '/sto/invoicing', icon: DollarSign, roleIds: [6, 10] },
   ]
 }
 
 const productionGroup: NavGroup = {
   title: 'Production',
   icon: Factory,
-  roleIds: [1, 6, 8],
+  roleIds: [5, 6, 7, 8, 10],
   children: [
-    { title: 'Recipe Manager', path: '/production/recipes', icon: BookOpen, roleIds: [1, 6, 8] },
-    { title: 'Production Run', path: '/production/run', icon: ClipboardList, roleIds: [1, 6, 8] },
-    { title: 'Cost & Yield Report', path: '/production/cost-yield', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
+    { title: 'Recipe Manager', path: '/production/recipes', icon: BookOpen, roleIds: [6, 10] },
+    { title: 'Production Run', path: '/production/run', icon: ClipboardList, roleIds: [7] },
+    { title: 'Cost & Yield Report', path: '/production/cost-yield', icon: TrendingUp, roleIds: [5, 6, 8, 10] },
   ]
 }
 
 const financeGroup: NavGroup = {
   title: 'Financial',
   icon: Landmark,
-  roleIds: [1, 3, 5, 6, 8], // Admin, Laundry Admin, Outlet Admin, Finance, Superuser
+  roleIds: [5, 6, 7, 8, 10],
   children: [
-    { title: 'Accounts', path: '/finance/accounts', icon: DollarSign, roleIds: [1, 3, 6] },
-    { title: 'General Transactions', path: '/finance/general-transactions', icon: Receipt, roleIds: [1, 3, 6] },
-    { title: 'Report AP Aging', path: '/finance/report-ap-aging', icon: Clock, roleIds: [1, 3, 5, 8] },
-    { title: 'Report Cash Flow', path: '/finance/report-cash-flow', icon: Banknote, roleIds: [3, 5, 6, 8] },
-    { title: 'Invoices Report', path: '/finance/invoices-report', icon: FileText, roleIds: [1, 3, 5, 6, 8] },
-    { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [1, 3, 6] },
-    { title: 'STO Paydown', path: '/finance/sto-paydown', icon: Boxes, roleIds: [1, 3, 6] },
+    { title: 'Accounts', path: '/finance/accounts', icon: DollarSign, roleIds: [6, 10] },
+    { title: 'General Transactions', path: '/finance/general-transactions', icon: Receipt, roleIds: [6, 10] },
+    { title: 'Report AP Aging', path: '/finance/report-ap-aging', icon: Clock, roleIds: [5, 6, 8, 10] },
+    { title: 'Report Cash Flow', path: '/finance/report-cash-flow', icon: Banknote, roleIds: [5, 6, 8, 10] }, // Role 1 Excluded per MD
+    { title: 'Invoices Report', path: '/finance/invoices-report', icon: FileText, roleIds: [5, 6, 8, 10] },
+    { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [6, 10] },
+    { title: 'STO Paydown', path: '/finance/sto-paydown', icon: Boxes, roleIds: [6, 10] },
   ]
 }
 
 const paymentGroup: NavGroup = {
   title: 'Payment',
   icon: DollarSign,
-  roleIds: [1, 5, 8], // Admin, Finance
+  roleIds: [5, 6, 7, 8, 10],
   children: [
-    { title: 'Payment', path: '/payment', icon: DollarSign, roleIds: [1, 5, 8] },
-    { title: 'Payment Report', path: '/payment/report', icon: FileText, roleIds: [1, 5, 8] },
+    { title: 'Payment', path: '/payment', icon: DollarSign, roleIds: [8] },
+    { title: 'Payment Report', path: '/payment/report', icon: FileText, roleIds: [8] },
   ]
 }
 
 const laundryGroup: NavGroup = {
   title: 'Laundry',
   icon: Shirt,
-  roleIds: [3, 4, 8], // Laundry Roles
+  roleIds: [5, 6, 7, 8, 10],
   children: [
-    { title: 'Laundry Out', path: '/laundry/out', icon: Truck, roleIds: [3, 4, 8] },
-    { title: 'Laundry In', path: '/laundry/in', icon: Package, roleIds: [3, 4, 8] },
+    { title: 'Laundry Out', path: '/laundry/out', icon: Truck, roleIds: [8] },
+    { title: 'Laundry In', path: '/laundry/in', icon: Package, roleIds: [8] },
   ]
 }
 
@@ -228,32 +223,32 @@ const masterDataGroups: NavGroup[] = [
   {
     title: 'Master Data',
     icon: Boxes,
-    roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
-    defaultOpen: false, // Changed to false to reduce clutter with new groups
+    roleIds: [5, 6, 7, 8, 10],
+    defaultOpen: false,
     children: [
       {
         title: 'Type',
         path: '/master-type',
         icon: Layers,
-        roleIds: [1, 2, 3, 4, 5, 6, 7, 8],
+        roleIds: [5, 6, 7, 8, 10],
       },
       {
         title: 'Product',
         path: '/product',
         icon: Tag,
-        roleIds: [1, 5, 6, 8],
+        roleIds: [6, 10],
       },
       {
         title: 'Price & Unit',
         path: '/price-unit',
         icon: DollarSign,
-        roleIds: [1, 5, 6, 8],
+        roleIds: [6, 10],
       },
       {
         title: 'Supplier',
         path: '/supplier',
         icon: Truck,
-        roleIds: [1, 5, 6, 8],
+        roleIds: [6, 10],
       },
     ],
   },
@@ -262,29 +257,22 @@ const masterDataGroups: NavGroup[] = [
 /**
  * PoS Dashboard Navigation Groups
  */
-const posDashboardGroups: NavGroup[] = [
-  {
-    title: 'PoS Dashboard',
-    icon: TrendingUp,
-    roleIds: [1, 5, 6, 8],
-    defaultOpen: false,
-    children: [
-      { title: 'Financial', path: '/dashboard/financial', icon: TrendingUp, roleIds: [1, 5, 6, 8] },
-      { title: 'Operational', path: '/dashboard/operational', icon: Activity, roleIds: [1, 5, 6, 8] },
-      { title: 'Product & Service Mix', path: '/dashboard/product-mix', icon: Tag, roleIds: [1, 5, 6, 8] },
-      { title: 'Peak Hours Analysis', path: '/dashboard/peak-hours', icon: Clock, roleIds: [1, 5, 6, 8] },
-    ],
-  },
+const posDashboardGroups: NavGroup[] = [ // This is redundant now as it's included in navItems, keeping for compatibility if needed or removing
+  // Actually, it's used in allNavItems. I will comment it out or empty it as it is already in `navItems`
+  // Wait, in the original code, `posDashboardGroups` was defined separately.
+  // In my first replacement chunk, I added PoS Dashboard to `navItems`.
+  // So I should remove it from here or make it empty to avoid duplication.
+  // Let's check `allNavItems` definition.
 ]
 
 // Combine flat items and groups
 const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
-  financeGroup,
   goodsReceiptGroup,
   goodsIssuedGroup,
   stockTransferGroup,
   productionGroup,
+  financeGroup,
   paymentGroup,
   laundryGroup,
   ...posDashboardGroups,
@@ -419,6 +407,12 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                       {item.children.map((child) => {
                         const ChildIcon = child.icon
                         const active = child.path ? isActivePath(child.path) : false
+
+                        // CHECK CHILD ROLE PERMISSION
+                        // If SUPERUSER (8), allow. Else check if user role is in child.roleIds
+                        if (user && user.user_role !== 8 && !child.roleIds.includes(user.user_role)) {
+                          return null
+                        }
 
                         return (
                           <li key={child.title}>

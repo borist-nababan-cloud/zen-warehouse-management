@@ -197,8 +197,11 @@ export async function getShrinkageReport(outletCode: string, startDate?: string,
     let query = supabase
         .from('view_report_shrinkage_analysis')
         .select('*')
-        .eq('kode_outlet', outletCode)
         .order('transaction_date', { ascending: false })
+
+    if (outletCode && outletCode !== 'ALL') {
+        query = query.eq('kode_outlet', outletCode)
+    }
 
     if (startDate) {
         query = query.gte('transaction_date', startDate)

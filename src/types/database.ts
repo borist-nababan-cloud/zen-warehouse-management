@@ -21,7 +21,7 @@
  */
 
 
-export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
 
 /**
  * Legacy Role Names (for backward compatibility)
@@ -34,6 +34,7 @@ export type UserRole =
   | 'finance'
   | 'outlet_admin'
   | 'warehouse_staff'
+  | 'finance_outlet'
 
 /**
  * Map RoleId to UserRole string
@@ -48,6 +49,7 @@ export const ROLE_ID_TO_NAME: Record<RoleId, UserRole | 'SUPERUSER' | 'UNASSIGNE
   7: 'warehouse_staff',
   8: 'SUPERUSER',
   9: 'UNASSIGNED',
+  10: 'finance_outlet',
 }
 
 /**
@@ -61,6 +63,7 @@ export const ROLE_NAME_TO_ID: Record<UserRole, RoleId> = {
   finance: 5,
   outlet_admin: 6,
   warehouse_staff: 7,
+  finance_outlet: 10,
 }
 
 // ============================================
@@ -616,6 +619,7 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   7: 'Warehouse Staff',
   8: 'Superuser',
   9: 'Unassigned',
+  10: 'Finance Outlet',
 }
 
 /**
@@ -633,6 +637,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   7: ['dashboard', 'inventory', 'purchase-orders'],                           // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - no access
+  10: ['dashboard', 'finance', 'product', 'price-unit', 'supplier'],          // Finance Outlet
 }
 
 /**

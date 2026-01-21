@@ -181,7 +181,7 @@ export async function createGoodsReceipt(
 
         // Only update if the DB value is NOT what we expect
         if (currentDbQty !== targetQty) {
-             console.log(`[GR Service] Manual Update Required for Item ${item.po_item_id}. DB: ${currentDbQty}, Target: ${targetQty}`)
+
              await supabase
               .from('purchase_order_items')
               .update({ qty_received: targetQty })

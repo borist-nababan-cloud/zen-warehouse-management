@@ -10,93 +10,15 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuthUser } from '@/hooks/useAuth'
 import { DashboardLayout } from '@/components/layout/Sidebar'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Package,
-  FileText,
-  DollarSign,
-  Shirt,
-  Users,
-
-  AlertCircle,
 } from 'lucide-react'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
 import { useEffect } from 'react'
 import { useSignOut } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 
-// ============================================
-// TYPES
-// ============================================
 
-interface ModuleCard {
-  title: string
-  description: string
-  icon: React.ElementType
-  path: string
-  roleIds: RoleId[]
-  color: string
-}
-
-// ============================================
-// MODULE CONFIGURATION
-// ============================================
-
-/**
- * Module cards with their allowed Role IDs
- * Role ID mapping:
- * 1  - admin_holding
- * 2  - staff_holding
- * 3  - laundry_admin
- * 4  - laundry_staff
- * 5  - finance
- * 6  - outlet_admin
- * 7  - warehouse_staff
- * 8  - SUPERUSER (has all access)
- * 9  - UNASSIGNED (no access)
- */
-const moduleCards: ModuleCard[] = [
-  {
-    title: 'Inventory Management',
-    description: 'Manage products and track inventory movements',
-    icon: Package,
-    path: '/inventory',
-    roleIds: [1, 2, 6, 7, 8],  // admin_holding, staff_holding, outlet_admin, warehouse_staff, superuser
-    color: 'bg-pastel-blue text-blue-700',
-  },
-  {
-    title: 'Purchase Orders',
-    description: 'Create and manage purchase orders',
-    icon: FileText,
-    path: '/purchase-orders',
-    roleIds: [1, 2, 7, 8],  // admin_holding, staff_holding, warehouse_staff, superuser
-    color: 'bg-pastel-purple text-purple-700',
-  },
-  {
-    title: 'Finance',
-    description: 'Invoices, payment and financial reports',
-    icon: DollarSign,
-    path: '/finance',
-    roleIds: [1, 5, 8],  // admin_holding, finance, superuser
-    color: 'bg-pastel-green text-green-700',
-  },
-  {
-    title: 'Laundry Operations',
-    description: 'Manage laundry workflows and tracking',
-    icon: Shirt,
-    path: '/laundry',
-    roleIds: [3, 4, 8],  // laundry_admin, laundry_staff, superuser
-    color: 'bg-pastel-blue text-cyan-700',
-  },
-  {
-    title: 'User Management',
-    description: 'Manage users and assign roles',
-    icon: Users,
-    path: '/users',
-    roleIds: [1, 8],  // admin_holding, superuser
-    color: 'bg-pastel-orange text-orange-700',
-  },
-]
 
 // ============================================
 // COMPONENTS
@@ -141,62 +63,7 @@ function WelcomeCard({ userRole, outletName, kodeOutlet }: WelcomeCardProps) {
   )
 }
 
-function ModuleGrid() {
-  const { user } = useAuthUser()
-  const navigate = useNavigate()
 
-  // Filter modules based on user role
-  const availableModules = user
-    ? moduleCards.filter((module) => {
-      // SUPERUSER (8) sees everything
-      if (user.user_role === 8) return true
-      // Check if user's role is in the allowed roles for this module
-      return module.roleIds.includes(user.user_role)
-    })
-    : []
-
-  if (availableModules.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-12 text-center">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Modules Available</h3>
-          <p className="text-muted-foreground">
-            There are no modules available for your role. Please contact your administrator.
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {availableModules.map((module) => {
-        const Icon = module.icon
-        return (
-          <Card
-            key={module.path}
-            className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
-            onClick={() => navigate(module.path)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${module.color}`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 opacity-0 transition-opacity group-hover:opacity-100">
-                  <span className="text-primary">→</span>
-                </div>
-              </div>
-              <CardTitle className="mt-4">{module.title}</CardTitle>
-              <CardDescription>{module.description}</CardDescription>
-            </CardHeader>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
 
 // ============================================
 // MAIN DASHBOARD PAGE
@@ -252,7 +119,9 @@ export function DashboardPage() {
       <DashboardLayout>
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-slate-100 mx-auto mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle text-muted-foreground"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+            </div>
             <h2 className="text-lg font-semibold mb-2">Access Denied</h2>
             <p className="text-muted-foreground">You are not assigned to use this application. Contact Administrator.</p>
           </div>
@@ -272,14 +141,6 @@ export function DashboardPage() {
             kodeOutlet={user.kode_outlet ?? undefined}
           />
         )}
-
-
-
-        {/* Available Modules */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Available Modules</h2>
-          <ModuleGrid />
-        </div>
       </div>
     </DashboardLayout>
   )

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { reportService } from '@/services/reportService'
@@ -10,8 +10,17 @@ import {
     AlertCircle,
     PackageX,
     DollarSign,
-    FileText
+    FileText,
+    Store
 } from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { masterOutletService } from '@/services/masterOutletService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,18 +36,38 @@ export const OutstandingPoReportPage = () => {
         end: format(endOfMonth(today), 'yyyy-MM-dd'),
     })
 
+    // Outlet Logic
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('')
+    const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
+    const canSelectOutlet = user?.user_role === 5 || user?.user_role === 8
+
+    useEffect(() => {
+        if (!canSelectOutlet && user?.kode_outlet) {
+            setSelectedOutlet(user.kode_outlet)
+        } else if (canSelectOutlet) {
+            setSelectedOutlet('ALL')
+        }
+    }, [user, canSelectOutlet])
+
+    useEffect(() => {
+        if (canSelectOutlet) {
+            masterOutletService.getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch(err => console.error(err))
+        }
+    }, [canSelectOutlet])
+
     // Fetch Data
     const { data: apiResponse, isLoading, error } = useQuery({
-        queryKey: ['report-outstanding-po', user?.kode_outlet, dateRange.start, dateRange.end],
+        queryKey: ['report-outstanding-po', selectedOutlet, dateRange.start, dateRange.end],
         queryFn: () => {
-            if (!user?.kode_outlet) throw new Error('No outlet assigned')
             return reportService.getOutstandingPoReport(
-                user.kode_outlet,
+                selectedOutlet || user?.kode_outlet || '',
                 dateRange.start,
                 dateRange.end
             )
         },
-        enabled: !!user?.kode_outlet,
+        enabled: !!selectedOutlet,
     })
 
     const data = apiResponse?.data || []
@@ -87,7 +116,28 @@ export const OutstandingPoReportPage = () => {
 
                 {/* Filters */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-end p-4 bg-white rounded-lg border shadow-sm">
-                    <div className="grid grid-cols-2 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                        {canSelectOutlet && (
+                            <div className="space-y-2">
+                                <Label>Outlet</Label>
+                                <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                    <SelectTrigger className="w-full bg-white">
+                                        <div className="flex items-center gap-2">
+                                            <Store className="h-4 w-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Select Outlet" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        {availableOutlets.map((outlet) => (
+                                            <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                {outlet.name_outlet}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <Label>Start Date</Label>
                             <Input

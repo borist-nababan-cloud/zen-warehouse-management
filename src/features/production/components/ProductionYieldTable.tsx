@@ -13,9 +13,11 @@ import { Badge } from '@/components/ui/badge'
 
 interface ProductionYieldTableProps {
     data: ViewReportProductionYield[]
+    showOutlet?: boolean
+    outlets?: { kode_outlet: string, name_outlet: string }[]
 }
 
-export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data }) => {
+export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data, showOutlet = false, outlets = [] }) => {
     if (data.length === 0) {
         return (
             <div className="text-center p-8 border rounded-lg bg-slate-50 text-slate-500">
@@ -30,6 +32,7 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
                 <TableHeader className="bg-slate-100">
                     <TableRow>
                         <TableHead className="w-[120px]">Date</TableHead>
+                        {showOutlet && <TableHead>Outlet</TableHead>}
                         <TableHead>Doc Number</TableHead>
                         <TableHead>Product Name</TableHead>
                         <TableHead className="text-center">Yield (Qty)</TableHead>
@@ -47,6 +50,11 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
                             <TableCell className="font-medium text-slate-600">
                                 {formatDate(row.transaction_date)}
                             </TableCell>
+                            {showOutlet && (
+                                <TableCell className="text-sm">
+                                    {outlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet}
+                                </TableCell>
+                            )}
                             <TableCell className="text-xs font-mono text-slate-500">
                                 {row.document_number}
                             </TableCell>

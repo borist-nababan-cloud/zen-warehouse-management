@@ -14,8 +14,11 @@ export const reportService = {
       let query = supabase
         .from('view_report_po_outstanding')
         .select('*')
-        .eq('kode_outlet', kodeOutlet)
         .order('po_created_at', { ascending: false })
+
+      if (kodeOutlet && kodeOutlet !== 'ALL') {
+        query = query.eq('kode_outlet', kodeOutlet)
+      }
 
       if (startDate) {
         query = query.gte('po_created_at', startDate)
@@ -51,12 +54,17 @@ export const reportService = {
     kodeOutlet: string
   ): Promise<ApiResponse<ViewReportSupplierPerformance[]>> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('view_report_supplier_performance')
         .select('*')
-        .eq('kode_outlet', kodeOutlet)
         // Default sort by fulfillment rate ascending (worst first) as per requirements
         .order('fulfillment_rate_percent', { ascending: true })
+
+      if (kodeOutlet && kodeOutlet !== 'ALL') {
+        query = query.eq('kode_outlet', kodeOutlet)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
@@ -87,8 +95,11 @@ export const reportService = {
       let query = supabase
         .from('view_report_purchase_orders')
         .select('*')
-        .eq('kode_outlet', kodeOutlet)
         .order('po_date', { ascending: false })
+
+      if (kodeOutlet && kodeOutlet !== 'ALL') {
+        query = query.eq('kode_outlet', kodeOutlet)
+      }
 
       if (startDate) {
         query = query.gte('po_date', startDate)

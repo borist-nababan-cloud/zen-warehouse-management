@@ -139,8 +139,11 @@ export async function getProductionYieldReport(
         let query = supabase
             .from('view_report_production_yield')
             .select('*')
-            .eq('kode_outlet', kodeOutlet)
             .order('transaction_date', { ascending: false })
+
+        if (kodeOutlet && kodeOutlet !== 'ALL') {
+            query = query.eq('kode_outlet', kodeOutlet)
+        }
 
         if (startDate) {
             query = query.gte('transaction_date', startDate)

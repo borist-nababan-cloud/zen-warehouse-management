@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useOpnameVarianceReport } from '@/hooks/useInventory'
+import { masterOutletService } from '@/services/masterOutletService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,8 +14,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Checkbox } from '@/components/ui/checkbox'
-import { Download, AlertTriangle, TrendingUp, TrendingDown, Scale, Search } from 'lucide-react'
+import { Download, AlertTriangle, TrendingUp, TrendingDown, Scale, Search, Store } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { OpnameVarianceItem } from '@/types/database'
 
@@ -29,9 +37,30 @@ export default function StockOpnameVariancePage() {
     const [showOnlyDiscrepancies, setShowOnlyDiscrepancies] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
 
+    // Outlet Logic
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('')
+    const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
+    const canSelectOutlet = user?.user_role === 5 || user?.user_role === 8
+
+    useEffect(() => {
+        if (!canSelectOutlet && user?.kode_outlet) {
+            setSelectedOutlet(user.kode_outlet)
+        } else if (canSelectOutlet) {
+            setSelectedOutlet('ALL')
+        }
+    }, [user, canSelectOutlet])
+
+    useEffect(() => {
+        if (canSelectOutlet) {
+            masterOutletService.getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch(err => console.error(err))
+        }
+    }, [canSelectOutlet])
+
     // Fetch Data
     const { data: reportData, isLoading } = useOpnameVarianceReport(
-        user?.kode_outlet || undefined,
+        selectedOutlet || undefined,
         dateRange.startDate,
         dateRange.endDate
     )
@@ -133,6 +162,29 @@ export default function StockOpnameVariancePage() {
                                     aria-label="Start Date"
                                 />
                             </div>
+
+                            {/* Outlet Filter for Role 5 & 8 */}
+                            {canSelectOutlet && (
+                                <div className="flex flex-col gap-2 w-full md:w-auto">
+                                    <label className="text-xs font-semibold text-slate-500">Outlet</label>
+                                    <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                        <SelectTrigger className="w-[200px] bg-white">
+                                            <div className="flex items-center gap-2">
+                                                <Store className="h-4 w-4 text-muted-foreground" />
+                                                <SelectValue placeholder="Select Outlet" />
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                            {availableOutlets.map((outlet) => (
+                                                <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                    {outlet.name_outlet}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                             <div className="flex flex-col gap-2 w-full md:w-auto">
                                 <label className="text-xs font-semibold text-slate-500">End Date</label>
                                 <Input
@@ -221,6 +273,9 @@ export default function StockOpnameVariancePage() {
                             <TableHeader>
                                 <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
                                     <TableHead className="w-[100px] font-semibold text-slate-700">Date</TableHead>
+                                    {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                        <TableHead className="font-semibold text-slate-700">Outlet</TableHead>
+                                    )}
                                     <TableHead className="font-semibold text-slate-700">Doc No</TableHead>
                                     <TableHead className="font-semibold text-slate-700">SKU</TableHead>
                                     <TableHead className="font-semibold text-slate-700">Item Name</TableHead>
@@ -254,6 +309,9 @@ export default function StockOpnameVariancePage() {
                                                 <TableCell className="text-xs text-muted-foreground">
                                                     {format(new Date(item.opname_date), 'dd/MM/yyyy')}
                                                 </TableCell>
+                                                {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                                    <TableCell className="text-xs text-muted-foreground">{item.kode_outlet}</TableCell>
+                                                )}
                                                 <TableCell className="text-xs font-mono">{item.document_number}</TableCell>
                                                 <TableCell className="font-mono text-xs text-slate-500">{item.sku}</TableCell>
                                                 <TableCell className="font-medium text-sm">{item.item_name}</TableCell>

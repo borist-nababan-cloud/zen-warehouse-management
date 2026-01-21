@@ -319,7 +319,7 @@ function App() {
           <Route
             path="/procurement/report-outstanding-po"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <OutstandingPoReportPage />
               </ProtectedRoute>
             }
@@ -327,7 +327,7 @@ function App() {
           <Route
             path="/procurement/report-supplier-performance"
             element={
-              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8, 10]}>
                 <SupplierPerformanceReportPage />
               </ProtectedRoute>
             }
@@ -335,7 +335,7 @@ function App() {
           <Route
             path="/procurement/report-po"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <PoReportPage />
               </ProtectedRoute>
             }
@@ -515,7 +515,7 @@ function App() {
           <Route
             path="/inventory/report"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <InventoryReportPage />
               </ProtectedRoute>
             }
@@ -525,7 +525,7 @@ function App() {
           <Route
             path="/inventory/report-qty"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <InventoryQtyReportPage />
               </ProtectedRoute>
             }
@@ -533,7 +533,7 @@ function App() {
           <Route
             path="/inventory/report-shrinkage"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <ShrinkageReportPage />
               </ProtectedRoute>
             }
@@ -541,7 +541,7 @@ function App() {
           <Route
             path="/inventory/report-opname-variance"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <StockOpnameVariancePage />
               </ProtectedRoute>
             }

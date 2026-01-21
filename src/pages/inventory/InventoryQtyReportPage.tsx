@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useInventoryReport } from '@/hooks/useInventory'
+import { masterOutletService } from '@/services/masterOutletService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,12 +14,43 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Download, Search, Package } from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Download, Search, Package, Store } from 'lucide-react'
+import { Label } from '@/components/ui/label'
 import { format } from 'date-fns'
 
 export default function InventoryQtyReportPage() {
     const { user } = useAuthUser()
-    const { data: reportData, isLoading } = useInventoryReport(user?.kode_outlet || '')
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('')
+    const [availableOutlets, setAvailableOutlets] = useState<{ kode_outlet: string, name_outlet: string }[]>([])
+
+    const canSelectOutlet = user?.user_role === 5 || user?.user_role === 8
+
+    // Initialize Default Outlet
+    useEffect(() => {
+        if (!canSelectOutlet && user?.kode_outlet) {
+            setSelectedOutlet(user.kode_outlet)
+        } else if (canSelectOutlet) {
+            setSelectedOutlet('ALL')
+        }
+    }, [user, canSelectOutlet])
+
+    // Fetch Outlets
+    useEffect(() => {
+        if (canSelectOutlet) {
+            masterOutletService.getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch(err => console.error(err))
+        }
+    }, [canSelectOutlet])
+
+    const { data: reportData, isLoading } = useInventoryReport(selectedOutlet)
     const [searchTerm, setSearchTerm] = useState('')
 
     // 1. Filter Data
@@ -71,14 +103,38 @@ export default function InventoryQtyReportPage() {
                         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Inventory Quantity Report</h1>
                         <p className="text-muted-foreground">Current stock levels by item.</p>
                     </div>
-                    <Button
-                        onClick={handleExport}
-                        variant="outline"
-                        className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                    >
-                        <Download className="mr-2 h-4 w-4" />
-                        Export CSV
-                    </Button>
+
+                    <div className="flex items-center gap-2">
+                        {canSelectOutlet && (
+                            <div className="flex items-center gap-2">
+                                <Label className="text-sm font-medium hidden md:block">Outlet:</Label>
+                                <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                    <SelectTrigger className="w-[200px] bg-white">
+                                        <div className="flex items-center gap-2">
+                                            <Store className="h-4 w-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Select Outlet" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        {availableOutlets.map((outlet) => (
+                                            <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                {outlet.name_outlet}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        <Button
+                            onClick={handleExport}
+                            variant="outline"
+                            className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                        >
+                            <Download className="mr-2 h-4 w-4" />
+                            Export CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -117,6 +173,9 @@ export default function InventoryQtyReportPage() {
                                 <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
                                     <TableHead className="w-[120px] font-semibold text-slate-700">SKU</TableHead>
                                     <TableHead className="font-semibold text-slate-700">Item Name</TableHead>
+                                    {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                        <TableHead className="font-semibold text-slate-700">Outlet</TableHead>
+                                    )}
                                     <TableHead className="w-[80px] text-center font-semibold text-slate-700">UOM</TableHead>
                                     <TableHead className="text-right font-semibold text-slate-700">Qty On Hand</TableHead>
                                 </TableRow>
@@ -135,10 +194,13 @@ export default function InventoryQtyReportPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredData.map((item) => (
-                                        <TableRow key={item.sku} className="hover:bg-slate-50">
+                                    filteredData.map((item, index) => (
+                                        <TableRow key={`${item.sku}-${item.kode_outlet}-${index}`} className="hover:bg-slate-50">
                                             <TableCell className="font-mono text-xs">{item.sku}</TableCell>
                                             <TableCell className="font-medium">{item.item_name}</TableCell>
+                                            {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                                <TableCell className="text-xs text-muted-foreground">{item.name_outlet || item.kode_outlet}</TableCell>
+                                            )}
                                             <TableCell className="text-center text-xs text-muted-foreground">{item.purchase_uom}</TableCell>
                                             <TableCell className="text-right font-bold text-slate-700">{item.qty_on_hand}</TableCell>
                                         </TableRow>

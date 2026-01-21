@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useInventoryReport } from '@/hooks/useInventory'
+import { masterOutletService } from '@/services/masterOutletService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,9 +14,16 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Download, Search, Package, TrendingUp, DollarSign, Store } from 'lucide-react'
 import { format } from 'date-fns'
-import { supabase } from '@/lib/supabase'
+import { Label } from '@/components/ui/label'
 
 export default function InventoryReportPage() {
     const { user } = useAuthUser()
@@ -38,18 +46,11 @@ export default function InventoryReportPage() {
 
     // Fetch Outlets for Privileged Users
     useEffect(() => {
-        async function fetchOutlets() {
-            if (canSelectOutlet) {
-                const { data } = await supabase
-                    .from('master_outlet')
-                    .select('kode_outlet, name_outlet')
-                    .eq('active', true)
-                    .order('name_outlet', { ascending: true })
-
-                if (data) setAvailableOutlets(data)
-            }
+        if (canSelectOutlet) {
+            masterOutletService.getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch(err => console.error("Failed to fetch outlets:", err))
         }
-        fetchOutlets()
     }, [canSelectOutlet])
 
     // --- Data Fetching ---
@@ -127,20 +128,24 @@ export default function InventoryReportPage() {
                     <div className="flex items-center gap-2">
                         {/* Outlet Dropdown for Role 5 & 8 */}
                         {canSelectOutlet && (
-                            <div className="relative w-[200px]">
-                                <Store className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <select
-                                    className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 pl-9 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none shadow-sm"
-                                    value={selectedOutlet}
-                                    onChange={(e) => setSelectedOutlet(e.target.value)}
-                                >
-                                    <option value="ALL">ALL OUTLETS</option>
-                                    {availableOutlets.map((outlet) => (
-                                        <option key={outlet.kode_outlet} value={outlet.kode_outlet}>
-                                            {outlet.name_outlet}
-                                        </option>
-                                    ))}
-                                </select>
+                            <div className="flex items-center gap-2">
+                                <Label className="text-sm font-medium hidden md:block">Outlet:</Label>
+                                <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+                                    <SelectTrigger className="w-[200px] bg-white">
+                                        <div className="flex items-center gap-2">
+                                            <Store className="h-4 w-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Select Outlet" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        {availableOutlets.map((outlet) => (
+                                            <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                {outlet.name_outlet}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         )}
 

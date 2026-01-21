@@ -241,7 +241,7 @@ export async function updatePrice(
   updated_by: string
 ): Promise<ApiResponse<BarangPrice>> {
   try {
-    console.log('[Service] Upserting Price', { barang_id, kode_outlet })
+
     const { data, error } = await supabase
       .from('barang_prices')
       .upsert({
@@ -302,7 +302,7 @@ export async function updateUnit(
   updated_by: string
 ): Promise<ApiResponse<BarangUnit>> {
   try {
-    console.log('[Service] Upserting Unit', { barang_id, kode_outlet })
+
     const { data, error } = await supabase
       .from('barang_units')
       .upsert({

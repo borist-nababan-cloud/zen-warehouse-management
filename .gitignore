@@ -41,10 +41,20 @@ frontendplan.md
 
 
 
-# Sensitive Documentation
+
+# Sensitive Directories & Files
 docs/
 database-docs/
 my-cred/
 scripts/*.cjs
 scripts/*.js
 *.sql
+*.pem
+*.key
+.env*
+!perintah.md
+!README.md
+!DEPLOY_COOLIFY.md
+
+# Ignored Project Plans
+frontendplan.md
