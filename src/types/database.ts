@@ -638,7 +638,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   7: ['dashboard', 'inventory', 'purchase-orders'],                           // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - no access
-  10: ['dashboard', 'finance', 'product', 'price-unit', 'supplier'],          // Finance Outlet
+  10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'],          // Finance Outlet
 }
 
 /**
