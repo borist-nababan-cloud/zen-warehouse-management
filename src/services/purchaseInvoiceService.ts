@@ -36,17 +36,18 @@ export async function getCompletedPurchaseOrders(outletCode: string): Promise<Ap
     supplier_inv_ref: string
     payment_due_date: string // YYYY-MM-DD
     user_id: string
+    shipping_cost_input?: number
   }
   
   export async function createPurchaseInvoice(params: CreateInvoiceParams): Promise<ApiResponse<number>> {
     try {
-      // RPC signature: generate_purchase_invoice(target_po_id, supplier_inv_number, payment_due_date, user_id)
+      // RPC signature: generate_purchase_invoice(target_po_id, supplier_inv_number, payment_due_date, user_id, shipping_cost_input)
       
       const { data, error } = await supabase.rpc('generate_purchase_invoice', {
         target_po_id: params.target_po_id,
         supplier_inv_ref: params.supplier_inv_ref,
         payment_due_date: params.payment_due_date,
-        user_id: params.user_id
+        shipping_cost_input: params.shipping_cost_input || 0
   })
 
     if (error) throw error

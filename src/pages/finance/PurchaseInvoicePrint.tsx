@@ -34,7 +34,7 @@ export default function PurchaseInvoicePrint() {
                     }
                 }
             } catch (err) {
-                console.error('Error loading invoice print data:', err)
+                // Fail silently or handle UI feedback if needed
             } finally {
                 setLoading(false)
             }
@@ -174,8 +174,18 @@ export default function PurchaseInvoicePrint() {
                     <div className="w-1/3 space-y-3">
                         <div className="flex justify-between items-center text-slate-600">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(invoice.total_amount)}</span>
+                            <span>{(() => {
+                                const subTotal = invoice.items.reduce((acc, item) => acc + (item.qty_received * item.price_per_unit), 0)
+                                return formatCurrency(subTotal)
+                            })()}</span>
                         </div>
+                        {/* Shipping Cost */}
+                        {invoice.shipping_cost && invoice.shipping_cost > 0 && (
+                            <div className="flex justify-between items-center text-slate-600">
+                                <span>Shipping Cost</span>
+                                <span>{formatCurrency(invoice.shipping_cost)}</span>
+                            </div>
+                        )}
                         {/* Add Tax/Discount here if they exist in schema later */}
                         <div className="flex justify-between items-center pt-3 border-t border-slate-200 text-lg font-bold text-slate-800">
                             <span>Total Amount</span>

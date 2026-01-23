@@ -487,6 +487,9 @@ export interface PurchaseInvoice {
   purchase_order_id: string
   status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
   total_amount: number
+  shipping_cost?: number // Added via migration
+  kode_supplier?: string // Added via migration
+  kode_outlet?: string // Added via migration
   notes: string | null
   created_at: string
   // Joins

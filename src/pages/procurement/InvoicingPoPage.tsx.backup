@@ -59,7 +59,6 @@ export function InvoicingPoPage() {
     // Form State
     const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState('')
     const [dueDate, setDueDate] = useState<string>('')
-    const [shippingCost, setShippingCost] = useState<number>(0)
 
     const fetchOrders = async (outletCode: string) => {
         setIsLoading(true)
@@ -71,7 +70,7 @@ export function InvoicingPoPage() {
                 toast.error(result.error || "Failed to load orders")
             }
         } catch (error) {
-            toast.error('An unexpected error occurred')
+            console.error(error)
         } finally {
             setIsLoading(false)
         }
@@ -87,7 +86,7 @@ export function InvoicingPoPage() {
                 toast.error(result.error || "Failed to load PO details")
             }
         } catch (error) {
-            toast.error('An unexpected error occurred')
+            console.error(error)
         } finally {
             setIsDetailsLoading(false)
         }
@@ -103,7 +102,6 @@ export function InvoicingPoPage() {
         setSelectedPo(po)
         setSupplierInvoiceNumber('')
         setDueDate('')
-        setShippingCost(0)
         setPoDetails([]) // Reset previous details
         setIsModalOpen(true)
         fetchPoDetails(po.id)
@@ -123,8 +121,7 @@ export function InvoicingPoPage() {
             target_po_id: selectedPo.id,
             supplier_inv_ref: supplierInvoiceNumber,
             payment_due_date: dueDate, // Already in YYYY-MM-DD from input type="date"
-            user_id: user?.id || '', // Pass user_id from auth context
-            shipping_cost_input: shippingCost
+            user_id: user?.id || '' // Pass user_id from auth context
         })
 
         if (result.isSuccess) {
@@ -259,14 +256,6 @@ export function InvoicingPoPage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
-                                            {/* Shipping Cost Row */}
-                                            <TableRow className="bg-muted/10">
-                                                <TableCell colSpan={4} className="text-right font-medium">Shipping Cost</TableCell>
-                                                <TableCell className="text-right text-muted-foreground">-</TableCell>
-                                                <TableCell className="text-right font-medium">
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(shippingCost)}
-                                                </TableCell>
-                                            </TableRow>
                                             {/* Summary Row */}
                                             <TableRow className="bg-muted/30 font-bold border-t-2">
                                                 <TableCell colSpan={4} className="text-right">Grand Total</TableCell>
@@ -277,7 +266,7 @@ export function InvoicingPoPage() {
                                                 </TableCell>
                                                 <TableCell className="text-right text-green-700 text-lg">
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
-                                                        poDetails.reduce((sum, item) => sum + (item.total_price_received || 0), 0) + shippingCost
+                                                        poDetails.reduce((sum, item) => sum + (item.total_price_received || 0), 0)
                                                     )}
                                                 </TableCell>
                                             </TableRow>
@@ -320,19 +309,6 @@ export function InvoicingPoPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="shipping_cost">Shipping Cost (Optional)</Label>
-                            <Input
-                                id="shipping_cost"
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                value={shippingCost}
-                                onChange={(e) => setShippingCost(Number(e.target.value))}
-                            />
-                            <p className="text-xs text-muted-foreground">Additional freight or delivery logic.</p>
-                        </div>
-
                         <div className="pt-4 flex justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                                 Cancel
@@ -348,7 +324,7 @@ export function InvoicingPoPage() {
                         </div>
                     </form>
                 </SimpleModal>
-            </div >
-        </DashboardLayout >
+            </div>
+        </DashboardLayout>
     )
 }

@@ -291,7 +291,7 @@ function App() {
           <Route
             path="/production/run"
             element={
-              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+              <ProtectedRoute allowedRoles={[1, 6, 7, 8]}>
                 <ProductionRunPage />
               </ProtectedRoute>
             }

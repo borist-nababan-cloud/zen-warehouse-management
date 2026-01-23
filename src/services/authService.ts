@@ -351,7 +351,7 @@ export async function getOutletByCode(kodeOutlet: string) {
       .from('master_outlet')
       .select('*')
       .eq('kode_outlet', kodeOutlet)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
 

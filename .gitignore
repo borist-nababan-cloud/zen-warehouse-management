@@ -48,3 +48,9 @@ frontendplan.md
 !README.md
 !package.json
 !tsconfig.json
+
+.env
+*.sql
+docs/
+my-cred/
+database-docs/
