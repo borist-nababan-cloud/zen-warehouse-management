@@ -6,6 +6,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query'
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -93,6 +94,14 @@ export default function StoCreatePage() {
         const product = products?.data?.find(p => p.id.toString() === selectedProductId)
         if (!product) return
 
+        // [STO Debug] Start
+        console.group('[STO Debug] Add Item')
+        console.log('User Outlet:', user?.kode_outlet)
+        // Find price for CURRENT outlet
+        // Strict check: Must match user.kode_outlet
+        const outletPrice = product.barang_prices?.find(p => p.kode_outlet === user?.kode_outlet)
+        const resolvedPrice = outletPrice?.sell_price || 0
+
         // Check if item already exists
         const existingIndex = items.findIndex(i => i.barang_id === product.id)
         if (existingIndex >= 0) {
@@ -106,7 +115,7 @@ export default function StoCreatePage() {
                 barang_id: product.id,
                 sku: product.sku || '',
                 name: product.name || 'Unknown',
-                price_unit: product.barang_prices?.[0]?.sell_price || 0,
+                price_unit: resolvedPrice, // Use resolved price
                 qty_requested: qtyInput,
                 uom: product.barang_units?.[0]?.purchase_uom || 'PCS'
             }])
@@ -232,18 +241,16 @@ export default function StoCreatePage() {
                                 <div className="flex items-end gap-3 p-3 bg-slate-50 rounded-lg border">
                                     <div className="flex-1 space-y-2">
                                         <Label>Product</Label>
-                                        <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Product..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {products?.data?.map(p => (
-                                                    <SelectItem key={p.id} value={p.id.toString()}>
-                                                        {p.sku || 'No SKU'} - {p.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            value={selectedProductId}
+                                            onChange={setSelectedProductId}
+                                            placeholder="Select Product..."
+                                            options={products?.data?.map(p => ({
+                                                value: p.id.toString(),
+                                                label: `${p.sku || 'No SKU'} - ${p.name}`,
+                                                subLabel: p.name || ''
+                                            })) || []}
+                                        />
                                     </div>
                                     <div className="w-24 space-y-2">
                                         <Label>Qty</Label>

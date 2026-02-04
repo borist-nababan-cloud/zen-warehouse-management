@@ -59,6 +59,12 @@ import StoPaydownPage from '@/pages/finance/StoPaydownPage'
 import StoListPage from '@/pages/sto/StoListPage'
 import { StoDetailPage } from '@/pages/sto/StoDetailPage'
 import { StoPrintPage } from '@/pages/sto/StoPrintPage'
+import { ReportStoSummaryPage } from '@/pages/sto/ReportStoSummaryPage'
+import { ReportStoTransitPage } from '@/pages/sto/ReportStoTransitPage'
+import { ReportStoOrderPage } from '@/pages/sto/ReportStoOrderPage'
+import { ReportStoOrderItemsPage } from '@/pages/sto/ReportStoOrderItemsPage'
+import { ReportStoReceiptPage } from '@/pages/sto/ReportStoReceiptPage'
+import { ReportStoReceiptItemsPage } from '@/pages/sto/ReportStoReceiptItemsPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -421,6 +427,56 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
                 <StoPaydownPage />
+              </ProtectedRoute>
+            }
+          />
+
+
+          <Route
+            path="/sto/report-summary"
+            element={
+              <ProtectedRoute allowedRoles={[6, 10]}>
+                <ReportStoSummaryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-transit"
+            element={
+              <ProtectedRoute allowedRoles={[6, 7, 10]}>
+                <ReportStoTransitPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-order"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 10]}>
+                <ReportStoOrderPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-order-items"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
+                <ReportStoOrderItemsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-receipt"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 10]}>
+                <ReportStoReceiptPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-receipt-items"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
+                <ReportStoReceiptItemsPage />
               </ProtectedRoute>
             }
           />

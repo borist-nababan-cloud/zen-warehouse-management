@@ -42,6 +42,8 @@ scripts/
 .env
 .env*
 *_backup.sql
+*.backup
+*.bak
 frontendplan.md
 
 # Keep likely safe root files if needed, but strict on folders

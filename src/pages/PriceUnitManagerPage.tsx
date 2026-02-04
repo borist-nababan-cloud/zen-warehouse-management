@@ -12,7 +12,7 @@
  * Access: Roles 1, 5, 6, 8 (admin_holding, finance, outlet_admin, superuser)
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePriceUnitsPaginated, useUpdatePriceUnit, useCanEditProduct } from '@/hooks/useBarangPriceUnit'
 import { useAuthUser } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -23,22 +23,6 @@ import { Input } from '@/components/ui/input'
 import { Search, Save, Lock, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import type { BarangPriceUnit, PriceUnitUpdateData } from '@/types/database'
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Format number to thousands (e.g. 1000 -> 1.000) using ID locale
- */
-const formatNumber = (value: number | string): string => {
-  if (value === '' || value === undefined || value === null) return ''
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return ''
-  return new Intl.NumberFormat('id-ID').format(num)
-}
-
-
 
 // ============================================
 // ROW EDIT STATE TYPE
@@ -69,51 +53,13 @@ interface EditableRowProps {
 
 function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChange, onSave }: EditableRowProps) {
   // If Item Outlet != User Outlet, it's "Managed by Owner" (Read Only)
-  // Previously specific to HQ, now general: if I don't own it, I can't edit it.
   const isManagedByOwner = item.kode_outlet !== userOutletCode
 
-  // Local state for formatted inputs to handle typing
-  const [buyPriceDisplay, setBuyPriceDisplay] = useState(formatNumber(editState.buy_price))
-  const [sellPriceDisplay, setSellPriceDisplay] = useState(formatNumber(editState.sell_price))
-
-  // Update display if external editState changes (e.g. from DB reload)
-  useEffect(() => {
-    // Only update if not currently being typed?
-    // Actually, onEditChange updates editState, so we should sync display
-    // BUT we need to be careful not to override typing cursor.
-    // Simple approach: Only sync on mount or if drastic change, but here
-    // we let the input handler manage display state primarily.
-    if (!editState.isDirty) {
-      setBuyPriceDisplay(formatNumber(editState.buy_price))
-      setSellPriceDisplay(formatNumber(editState.sell_price))
-    }
-  }, [editState.buy_price, editState.sell_price, editState.isDirty])
-
-  const handlePriceChange = (field: 'buy_price' | 'sell_price', value: string) => {
-    // Allow typing numbers and dots (if user manually types them?)
-    // Actually standard ID format doesn't accept dots for decimal usually in simple currency
-    // But let's allow digits only for simplicity then format.
-
-    // 1. Remove non-numeric chars (except dot/comma if needed, but for ID thousands we strip dot)
-    const rawValue = value.replace(/[^0-9]/g, '')
-
-    // 2. Parse to number
-    const numValue = parseInt(rawValue) || 0
-
-    // 3. Format back to display
-    const formatted = formatNumber(numValue)
-
-    // 4. Update state
-    if (field === 'buy_price') setBuyPriceDisplay(formatted)
-    else setSellPriceDisplay(formatted)
-
-    onEditChange(item.id, field, numValue)
-  }
-
-  const handleInputChange = (field: 'purchase_uom' | 'conversion_rate', value: string) => {
+  const handleInputChange = (field: keyof RowEditState, value: string) => {
     if (field === 'purchase_uom') {
       onEditChange(item.id, field, value)
     } else {
+      // For numeric fields
       onEditChange(item.id, field, parseFloat(value) || 0)
     }
   }
@@ -154,7 +100,7 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
           type="number"
           step="0.01"
           min="0"
-          value={editState.conversion_rate || 1}
+          value={editState.conversion_rate || 0}
           onChange={(e) => handleInputChange('conversion_rate', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
           className={canEditItem ? 'h-9 w-20 text-xs' : 'h-9 w-20 bg-muted cursor-not-allowed text-xs'}
@@ -164,9 +110,11 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
       {/* Buy Price */}
       <td className="px-4 py-2 text-sm">
         <Input
-          type="text"
-          value={buyPriceDisplay}
-          onChange={(e) => handlePriceChange('buy_price', e.target.value)}
+          type="number"
+          step="0.01"
+          min="0"
+          value={editState.buy_price || 0}
+          onChange={(e) => handleInputChange('buy_price', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
           className={canEditItem ? 'h-9 w-32 text-right font-mono text-xs' : 'h-9 w-32 text-right font-mono bg-muted cursor-not-allowed text-xs'}
           placeholder="0"
@@ -176,9 +124,11 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
       {/* Sell Price */}
       <td className="px-4 py-2 text-sm">
         <Input
-          type="text"
-          value={sellPriceDisplay}
-          onChange={(e) => handlePriceChange('sell_price', e.target.value)}
+          type="number"
+          step="0.01"
+          min="0"
+          value={editState.sell_price || 0}
+          onChange={(e) => handleInputChange('sell_price', e.target.value)}
           disabled={!canEditItem || editState.isSaving}
           className={canEditItem ? 'h-9 w-32 text-right font-mono text-xs' : 'h-9 w-32 text-right font-mono bg-muted cursor-not-allowed text-xs'}
           placeholder="0"
@@ -386,22 +336,7 @@ export function PriceUnitManagerPage() {
 
           {/* Info Notice + Stats in Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="col-span-2 border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 shadow-sm">
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-500 mt-0.5 shrink-0" />
-                  <div className="text-xs">
-                    <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                      Ownership Rules
-                    </p>
-                    <ul className="text-blue-700 dark:text-blue-300 space-y-0.5 list-disc list-inside">
-                      <li>HOLDING (111) edits all. Outlets edit own only.</li>
-                      <li>Prices are updated per outlet.</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
 
             <Card className="shadow-sm">
               <CardContent className="pt-4 pb-4">

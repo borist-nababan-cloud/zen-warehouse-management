@@ -315,6 +315,8 @@ export interface PurchaseOrder {
   status: PurchaseOrderStatus
   total_amount: number
   expected_delivery_date: string  // date string YYYY-MM-DD
+  ro_number?: string | null       // [NEW]
+  notes?: string | null           // [NEW] (already part of schema but good to be explicit if missing)
   created_at?: string
   created_by?: string
   updated_by?: string
@@ -796,7 +798,76 @@ export interface CashFlowItem {
   money_in: number
   money_out: number
   balance_after: number
-  kode_outlet: string
+}
+
+export interface StoSummaryReportItem {
+  id: string
+  order_date: string
+  document_number: string
+  from_outlet: string
+  from_outlet_name?: string
+  to_outlet: string
+  to_outlet_name?: string
+  sender_status: StoStatus
+  recipient_status: StoRecipientStatus
+  items_summary: string
+  shipping_cost: number
+  grand_total: number
+}
+
+export interface StoTransitReportItem {
+  sto_id: string
+  document_number: string
+  shipped_at: string
+  from_outlet: string
+  from_outlet_name: string
+  to_outlet: string
+  to_outlet_name: string
+  grand_total: number
+  value_in_transit: number
+  days_in_transit: number
+  sender_phone?: string
+}
+
+// 4 New STO Reports
+export interface StoOrderList {
+  order_date: string
+  document_number: string
+  from_outlet: string
+  from_outlet_name: string
+  to_outlet: string
+  to_outlet_name: string
+  sender_status: StoStatus
+  recipient_status: StoRecipientStatus
+  grand_total: number
+}
+
+export interface StoOrderItem {
+  order_date: string
+  document_number: string
+  sku: string
+  item_name: string
+  qty_requested: number
+  price_unit: number
+  subtotal: number
+}
+
+export interface StoReceiptList {
+  received_at: string
+  document_number: string
+  order_number: string
+  from_outlet: string
+  to_outlet: string
+  grand_total: number
+}
+
+export interface StoReceiptItem {
+  received_at: string
+  document_number: string
+  order_number: string
+  sku: string
+  item_name: string
+  qty_received: number
 }
 
 export interface ViewReportProductionYield {

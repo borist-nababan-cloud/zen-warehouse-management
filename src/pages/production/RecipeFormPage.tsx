@@ -16,13 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { Trash2, Plus, ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -211,21 +205,16 @@ export function RecipeFormPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Target Product (Finished Good)</Label>
-                                    <Select
+                                    <SearchableSelect
                                         value={targetProductId}
-                                        onValueChange={setTargetProductId}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Product..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {allProducts.map(p => (
-                                                <SelectItem key={p.id} value={p.id.toString()}>
-                                                    {p.name} ({p.sku})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        onChange={setTargetProductId}
+                                        placeholder="Select Product..."
+                                        options={allProducts.map(p => ({
+                                            value: p.id.toString(),
+                                            label: p.name || 'Unknown',
+                                            subLabel: p.sku || ''
+                                        }))}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Standard Output Qty</Label>
@@ -289,21 +278,17 @@ export function RecipeFormPage() {
                                         ingredients.map((row) => (
                                             <TableRow key={row.tempId}>
                                                 <TableCell>
-                                                    <Select
+                                                    <SearchableSelect
                                                         value={row.materialId}
-                                                        onValueChange={(val) => updateIngredient(row.tempId, 'materialId', val)}
-                                                    >
-                                                        <SelectTrigger className="h-9">
-                                                            <SelectValue placeholder="Select Material..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {allProducts.map(p => (
-                                                                <SelectItem key={p.id} value={p.id.toString()}>
-                                                                    {p.name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                        onChange={(val) => updateIngredient(row.tempId, 'materialId', val)}
+                                                        placeholder="Select Material..."
+                                                        options={allProducts.map(p => ({
+                                                            value: p.id.toString(),
+                                                            label: p.name || 'Unknown',
+                                                            subLabel: p.sku || ''
+                                                        }))}
+                                                        className="w-full"
+                                                    />
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input

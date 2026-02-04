@@ -238,7 +238,9 @@ export const updatePurchaseOrderItems = async (
 
         // 5. Update Header (and Status if provided)
         const headerPayload: any = {
-            total_amount: header.total_amount
+            total_amount: header.total_amount,
+            ro_number: header.ro_number, // [NEW]
+            notes: header.notes          // [NEW]
         }
         if (header.status) {
             headerPayload.status = header.status

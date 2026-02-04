@@ -28,7 +28,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { toast } from 'sonner'
-import { Loader2, Filter } from 'lucide-react'
+import { Loader2, Filter, Download } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { masterOutletService } from '@/services/masterOutletService'
@@ -95,6 +95,59 @@ export function ReportGrSupplierPage() {
         } finally {
             setIsLoading(false)
         }
+    }
+
+    // Export CSV Helper
+    const handleExportCSV = () => {
+        if (!data || data.length === 0) {
+            toast.error("No data to export")
+            return
+        }
+
+        // 1. Define Headers
+        const headers = [
+            "PO Number",
+            "Date",
+            "Outlet",
+            "Item Name",
+            "SKU",
+            "Qty Ordered",
+            "Qty Received",
+            "Remaining",
+            "UOM",
+            "Status"
+        ]
+
+        // 2. Format Data Rows
+        const rows = data.map(item => {
+            const status = item.qty_remaining <= 0 ? 'Fulfilled'
+                : item.qty_already_received > 0 ? 'Partial'
+                    : 'Ordered'
+
+            return [
+                item.document_number,
+                item.po_created_at ? format(new Date(item.po_created_at), 'yyyy-MM-dd') : '',
+                item.kode_outlet,
+                `"${item.item_name.replace(/"/g, '""')}"`, // Escape quotes
+                item.sku,
+                item.qty_ordered,
+                item.qty_already_received,
+                item.qty_remaining > 0 ? item.qty_remaining : 0,
+                item.uom_purchase,
+                status
+            ].join(',')
+        })
+
+        // 3. Combine and Download
+        const csvContent = [headers.join(','), ...rows].join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.setAttribute('href', url)
+        link.setAttribute('download', `GR_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     // Initial load
@@ -166,10 +219,16 @@ export function ReportGrSupplierPage() {
                                 </div>
                             )}
 
-                            <Button onClick={handleSearch} disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Apply Filter
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button onClick={handleSearch} disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1">
+                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Apply Filter
+                                </Button>
+                                <Button variant="outline" onClick={handleExportCSV} disabled={data.length === 0} title="Export to CSV">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Export CSV
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

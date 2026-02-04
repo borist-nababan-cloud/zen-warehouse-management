@@ -21,6 +21,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { Plus, Trash2, Save, Send, Lock, ArrowLeft, FileText } from 'lucide-react'
 import {
@@ -63,6 +65,8 @@ export function PurchaseOrderCreatePage() {
     const [isGeneratingNo, setIsGeneratingNo] = useState(true)
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>('')
     const [expectedDate, setExpectedDate] = useState('')
+    const [roNumber, setRoNumber] = useState('')  // [NEW] RO Number
+    const [notes, setNotes] = useState('')        // [NEW] Notes
     const [items, setItems] = useState<POItemRow[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -113,6 +117,8 @@ export function PurchaseOrderCreatePage() {
             setDocNumber(po.document_number)
             setSelectedSupplierId(po.kode_supplier)
             setExpectedDate(po.expected_delivery_date || '')
+            setRoNumber(po.ro_number || '') // [NEW] Bind RO
+            setNotes(po.notes || '')        // [NEW] Bind Notes
 
             // Map items
             if (po.purchase_order_items) {
@@ -305,7 +311,9 @@ export function PurchaseOrderCreatePage() {
                 // --- UPDATE MODE ---
                 const result = await updatePurchaseOrderItems(id, {
                     total_amount: calculateGrandTotal(),
-                    status: status
+                    status: status,
+                    ro_number: roNumber, // [NEW]
+                    notes: notes         // [NEW]
                 }, itemsData)
 
                 if (result.isSuccess) {
@@ -325,6 +333,8 @@ export function PurchaseOrderCreatePage() {
                     expected_delivery_date: expectedDate || new Date().toISOString().split('T')[0],
                     status: status,
                     created_by: user.id, // Track user creation
+                    ro_number: roNumber, // [NEW]
+                    notes: notes         // [NEW]
                 }
 
                 const payloadItems = items.map(item => ({
@@ -416,8 +426,21 @@ export function PurchaseOrderCreatePage() {
                                 />
                             </div>
 
+                            {/* [NEW] RO Number */}
+                            <div>
+                                <Label htmlFor="ro_number">RO Number</Label>
+                                <Input
+                                    id="ro_number"
+                                    value={roNumber}
+                                    onChange={(e) => setRoNumber(e.target.value)}
+                                    placeholder="Optional"
+                                    className="mt-2"
+                                    disabled={isReadOnly}
+                                />
+                            </div>
+
                             {/* Supplier */}
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-1">
                                 <Label>Supplier</Label>
                                 <Select
                                     value={selectedSupplierId}
@@ -487,22 +510,19 @@ export function PurchaseOrderCreatePage() {
                                 {items.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell>
-                                            <Select
-                                                value={item.barang_id ? String(item.barang_id) : ''}
-                                                onValueChange={(val: string) => handleProductChange(item.id, val)}
-                                                disabled={isReadOnly}
-                                            >
-                                                <SelectTrigger className="h-9">
-                                                    <SelectValue placeholder="Select Product" />
-                                                </SelectTrigger>
-                                                <SelectContent className="max-h-[200px]">
-                                                    {products.map(p => (
-                                                        <SelectItem key={p.id} value={String(p.id)}>
-                                                            {p.name} <span className="text-xs text-muted-foreground ml-1">({p.sku})</span>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <TableCell>
+                                                <SearchableSelect
+                                                    value={item.barang_id ? String(item.barang_id) : ''}
+                                                    onChange={(val: string) => handleProductChange(item.id, val)}
+                                                    disabled={isReadOnly}
+                                                    placeholder="Select Product"
+                                                    options={products.map(p => ({
+                                                        value: String(p.id),
+                                                        label: p.name || 'Unknown',
+                                                        subLabel: p.sku || ''
+                                                    }))}
+                                                />
+                                            </TableCell>
                                         </TableCell>
                                         <TableCell>
                                             <Input
@@ -556,6 +576,20 @@ export function PurchaseOrderCreatePage() {
                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(calculateGrandTotal())}
                                 </span>
                             </div>
+                        </div>
+
+                        {/* [NEW] Notes Section */}
+                        <div className="mt-6 px-6 pb-6">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                                id="notes"
+                                placeholder="Add notes here..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                className="mt-2"
+                                rows={3}
+                                disabled={isReadOnly}
+                            />
                         </div>
                     </CardContent>
                 </Card>

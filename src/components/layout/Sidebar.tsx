@@ -40,7 +40,10 @@ import {
   AlertTriangle,
   AlertOctagon,
   Scale,
-  Banknote
+  Banknote,
+  List,
+  Wallet,
+  PackageCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -167,6 +170,12 @@ const stockTransferGroup: NavGroup = {
     { title: 'Goods Issue', path: '/sto/issue', icon: Truck, roleIds: [7] },
     { title: 'Goods Receipt', path: '/sto/receipt', icon: Package, roleIds: [7] },
     { title: 'STO Invoicing', path: '/sto/invoicing', icon: DollarSign, roleIds: [6, 10] },
+    { title: 'Report Summary STO', path: '/sto/report-summary', icon: Activity, roleIds: [6, 10] },
+    { title: 'Report STO Transit', path: '/sto/report-transit', icon: Truck, roleIds: [6, 7, 10] },
+    { title: 'Report STO Order', path: '/sto/report-order', icon: FileText, roleIds: [5, 6, 8, 10] },
+    { title: 'Report STO Order Items', path: '/sto/report-order-items', icon: List, roleIds: [5, 6, 7, 8, 10] },
+    { title: 'Report STO Receipt', path: '/sto/report-receipt', icon: Wallet, roleIds: [5, 6, 8, 10] },
+    { title: 'Report STO Receipt List', path: '/sto/report-receipt-items', icon: PackageCheck, roleIds: [5, 6, 7, 8, 10] },
   ]
 }
 
