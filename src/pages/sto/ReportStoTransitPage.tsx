@@ -100,7 +100,7 @@ export function ReportStoTransitPage() {
 
                                         return (
                                             <TableRow
-                                                key={item.id}
+                                                key={item.sto_id}
                                                 className={cn(
                                                     "transition-colors",
                                                     isDelayed ? "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-900/10" : "bg-blue-50/30 hover:bg-blue-100/30 dark:bg-blue-900/10"
