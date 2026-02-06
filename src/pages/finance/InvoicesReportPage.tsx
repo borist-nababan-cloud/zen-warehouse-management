@@ -377,7 +377,17 @@ export default function InvoicesReportPage() {
                                             {row.supplier_name}
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-slate-500">
-                                            {row.po_doc || '-'}
+                                            {row.sto_id ? (
+                                                <span>{row.po_doc}</span>
+                                            ) : (
+                                                <div className="flex items-center gap-2 group cursor-pointer" onClick={() => {
+                                                    const url = `/procurement/purchase-orders/${row.purchase_order_id}/print`
+                                                    window.open(url, '_blank')
+                                                }}>
+                                                    <span>{row.po_doc}</span>
+                                                    <FileText className="h-3 w-3 text-slate-400 group-hover:text-indigo-600" />
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(row.status)}`}>
@@ -389,29 +399,35 @@ export default function InvoicesReportPage() {
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                {/* Print Invoice Action */}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    title="Print Invoice"
-                                                    className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                                    disabled={!!row.sto_id} // Disabled for STO as per user request
+                                                    title={row.sto_id ? "Print Not Available" : "Print Invoice"}
+                                                    className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     onClick={() => {
-                                                        const url = `/finance/invoices/print/${row.invoice_id}`
-                                                        window.open(url, '_blank')
+                                                        if (row.sto_id) {
+                                                            return // Do nothing
+                                                        } else {
+                                                            const url = `/finance/invoices/print/${row.invoice_id}`
+                                                            window.open(url, '_blank')
+                                                        }
                                                     }}
                                                 >
                                                     <Printer className="h-4 w-4" />
                                                 </Button>
 
-                                                {/* View PO Action */}
+                                                {/* View PO / STO Action */}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    title="View/Print PO"
+                                                    title={row.sto_id ? "View STO" : "View/Print PO"}
                                                     className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50"
-                                                    disabled={!row.purchase_order_id}
+                                                    disabled={!row.purchase_order_id && !row.sto_id}
                                                     onClick={() => {
-                                                        if (row.purchase_order_id) {
+                                                        if (row.sto_id) {
+                                                            window.open('/sto/report-order', '_blank')
+                                                        } else if (row.purchase_order_id) {
                                                             const url = `/procurement/purchase-orders/${row.purchase_order_id}/print`
                                                             window.open(url, '_blank')
                                                         }

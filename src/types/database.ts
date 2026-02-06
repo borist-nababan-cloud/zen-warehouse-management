@@ -914,9 +914,11 @@ export interface ViewReportPurchaseInvoices {
   supplier_name: string
   kode_supplier: string         // Added
   po_doc: string                // Was po_doc_number
-  purchase_order_id: string     // Was po_id
+  purchase_order_id: string | null     // Was po_id, nullable for STO
+  sto_id?: string | null        // Added for STO Invoices
   status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
   total_amount: number
+  shipping_cost?: number        // Added via user SQL update
   total_paid_amount: number | null // Added
   payment_due_date: string | null // Added
   kode_outlet: string
@@ -939,3 +941,116 @@ export interface ViewReportPurchaseOrders {
   linked_invoice_id: string | null
   kode_outlet: string
 }
+
+// ============================================
+// INTERNAL CONSUMPTION / WAREHOUSE EXPENSES
+// ============================================
+
+export interface MasterIssueCategory {
+  id: number
+  category_name: string
+  created_at?: string
+}
+
+export interface InternalUsageHeader {
+  id: string
+  document_number: string
+  kode_outlet: string
+  transaction_date: string // YYYY-MM-DD
+  category_id: number
+  requested_by: string | null
+  notes: string | null
+  created_by: string
+  created_at: string
+  // Joins
+  master_outlet?: MasterOutlet | null
+  master_issue_category?: MasterIssueCategory | null
+  internal_usage_items?: InternalUsageItem[]
+}
+
+export interface InternalUsageItem {
+  id: string
+  header_id: string
+  barang_id: number
+  qty_used: number
+  uom: string | null
+  notes: string | null
+  // Joins
+  master_barang?: MasterBarang | null
+}
+
+// ==========================================
+// INTERNAL RETURN / EXTERNAL RETURN (Inbound)
+// ==========================================
+
+export interface InternalReturnHeader {
+  id: string
+  document_number: string
+  kode_outlet: string
+  transaction_date: string
+  category_id: number
+  returned_by: string | null
+  notes: string | null
+  created_by: string
+  created_at: string
+  
+  // Joins
+  master_issue_category?: MasterIssueCategory
+  master_outlet?: MasterOutlet
+  internal_return_items?: InternalReturnItem[]
+}
+
+export interface InternalReturnItem {
+  id: string
+  header_id: string
+  barang_id: number
+  qty_returned: number
+  uom: string | null
+  condition_notes: string | null
+  
+  // Joins
+  master_barang?: MasterBarang
+}
+
+// ============================================
+// NEW REPORT VIEWS
+// ============================================
+
+export interface ViewReportInternalUsage {
+  item_id: string
+  document_number: string
+  transaction_date: string
+  kode_outlet: string
+  name_outlet: string
+  category_name: string
+  requested_by: string | null
+  created_by_name: string | null
+  sku: string | null
+  item_name: string | null
+  uom: string | null
+  qty_used: number
+  unit_cost_estimate: number
+  total_expense_value: number
+  item_notes: string | null
+  header_notes: string | null
+}
+
+export interface ViewReportInternalReturn {
+  item_id: string
+  document_number: string
+  transaction_date: string
+  kode_outlet: string
+  name_outlet: string
+  category_name: string
+  returned_by: string | null
+  created_by_name: string | null
+  sku: string | null
+  item_name: string | null
+  uom: string | null
+  qty_returned: number
+  condition_notes: string | null
+  unit_cost_estimate: number
+  total_value_recovered: number
+  header_notes: string | null
+}
+

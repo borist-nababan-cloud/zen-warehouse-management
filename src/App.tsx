@@ -42,6 +42,13 @@ import InventoryReportPage from '@/pages/inventory/InventoryReportPage'
 import InventoryQtyReportPage from '@/pages/inventory/InventoryQtyReportPage'
 import ShrinkageReportPage from '@/pages/inventory/ShrinkageReportPage'
 import StockOpnameVariancePage from '@/pages/inventory/StockOpnameVariancePage'
+import InternalUsageListPage from '@/pages/inventory/InternalUsageListPage'
+import InternalUsageFormPage from '@/pages/inventory/InternalUsageFormPage'
+import InternalUsagePrint from '@/components/print/InternalUsagePrint'
+import InternalReturnListPage from '@/pages/inventory/InternalReturnListPage'
+import InternalReturnFormPage from '@/pages/inventory/InternalReturnFormPage'
+import ReportInternalUsagePage from '@/pages/inventory/ReportInternalUsagePage'
+import ReportInternalReturnPage from '@/pages/inventory/ReportInternalReturnPage'
 import ApAgingReportPage from '@/pages/finance/ApAgingReportPage'
 import CashFlowReportPage from '@/pages/finance/CashFlowReportPage'
 import { OutstandingPoReportPage } from '@/pages/procurement/OutstandingPoReportPage'
@@ -599,6 +606,62 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <StockOpnameVariancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/internal-usage"
+            element={
+              <ProtectedRoute allowedRoles={[6, 7, 10, 8]}>
+                <InternalUsageListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/internal-usage/create"
+            element={
+              <ProtectedRoute allowedRoles={[6, 7, 10, 8]}>
+                <InternalUsageFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/internal-usage/print/:id"
+            element={
+              <ProtectedRoute allowedRoles={[6, 7, 10, 8]}>
+                <InternalUsagePrint />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/internal-return"
+            element={
+              <ProtectedRoute allowedRoles={[6, 7, 10, 8]}>
+                <InternalReturnListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/internal-return/create"
+            element={
+              <ProtectedRoute allowedRoles={[6, 7, 10, 8]}>
+                <InternalReturnFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/report-internal-usage"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
+                <ReportInternalUsagePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/report-internal-return"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
+                <ReportInternalReturnPage />
               </ProtectedRoute>
             }
           />

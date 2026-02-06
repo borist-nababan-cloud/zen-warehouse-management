@@ -95,8 +95,6 @@ export default function StoCreatePage() {
         if (!product) return
 
         // [STO Debug] Start
-        console.group('[STO Debug] Add Item')
-        console.log('User Outlet:', user?.kode_outlet)
         // Find price for CURRENT outlet
         // Strict check: Must match user.kode_outlet
         const outletPrice = product.barang_prices?.find(p => p.kode_outlet === user?.kode_outlet)

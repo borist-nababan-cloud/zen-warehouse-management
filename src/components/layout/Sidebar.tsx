@@ -43,7 +43,8 @@ import {
   Banknote,
   List,
   Wallet,
-  PackageCheck
+  PackageCheck,
+  Undo2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -121,7 +122,11 @@ const navItems: NavItem[] = [
       { title: 'Report Inventory', path: '/inventory/report', icon: TrendingUp, roleIds: [5, 6, 7, 8, 10] },
       { title: 'Report Qty Inventory', path: '/inventory/report-qty', icon: Boxes, roleIds: [5, 6, 7, 8, 10] },
       { title: 'Report Shrinkage', path: '/inventory/report-shrinkage', icon: AlertOctagon, roleIds: [5, 6, 7, 8, 10] },
-      { title: 'Report Opname Variance', path: '/inventory/report-opname-variance', icon: Scale, roleIds: [5, 6, 7, 8, 10] }
+      { title: 'Report Opname Variance', path: '/inventory/report-opname-variance', icon: Scale, roleIds: [5, 6, 7, 8, 10] },
+      { title: 'Report Int. Consumption', path: '/inventory/report-internal-usage', icon: LogOut, roleIds: [5, 6, 7, 8, 10] },
+      { title: 'Report Return', path: '/inventory/report-internal-return', icon: Undo2, roleIds: [5, 6, 7, 8, 10] },
+      { title: 'Internal Consumption', path: '/inventory/internal-usage', icon: LogOut, roleIds: [6, 7, 10] },
+      { title: 'Internal Return', path: '/inventory/internal-return', icon: Undo2, roleIds: [6, 7, 10] }
     ]
   },
   {
