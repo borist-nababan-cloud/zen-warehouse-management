@@ -72,6 +72,8 @@ import { ReportStoOrderPage } from '@/pages/sto/ReportStoOrderPage'
 import { ReportStoOrderItemsPage } from '@/pages/sto/ReportStoOrderItemsPage'
 import { ReportStoReceiptPage } from '@/pages/sto/ReportStoReceiptPage'
 import { ReportStoReceiptItemsPage } from '@/pages/sto/ReportStoReceiptItemsPage'
+import StoSettlementPage from '@/pages/finance/StoSettlementPage'
+import StoArReportPage from '@/pages/finance/StoArReportPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -700,8 +702,24 @@ function App() {
           <Route
             path="/finance/paydown"
             element={
-              <ProtectedRoute allowedRoles={[1, 3, 6]}>
+              <ProtectedRoute allowedRoles={[1, 3, 6, 10]}>
                 <SupplierPaydownPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/sto-settlement"
+            element={
+              <ProtectedRoute allowedRoles={[6, 10]}>
+                <StoSettlementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/sto-ar-report"
+            element={
+              <ProtectedRoute allowedRoles={[6, 10]}>
+                <StoArReportPage />
               </ProtectedRoute>
             }
           />

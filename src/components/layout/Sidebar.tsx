@@ -207,6 +207,8 @@ const financeGroup: NavGroup = {
     { title: 'Invoices Report', path: '/finance/invoices-report', icon: FileText, roleIds: [5, 6, 8, 10] },
     { title: 'Supplier Paydown', path: '/finance/paydown', icon: Truck, roleIds: [6, 10] },
     { title: 'STO Paydown', path: '/finance/sto-paydown', icon: Boxes, roleIds: [6, 10] },
+    { title: 'STO Settlement', path: '/finance/sto-settlement', icon: Wallet, roleIds: [6, 10] },
+    { title: 'STO AR Report', path: '/finance/sto-ar-report', icon: TrendingUp, roleIds: [6, 10] },
   ]
 }
 

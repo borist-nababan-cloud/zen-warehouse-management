@@ -469,6 +469,7 @@ export interface StoInvoice {
   total_amount: number
   due_date: string
   status: 'UNPAID' | 'PAID'
+  settlement_status: 'UNCLAIMED' | 'RECEIVED' // Added via STO AR Module
   created_at: string
   // Joins
   sto_order?: StoOrder | null
