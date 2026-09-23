@@ -50,3 +50,10 @@ frontendplan.md
 !package.json
 !tsconfig.json
 build_errors.txt
+
+# Added by Agent for safety
+.env
+*.sql
+*.md
+!README.md
+docs/
