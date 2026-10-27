@@ -33,7 +33,7 @@ Aplikasi WHMS telah diaudit dan dioptimalkan dengan standar **Production Grade**
 > Oleh karena itu, di dashboard Coolify, pastikan mencentang tombol opsi **"Build Variable"** (atau *"Available during build"*) pada setiap variabel yang dimasukkan.
 
 ### A. Environment Staging / Mode Latihan
-Gunakan konfigurasi ini untuk instance pengujian atau simulasi staf (misal domain: `whm-staging.zenfamilyspa.id`):
+Gunakan konfigurasi ini untuk instance pengujian atau simulasi staf (domain resmi: `https://latihan-whmapp.zenfamilyspa.id`):
 
 | Nama Variabel | Nilai (Value) | Keterangan |
 | :--- | :--- | :--- |
@@ -59,7 +59,7 @@ VITE_APP_MODE=STAG
 ---
 
 ### B. Environment Production (Live Operasional)
-Gunakan konfigurasi ini untuk instance live operasional cabang dan holding (misal domain: `whm.zenfamilyspa.id`):
+Gunakan konfigurasi ini untuk instance live operasional cabang dan holding (domain resmi: `https://whmapp.zenfamilyspa.id`):
 
 | Nama Variabel | Nilai (Value) | Keterangan |
 | :--- | :--- | :--- |
@@ -93,9 +93,9 @@ VITE_APP_MODE=PROD
 4. Klik **+ Add Resource** $\rightarrow$ Pilih **Application**.
 5. Pilih **Public Repository** atau **Private Repository** (jika menggunakan integrasi GitHub/GitLab).
 6. Tentukan konfigurasi git:
-   - **Repository URL**: Masukkan URL repositori frontend WHMS Anda.
-   - **Branch**: `main` (atau `production`).
-   - **Base Directory**: `/` (atau `/frontend/warehousemanagement` jika monorepo).
+   - **Repository URL**: Masukkan URL repositori frontend WHMS Anda (`https://github.com/borist-nababan-cloud/zen-warehouse-management.git`).
+   - **Branch**: `main`.
+   - **Base Directory**: `/`.
 
 ---
 
@@ -106,8 +106,8 @@ VITE_APP_MODE=PROD
    - **Healthcheck Path**: `/healthz`.
 2. Pada bagian **Domains**:
    - Masukkan FQDN domain lengkap dengan protokol HTTPS:
-     - Staging: `https://whm-staging.zenfamilyspa.id`
-     - Production: `https://whm.zenfamilyspa.id`
+     - Staging: `https://latihan-whmapp.zenfamilyspa.id`
+     - Production: `https://whmapp.zenfamilyspa.id`
    - *(Coolify dan Traefik akan otomatis menerbitkan sertifikat SSL/TLS gratis via Let's Encrypt)*.
 
 ---
