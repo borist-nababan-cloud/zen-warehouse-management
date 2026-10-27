@@ -299,16 +299,19 @@ export async function updateUnit(
   kode_outlet: string,
   purchase_uom: string,
   conversion_rate: number,
-  updated_by: string
+  updated_by: string,
+  base_uom?: string
 ): Promise<ApiResponse<BarangUnit>> {
   try {
+    const finalUom = (purchase_uom || base_uom || 'PCS').trim().toUpperCase()
 
     const { data, error } = await supabase
       .from('barang_units')
       .upsert({
         barang_id,
         kode_outlet,
-        purchase_uom,
+        base_uom: finalUom,
+        purchase_uom: finalUom,
         conversion_rate,
         updated_at: new Date().toISOString(),
         update_by: updated_by,
@@ -357,7 +360,7 @@ export async function updatePriceUnit(
   updated_by: string
 ): Promise<ApiResponse<{ price: BarangPrice | null; unit: BarangUnit | null }>> {
   try {
-    const { barang_id, kode_outlet, buy_price, sell_price, purchase_uom, conversion_rate } = updateData
+    const { barang_id, kode_outlet, buy_price, sell_price, purchase_uom, base_uom, conversion_rate } = updateData
 
     // Update price if provided
     let priceResult: BarangPrice | null = null
@@ -379,15 +382,17 @@ export async function updatePriceUnit(
       priceResult = priceResponse.data
     }
 
-    // Update unit if provided
+    // Update unit if provided (ensuring base_uom and purchase_uom share the same value)
     let unitResult: BarangUnit | null = null
-    if (purchase_uom !== undefined || conversion_rate !== undefined) {
+    if (purchase_uom !== undefined || base_uom !== undefined || conversion_rate !== undefined) {
+      const uomValue = (purchase_uom || base_uom || 'PCS').trim().toUpperCase()
       const unitResponse = await updateUnit(
         barang_id,
         kode_outlet,
-        purchase_uom ?? 'PCS',
+        uomValue,
         conversion_rate ?? 1,
-        updated_by
+        updated_by,
+        uomValue
       )
       if (!unitResponse.isSuccess) {
         return {

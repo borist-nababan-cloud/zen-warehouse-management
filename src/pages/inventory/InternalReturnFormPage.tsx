@@ -122,14 +122,14 @@ export default function InternalReturnFormPage() {
     }
 
     const handleSubmit = async () => {
-        if (!categoryId) return toast.error("Please select a category")
-        if (!returnedBy) return toast.error("Please enter who returned the items")
-        if (cart.length === 0) return toast.error("Please add at least one item")
+        if (!categoryId) return toast.error("Silakan pilih kategori retur")
+        if (!returnedBy) return toast.error("Silakan isi nama yang mengembalikan barang")
+        if (cart.length === 0) return toast.error("Silakan tambahkan minimal satu barang")
 
-        // Validate
+        // Validate Qty
         for (const item of cart) {
             if (item.qty_returned <= 0) {
-                return toast.error(`Invalid quantity for ${item.name}`)
+                return toast.error(`Jumlah retur tidak valid untuk ${item.name}`)
             }
         }
 
@@ -153,13 +153,13 @@ export default function InternalReturnFormPage() {
             const res = await internalReturnService.createReturn(header, items, user!.id)
 
             if (res.isSuccess) {
-                toast.success("Internal Return Created!")
+                toast.success("Retur internal berhasil dicatat!")
                 navigate('/inventory/internal-return')
             } else {
-                toast.error(res.error || "Failed to create return")
+                toast.error(res.error || "Gagal mencatat retur internal")
             }
         } catch (err) {
-            toast.error("An unexpected error occurred")
+            toast.error("Terjadi kesalahan sistem saat menyimpan")
         } finally {
             setLoading(false)
         }
@@ -169,33 +169,47 @@ export default function InternalReturnFormPage() {
         <DashboardLayout>
             <div className="max-w-5xl mx-auto space-y-6">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" onClick={() => navigate('/inventory/internal-return')}>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => navigate('/inventory/internal-return')}
+                        className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]"
+                    >
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900">New Internal Return</h1>
-                        <p className="text-slate-500">Return items to warehouse inventory.</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-[#EBE6DF]">
+                            Catat Retur Internal Baru
+                        </h1>
+                        <p className="text-slate-500 dark:text-[#A6A095]">
+                            Kembalikan barang atau sisa perlengkapan operasional ke stok inventaris gudang.
+                        </p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Header Information */}
-                    <Card className="md:col-span-1 border-slate-200 h-fit">
+                    <Card className="md:col-span-1 border-slate-200 dark:border-[#38382E] bg-white dark:bg-[#22221B] h-fit shadow-sm">
                         <CardHeader>
-                            <CardTitle className="text-base text-teal-700">Transaction Details</CardTitle>
+                            <CardTitle className="text-base text-slate-900 dark:text-[#EBE6DF]">Rincian Transaksi</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label>Date</Label>
-                                <Input type="date" value={transactionDate} onChange={e => setTransactionDate(e.target.value)} />
+                                <Label className="dark:text-[#EBE6DF]">Tanggal Transaksi</Label>
+                                <Input
+                                    type="date"
+                                    value={transactionDate}
+                                    onChange={e => setTransactionDate(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <Label>Category (Reused) <span className="text-red-500">*</span></Label>
+                                <Label className="dark:text-[#EBE6DF]">Kategori Retur <span className="text-rose-500">*</span></Label>
                                 <Select value={categoryId} onValueChange={setCategoryId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Category" />
+                                    <SelectTrigger className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]">
+                                        <SelectValue placeholder="Pilih Kategori" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="dark:bg-[#22221B] dark:border-[#38382E]">
                                         {categories.map(c => (
                                             <SelectItem key={c.id} value={c.id.toString()}>{c.category_name}</SelectItem>
                                         ))}
@@ -203,58 +217,68 @@ export default function InternalReturnFormPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Returned By <span className="text-red-500">*</span></Label>
-                                <Input placeholder="e.g. John Doe" value={returnedBy} onChange={e => setReturnedBy(e.target.value)} />
+                                <Label className="dark:text-[#EBE6DF]">Dikembalikan Oleh <span className="text-rose-500">*</span></Label>
+                                <Input
+                                    placeholder="Cth: Front Office, Terapis, Staff..."
+                                    value={returnedBy}
+                                    onChange={e => setReturnedBy(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <Label>Notes</Label>
-                                <Textarea placeholder="Additional notes..." value={headerNotes} onChange={e => setHeaderNotes(e.target.value)} />
+                                <Label className="dark:text-[#EBE6DF]">Catatan Alasan Retur</Label>
+                                <Textarea
+                                    placeholder="Alasan pengembalian barang ke gudang..."
+                                    value={headerNotes}
+                                    onChange={e => setHeaderNotes(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* Items & Cart */}
-                    <Card className="md:col-span-2 border-slate-200">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-base">Returned Items</CardTitle>
+                    <Card className="md:col-span-2 border-slate-200 dark:border-[#38382E] bg-white dark:bg-[#22221B] shadow-sm">
+                        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-slate-100 dark:border-[#38382E]">
+                            <CardTitle className="text-base text-slate-900 dark:text-[#EBE6DF]">Daftar Barang yang Diretur</CardTitle>
 
                             <div className="w-[300px]">
                                 <SearchableSelect
                                     options={productOptions}
                                     value={selectedProductId}
                                     onChange={setSelectedProductId}
-                                    placeholder="Search Product to Return..."
+                                    placeholder="Cari & Pilih Barang..."
                                 />
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-4">
                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Item</TableHead>
-                                        <TableHead className="w-[120px]">Condition</TableHead>
-                                        <TableHead className="w-[100px]">Qty Return</TableHead>
-                                        <TableHead className="w-[60px]"></TableHead>
+                                <TableHeader className="bg-slate-50/80 dark:bg-[#191914]">
+                                    <TableRow className="border-b border-slate-200 dark:border-[#38382E]">
+                                        <TableHead className="dark:text-[#EBE6DF]">Barang</TableHead>
+                                        <TableHead className="w-[140px] dark:text-[#EBE6DF]">Kondisi</TableHead>
+                                        <TableHead className="w-[120px] dark:text-[#EBE6DF]">Jumlah Retur</TableHead>
+                                        <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {cart.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="h-24 text-center text-slate-500">
-                                                No items added yet.
+                                            <TableCell colSpan={4} className="h-28 text-center text-slate-500 dark:text-[#A6A095]">
+                                                Belum ada barang ditambahkan. Pilih barang dari kotak pencarian di atas.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         cart.map((item, index) => (
-                                            <TableRow key={item.id}>
+                                            <TableRow key={item.id} className="border-b border-slate-100 dark:border-[#38382E]/50">
                                                 <TableCell>
-                                                    <div className="font-medium text-slate-700">{item.name}</div>
-                                                    <div className="text-xs text-slate-500">{item.sku}</div>
+                                                    <div className="font-medium text-slate-700 dark:text-[#EBE6DF]">{item.name}</div>
+                                                    <div className="text-xs text-slate-500 dark:text-[#A6A095] font-mono">{item.sku}</div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input
-                                                        placeholder="Condition..."
-                                                        className="h-8 text-xs"
+                                                        placeholder="Kondisi (Baik/Rusak)..."
+                                                        className="h-8 text-xs dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]"
                                                         value={item.condition_notes}
                                                         onChange={(e) => updateCartItem(index, 'condition_notes', e.target.value)}
                                                     />
@@ -266,11 +290,11 @@ export default function InternalReturnFormPage() {
                                                         step="0.01"
                                                         value={item.qty_returned}
                                                         onChange={(e) => updateCartItem(index, 'qty_returned', parseFloat(e.target.value))}
-                                                        className="h-8 text-right font-medium text-teal-700 bg-teal-50 border-teal-200"
+                                                        className="h-8 text-right font-medium text-[#6E8027] dark:text-[#9BB33B] bg-[#889D35]/10 border-[#889D35]/30 dark:bg-[#191914] dark:border-[#38382E]"
                                                     />
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => removeCartItem(index)} className="text-slate-400 hover:text-red-600">
+                                                    <Button variant="ghost" size="icon" onClick={() => removeCartItem(index)} className="text-slate-400 hover:text-rose-600">
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </TableCell>
@@ -280,15 +304,15 @@ export default function InternalReturnFormPage() {
                                 </TableBody>
                             </Table>
 
-                            <div className="flex justify-end mt-6 pt-4 border-t">
+                            <div className="flex justify-end mt-6 pt-4 border-t border-slate-100 dark:border-[#38382E]">
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={loading || cart.length === 0}
-                                    className="bg-teal-600 hover:bg-teal-700 text-white min-w-[150px]"
+                                    className="bg-[#889D35] hover:bg-[#72842B] text-white min-w-[170px] font-medium shadow-sm"
                                 >
                                     {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                     <Save className="h-4 w-4 mr-2" />
-                                    Submit Return
+                                    Simpan Retur
                                 </Button>
                             </div>
                         </CardContent>

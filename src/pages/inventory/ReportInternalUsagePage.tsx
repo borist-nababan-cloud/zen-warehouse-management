@@ -117,13 +117,13 @@ export default function ReportInternalUsagePage() {
 
             if (res.isSuccess && res.data) {
                 setOriginalData(res.data)
-                setData(res.data) // Will trigger local filtering effect if dependencies change, but might need initial set
+                setData(res.data)
             } else {
-                toast.error(res.error || 'Failed to load report')
+                toast.error(res.error || 'Gagal memuat laporan pemakaian internal')
             }
         } catch (error) {
             console.error('Error:', error)
-            toast.error('An unexpected error occurred')
+            toast.error('Terjadi kesalahan sistem saat memuat laporan')
         } finally {
             setLoading(false)
         }
@@ -131,11 +131,11 @@ export default function ReportInternalUsagePage() {
 
     const handleExportCsv = () => {
         if (data.length === 0) {
-            toast.error('No data to export')
+            toast.error('Tidak ada data untuk diekspor')
             return
         }
 
-        const headers = ['Date', 'Doc No', 'Category', 'Item Name', 'Requested By', 'Qty Used', 'Total Value', 'Notes']
+        const headers = ['Tanggal', 'No Dokumen', 'Kategori', 'Nama Barang', 'SKU', 'Pemohon', 'Petugas', 'Jumlah Qty', 'Satuan', 'Estimasi Biaya', 'Total Nilai', 'Catatan']
         const csvRows = [headers.join(',')]
 
         data.forEach(row => {
@@ -144,10 +144,14 @@ export default function ReportInternalUsagePage() {
                 `"${row.document_number}"`,
                 `"${row.category_name}"`,
                 `"${row.item_name || ''}"`,
+                `"${row.sku || ''}"`,
                 `"${row.requested_by || ''}"`,
+                `"${row.created_by_name || ''}"`,
                 row.qty_used,
+                `"${row.uom || ''}"`,
+                row.unit_cost_estimate,
                 row.total_expense_value,
-                `"${row.item_notes || ''}"`
+                `"${row.item_notes || row.header_notes || ''}"`
             ]
             csvRows.push(values.join(','))
         })
@@ -157,7 +161,7 @@ export default function ReportInternalUsagePage() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `Usage_Report_${startDate}_${endDate}.csv`
+        a.download = `Laporan_Pemakaian_Internal_${startDate}_${endDate}.csv`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -165,54 +169,71 @@ export default function ReportInternalUsagePage() {
     }
 
     // Summary Calculations
-    const totalItems = data.reduce((acc, curr) => acc + (curr.qty_used || 0), 0)
-    const totalValue = data.reduce((acc, curr) => acc + (curr.total_expense_value || 0), 0)
+    const totalItems = data.reduce((acc, curr) => acc + (Number(curr.qty_used) || 0), 0)
+    const totalValue = data.reduce((acc, curr) => acc + (Number(curr.total_expense_value) || 0), 0)
 
     return (
         <DashboardLayout>
             <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Internal Consumption Report</h1>
-                    <p className="text-slate-500">
-                        Track inventory expenses and internal usage across departments.
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-[#EBE6DF]">
+                        Laporan Pemakaian Internal
+                    </h1>
+                    <p className="text-slate-500 dark:text-[#A6A095]">
+                        Pantau pengeluaran inventaris dan pemakaian internal operasional antar departemen outlet.
                     </p>
                 </div>
 
                 {/* Filters */}
-                <Card className="bg-white shadow-sm border-slate-200">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
-                            <Filter className="h-4 w-4 text-orange-500" />
-                            Filters & Search
+                <Card className="bg-white dark:bg-[#22221B] shadow-sm border-slate-200 dark:border-[#38382E]">
+                    <CardHeader className="pb-4 flex flex-row items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-[#EBE6DF]">
+                            <Filter className="h-4 w-4 text-[#889D35]" />
+                            Filter & Pencarian
                         </CardTitle>
-                        <Button variant="outline" size="sm" className="ml-auto" onClick={handleExportCsv}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Export CSV
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-slate-200 dark:border-[#38382E] hover:bg-slate-50 dark:hover:bg-[#2a2a22]"
+                            onClick={handleExportCsv}
+                        >
+                            <Download className="mr-2 h-4 w-4 text-[#889D35]" />
+                            Ekspor CSV
                         </Button>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
-                                <Label>Start Date</Label>
-                                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="focus:border-orange-500" />
+                                <Label className="dark:text-[#EBE6DF]">Tanggal Mulai</Label>
+                                <Input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <Label>End Date</Label>
-                                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="focus:border-orange-500" />
+                                <Label className="dark:text-[#EBE6DF]">Tanggal Akhir</Label>
+                                <Input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
                             </div>
 
                             {canSelectOutlet && (
                                 <div className="space-y-2">
-                                    <Label>Outlet</Label>
+                                    <Label className="dark:text-[#EBE6DF]">Outlet / Cabang</Label>
                                     <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
-                                        <SelectTrigger className="w-full bg-white">
+                                        <SelectTrigger className="w-full bg-white dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]">
                                             <div className="flex items-center gap-2">
                                                 <Store className="h-4 w-4 text-muted-foreground" />
-                                                <SelectValue placeholder="Select Outlet" />
+                                                <SelectValue placeholder="Pilih Outlet" />
                                             </div>
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        <SelectContent className="dark:bg-[#22221B] dark:border-[#38382E]">
+                                            <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                             {availableOutlets.map((outlet) => (
                                                 <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                     {outlet.name_outlet}
@@ -224,13 +245,13 @@ export default function ReportInternalUsagePage() {
                             )}
 
                             <div className="space-y-2">
-                                <Label>Category</Label>
+                                <Label className="dark:text-[#EBE6DF]">Kategori Pemakaian</Label>
                                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All Categories" />
+                                    <SelectTrigger className="bg-white dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]">
+                                        <SelectValue placeholder="Semua Kategori" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Categories</SelectItem>
+                                    <SelectContent className="dark:bg-[#22221B] dark:border-[#38382E]">
+                                        <SelectItem value="all">Semua Kategori</SelectItem>
                                         {categories.map(c => (
                                             <SelectItem key={c.id} value={c.category_name}>{c.category_name}</SelectItem>
                                         ))}
@@ -243,10 +264,10 @@ export default function ReportInternalUsagePage() {
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                                 <Input
-                                    placeholder="Search Document, Item Name, or Requester..."
+                                    placeholder="Cari No. Dokumen, Nama Barang, Pemohon, atau SKU..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-9 focus:border-orange-500"
+                                    className="pl-9 dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
                                 />
                             </div>
                         </div>
@@ -255,28 +276,28 @@ export default function ReportInternalUsagePage() {
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-orange-50 border-orange-100 shadow-sm">
+                    <Card className="bg-[#889D35]/10 border-[#889D35]/25 dark:bg-[#22221B] dark:border-[#889D35]/30 shadow-sm">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-orange-100 rounded-full text-orange-600">
+                                <div className="p-3 bg-[#889D35]/20 rounded-xl text-[#6E8027] dark:text-[#9BB33B]">
                                     <PackageOpen className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-orange-600">Total Items Used</p>
-                                    <h3 className="text-2xl font-bold text-orange-900">{totalItems}</h3>
+                                    <p className="text-sm font-medium text-[#6E8027] dark:text-[#9BB33B]">Total Barang Terpakai</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-[#EBE6DF]">{totalItems}</h3>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-red-50 border-red-100 shadow-sm">
+                    <Card className="bg-amber-50/70 border-amber-200 dark:bg-[#22221B] dark:border-amber-900/40 shadow-sm">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-red-100 rounded-full text-red-600">
+                                <div className="p-3 bg-amber-100 dark:bg-amber-950/50 rounded-xl text-amber-700 dark:text-amber-400">
                                     <AlertCircle className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-red-600">Total Expense Value</p>
-                                    <h3 className="text-2xl font-bold text-red-900">{formatCurrency(totalValue)}</h3>
+                                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Total Estimasi Nilai Biaya</p>
+                                    <h3 className="text-2xl font-bold text-amber-900 dark:text-amber-200">{formatCurrency(totalValue)}</h3>
                                 </div>
                             </div>
                         </CardContent>
@@ -284,59 +305,65 @@ export default function ReportInternalUsagePage() {
                 </div>
 
                 {/* Main Table */}
-                <div className="rounded-md border bg-white shadow-sm overflow-hidden">
+                <div className="rounded-xl border border-slate-200 dark:border-[#38382E] bg-white dark:bg-[#22221B] shadow-sm overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-slate-50/80">
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Doc No</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Item Name</TableHead>
-                                <TableHead>Requested By</TableHead>
-                                <TableHead className="text-right">Qty</TableHead>
-                                <TableHead className="text-right">Value</TableHead>
-                                <TableHead>Notes</TableHead>
+                        <TableHeader className="bg-slate-50/80 dark:bg-[#191914]">
+                            <TableRow className="border-b border-slate-200 dark:border-[#38382E]">
+                                <TableHead className="dark:text-[#EBE6DF]">Tanggal</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">No. Dokumen</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Outlet</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Kategori</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Nama Barang</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Pemohon</TableHead>
+                                <TableHead className="text-right dark:text-[#EBE6DF]">Jumlah (Qty)</TableHead>
+                                <TableHead className="text-right dark:text-[#EBE6DF]">Total Nilai</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Catatan</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center">Loading...</TableCell>
+                                    <TableCell colSpan={9} className="h-24 text-center dark:text-[#A6A095]">
+                                        Memuat data pemakaian internal...
+                                    </TableCell>
                                 </TableRow>
                             ) : data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center text-slate-500">
-                                        No usage records found.
+                                    <TableCell colSpan={9} className="h-24 text-center text-slate-500 dark:text-[#A6A095]">
+                                        Tidak ada data pemakaian internal untuk periode atau filter yang dipilih.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 data.map((row) => (
-                                    <TableRow key={row.item_id} className="hover:bg-slate-50/50">
-                                        <TableCell className="font-medium text-slate-600">
+                                    <TableRow key={row.item_id} className="hover:bg-slate-50/50 dark:hover:bg-[#191914]/50 border-b border-slate-100 dark:border-[#38382E]/50">
+                                        <TableCell className="font-medium text-slate-600 dark:text-[#EBE6DF] whitespace-nowrap">
                                             {formatDate(row.transaction_date)}
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs text-slate-500">
+                                        <TableCell className="font-mono text-xs text-slate-500 dark:text-[#A6A095]">
                                             {row.document_number}
                                         </TableCell>
+                                        <TableCell className="text-xs text-slate-600 dark:text-[#A6A095]">
+                                            {row.name_outlet}
+                                        </TableCell>
                                         <TableCell>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#889D35]/15 text-[#6E8027] dark:text-[#9BB33B] border border-[#889D35]/20">
                                                 {row.category_name}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="font-medium text-slate-800">
+                                        <TableCell className="font-medium text-slate-800 dark:text-[#EBE6DF]">
                                             {row.item_name}
-                                            <span className="block text-xs text-slate-400">{row.sku}</span>
+                                            <span className="block text-xs text-slate-400 dark:text-[#A6A095] font-mono">{row.sku}</span>
                                         </TableCell>
-                                        <TableCell className="text-sm text-slate-600">
-                                            {row.requested_by}
+                                        <TableCell className="text-sm text-slate-600 dark:text-[#A6A095]">
+                                            {row.requested_by || '-'}
                                         </TableCell>
-                                        <TableCell className="text-right font-medium">
+                                        <TableCell className="text-right font-medium dark:text-[#EBE6DF] whitespace-nowrap">
                                             {row.qty_used} {row.uom}
                                         </TableCell>
-                                        <TableCell className="text-right font-medium text-red-600">
+                                        <TableCell className="text-right font-medium text-amber-700 dark:text-amber-400 whitespace-nowrap">
                                             {formatCurrency(row.total_expense_value)}
                                         </TableCell>
-                                        <TableCell className="text-xs text-slate-500 max-w-[200px] truncate">
+                                        <TableCell className="text-xs text-slate-500 dark:text-[#A6A095] max-w-[200px] truncate" title={row.item_notes || row.header_notes || ''}>
                                             {row.item_notes || row.header_notes || '-'}
                                         </TableCell>
                                     </TableRow>

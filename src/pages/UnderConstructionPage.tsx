@@ -12,12 +12,12 @@ export function UnderConstructionPage() {
             </div>
 
             <h1 className="mb-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Under Construction
+                Sedang Dalam Pengembangan
             </h1>
 
             <p className="mb-8 max-w-md text-lg text-muted-foreground">
-                We're currently working hard to bring you this feature.
-                Please check back soon for updates!
+                Fitur ini sedang dalam tahap pengembangan dan integrasi sistem.
+                Silakan periksa kembali nanti untuk pembaruan fitur.
             </p>
 
             <Button
@@ -26,7 +26,7 @@ export function UnderConstructionPage() {
                 size="lg"
             >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
+                Kembali ke Dasbor
             </Button>
         </div>
     )

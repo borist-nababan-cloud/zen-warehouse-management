@@ -43,9 +43,37 @@ export class UnassignedUserError extends Error {
   }
 }
 
+export class UnauthorizedRoleError extends Error {
+  constructor(message = 'Your role is not authorized to access Warehouse Management. Please use the Zen Internal App.') {
+    super(message)
+    this.name = 'UnauthorizedRoleError'
+  }
+}
+
 // ============================================
 // AUTHENTICATION OPERATIONS
 // ============================================
+
+/**
+ * Sign in with Google OAuth 2.0
+ * For Superuser (Role 8) and Outlet Admin (Role 6)
+ * @param redirectTo - Optional redirect URL
+ */
+export async function signInWithGoogle(redirectTo?: string): Promise<void> {
+  const targetUrl = redirectTo || `${window.location.origin}/auth/callback`
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: targetUrl,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  })
+
+  if (error) throw error
+}
 
 /**
  * Sign in with email and password
@@ -87,12 +115,18 @@ export async function signIn(
 
     const profile = userProfileResult.data
 
-    // Step 4: Check if user is UNASSIGNED (role=9)
+    // Step 4: Check if user is UNASSIGNED (role=9) or MEMBER (role=17)
+    // Both Role 9 and Role 17 cannot login to WHM
     if (profile.user_role === 9) {
       // Force logout
       await supabase.auth.signOut()
-
       throw new UnassignedUserError()
+    }
+
+    if (profile.user_role === 17) {
+      // Force logout: Member role cannot login to WHM
+      await supabase.auth.signOut()
+      throw new UnauthorizedRoleError('Role Member (17) is not authorized to access Warehouse Management.')
     }
 
     // Step 5: Store in localStorage for future use
@@ -126,6 +160,14 @@ export async function signIn(
       return {
         data: null,
         error: 'UNASSIGNED_USER', // Special error code for frontend handling
+        isSuccess: false,
+      }
+    }
+
+    if (error instanceof UnauthorizedRoleError) {
+      return {
+        data: null,
+        error: error.message || 'UNAUTHORIZED_ROLE',
         isSuccess: false,
       }
     }
@@ -234,12 +276,18 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       return null
     }
 
-    // Check if user is unassigned
-    if (profile.data.user_role === 9) {
-      // Sign out unassigned user
+    // Check if user is unassigned (role 9) or member (role 17)
+    // WHM blocks role 9 and 17 from logging in or maintaining session
+    if (profile.data.user_role === 9 || profile.data.user_role === 17) {
+      // Sign out unauthorized role
       await signOut()
       return null
     }
+
+    // Synchronize localStorage with active session (critical for OAuth redirects)
+    localStorage.setItem(STORAGE_KEY_KODE_OUTLET, profile.data.kode_outlet || '')
+    localStorage.setItem(STORAGE_KEY_USER_ROLE, profile.data.user_role.toString())
+    localStorage.setItem(STORAGE_KEY_USER_EMAIL, profile.data.email || session.user.email || '')
 
     let outlet = null
     if (profile.data.kode_outlet) {
@@ -247,11 +295,16 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       outlet = outletResult.data
     }
 
+    const provider = session.user.app_metadata?.provider ||
+      (session.user.identities?.some((id) => id.provider === 'google') ? 'google' : 'email')
+
     return {
       id: profile.data.uid,
       email: profile.data.email,
       user_role: profile.data.user_role,
       kode_outlet: profile.data.kode_outlet,
+      provider: provider,
+      app_metadata: session.user.app_metadata,
       profile: profile.data,
       outlet: outlet,
     }
@@ -527,17 +580,17 @@ export function getStoredUserEmail(): string | null {
 }
 
 /**
- * Check if current user is SUPERUSER
+ * Check if current user is SUPERUSER or WEB_ADMIN
  */
 export function isCurrentUserSuperuser(): boolean {
   const role = getStoredUserRole()
-  return role === 8
+  return role === 8 || role === 18
 }
 
 /**
- * Check if current user is Holding (can see all outlets)
+ * Check if current user is Holding / Global (can see all outlets)
  */
 export function isCurrentUserHolding(): boolean {
   const role = getStoredUserRole()
-  return role === 8
+  return role === 8 || role === 18
 }

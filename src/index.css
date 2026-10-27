@@ -1,44 +1,148 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-background: oklch(100% 0 0);
-  --color-foreground: oklch(9% 0.02 285);
-  --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(9% 0.02 285);
-  --color-popover: oklch(100% 0 0);
-  --color-popover-foreground: oklch(9% 0.02 285);
-  --color-primary: oklch(55% 0.22 265);
-  --color-primary-foreground: oklch(98% 0.01 265);
-  --color-secondary: oklch(96% 0.01 265);
-  --color-secondary-foreground: oklch(15% 0.02 265);
-  --color-muted: oklch(96% 0.01 265);
-  --color-muted-foreground: oklch(50% 0.02 265);
-  --color-accent: oklch(96% 0.01 265);
-  --color-accent-foreground: oklch(15% 0.02 265);
-  --color-destructive: oklch(60% 0.2 25);
-  --color-destructive-foreground: oklch(98% 0.01 265);
-  --color-border: oklch(90% 0.01 265);
-  --color-input: oklch(90% 0.01 265);
-  --color-ring: oklch(55% 0.22 265);
+  /* ====================================================
+     ZEN FAMILY SPA SIGNATURE BRAND PALETTE
+     Aligned with frontend/internalapp and frontend/dashboard
+     ==================================================== */
+  --color-zen-matcha: #889D35;    /* Primary Bamboo Green */
+  --color-zen-moss: #6E8027;      /* Deep Olive / Moss Accent */
+  --color-zen-sand: #D2C0A7;      /* Warm Accent Sand */
+  --color-zen-linen: #F8F5F1;     /* Soft Linen Background */
+  --color-zen-charcoal: #3C3C32;  /* River Stone / Dark Text */
+  --color-zen-dark: #2A2A23;      /* Dark Neutral */
+  --color-zen-paper: #FFFFFF;     /* Pure Paper White */
+  --color-zen-border: #E8E2D9;    /* Warm Earth Border */
+  --color-zen-stone: #EBE6DF;     /* Muted Stone */
+  --color-zen-cream: #F4EFEB;     /* Cream Accent */
+  --color-zen-bark: #544A3C;      /* Deep Bark Brown */
+  --color-zen-muted: #8C8578;     /* Muted Text */
 
-  /* Pastel Colors (converted to OKLCH for opacity support) */
-  --color-pastel-blue: oklch(93% 0.03 255);
-  /* #e0f2fe equivalent */
-  --color-pastel-green: oklch(93% 0.05 155);
-  /* #dcfce7 equivalent */
-  --color-pastel-purple: oklch(93% 0.05 305);
-  /* #f3e8ff equivalent */
-  --color-pastel-orange: oklch(93% 0.05 65);
-  /* #ffedd5 equivalent */
-  --color-pastel-red: oklch(93% 0.05 25);
-  /* #fee2e2 equivalent */
-  --color-pastel-yellow: oklch(95% 0.10 105);
-  /* #fef9c3 equivalent */
+  /* ====================================================
+     SEMANTIC THEME TOKENS (SHADCN / TAILWIND ALIGNED)
+     ==================================================== */
+  --color-background: #F8F5F1;
+  --color-foreground: #3C3C32;
 
-  /* Updated Main Theme to softer/pastel aesthetic */
-  --color-primary: oklch(70% 0.15 265);
-  /* Softer Indigo */
-  --color-primary-foreground: oklch(98% 0.01 265);
+  --color-card: #FFFFFF;
+  --color-card-foreground: #3C3C32;
 
-  --radius: 0.5rem;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #3C3C32;
+
+  --color-primary: #889D35;
+  --color-primary-foreground: #FFFFFF;
+
+  --color-secondary: #D2C0A7;
+  --color-secondary-foreground: #3C3C32;
+
+  --color-muted: #EBE6DF;
+  --color-muted-foreground: #8C8578;
+
+  --color-accent: #F4EFEB;
+  --color-accent-foreground: #3C3C32;
+
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #FFFFFF;
+
+  --color-border: #E8E2D9;
+  --color-input: #E8E2D9;
+  --color-ring: #889D35;
+
+  /* Pastel Tints with Warm Zen Touch */
+  --color-pastel-blue: #E8EEF5;
+  --color-pastel-green: #EBF1D8;
+  --color-pastel-purple: #F3E8FF;
+  --color-pastel-orange: #FFEDD5;
+  --color-pastel-red: #FEE2E2;
+  --color-pastel-yellow: #FEF9C3;
+
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+
+  --radius: 0.75rem;
+}
+
+@layer base {
+  :root {
+    --color-zen-matcha: #889D35;
+    --color-zen-sand: #D2C0A7;
+    --color-zen-linen: #F8F5F1;
+    --color-zen-charcoal: #3C3C32;
+    --color-zen-moss: #6E8027;
+  }
+
+  .dark {
+    /* Semantic Dark Theme Tokens */
+    --color-background: #191914;
+    --color-foreground: #EBE6DF;
+
+    --color-card: #22221B;
+    --color-card-foreground: #EBE6DF;
+
+    --color-popover: #22221B;
+    --color-popover-foreground: #EBE6DF;
+
+    --color-primary: #9BB33B;
+    --color-primary-foreground: #191914;
+
+    --color-secondary: #2E2E25;
+    --color-secondary-foreground: #EBE6DF;
+
+    --color-muted: #27271F;
+    --color-muted-foreground: #A6A095;
+
+    --color-accent: #2E2E25;
+    --color-accent-foreground: #EBE6DF;
+
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #FFFFFF;
+
+    --color-border: #38382E;
+    --color-input: #38382E;
+    --color-ring: #9BB33B;
+
+    /* Zen Signature Palette Overrides for Dark Mode */
+    --color-zen-linen: #191914;
+    --color-zen-charcoal: #EBE6DF;
+    --color-zen-dark: #12120E;
+    --color-zen-paper: #22221B;
+    --color-zen-border: #38382E;
+    --color-zen-stone: #27271F;
+    --color-zen-cream: #2E2E25;
+    --color-zen-sand: #B8A68D;
+    --color-zen-matcha: #9BB33B;
+    --color-zen-moss: #889D35;
+    --color-zen-muted: #A6A095;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Custom Zen Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
 }

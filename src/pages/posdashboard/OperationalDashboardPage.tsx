@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { OperationalLiveSection } from '@/components/features/operational/OperationalLiveSection'
 import { OperationalHistoricalSection } from '@/components/features/operational/OperationalHistoricalSection'
 
-import { AIChatWidget } from '@/components/features/ai/AIChatWidget'
 
 export function OperationalDashboardPage() {
     const { user } = useAuthUser()
@@ -50,15 +49,6 @@ export function OperationalDashboardPage() {
                     availableOutlets={availableOutlets}
                 />
 
-                {/* AI Chat Widget */}
-                <AIChatWidget
-                    pageName="Operational Dashboard"
-                    contextData={{
-                        userRole: user?.user_role,
-                        userOutlet: user?.kode_outlet,
-                        availableOutlets: availableOutlets
-                    }}
-                />
             </div>
         </DashboardLayout>
     )

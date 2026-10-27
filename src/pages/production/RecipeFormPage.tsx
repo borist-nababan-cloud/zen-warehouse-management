@@ -71,7 +71,7 @@ export function RecipeFormPage() {
                 setIngredients(mappedItems)
             }
         } else {
-            toast.error("Failed to load recipe details")
+            toast.error("Gagal memuat detail resep")
             navigate('/production/recipes')
         }
         setIsLoadingData(false)
@@ -88,12 +88,20 @@ export function RecipeFormPage() {
         setIngredients(ingredients.filter(i => i.tempId !== tempId))
     }
 
+    const getProductUom = (product?: typeof allProducts[0]) => {
+        if (!product || !product.barang_units || product.barang_units.length === 0) return 'PCS'
+        const unit = product.barang_units.find(u => u.kode_outlet === (user?.kode_outlet || '111'))
+            || product.barang_units.find(u => u.kode_outlet === product.kode_outlet)
+            || product.barang_units[0]
+        return unit?.purchase_uom || unit?.base_uom || 'PCS'
+    }
+
     const updateIngredient = (tempId: number, field: keyof IngredientRow, value: any) => {
         // Prevent duplicate material selection
         if (field === 'materialId') {
             const exists = ingredients.some(i => i.materialId === value && i.tempId !== tempId)
             if (exists) {
-                toast.error("This ingredient is already in the list.")
+                toast.error("Bahan baku ini sudah ada dalam daftar.")
                 return
             }
         }
@@ -104,11 +112,7 @@ export function RecipeFormPage() {
                 // Auto-update UOM if material changes
                 if (field === 'materialId') {
                     const product = allProducts.find(p => p.id.toString() === value)
-                    if (product) {
-                        // Priority: purchase_uom in barang_units -> base_uom in barang_units -> 'PCS'
-                        const unitInfo = product.barang_units?.[0]
-                        updated.uom = unitInfo?.purchase_uom || unitInfo?.base_uom || 'PCS'
-                    }
+                    updated.uom = getProductUom(product)
                 }
                 return updated
             }
@@ -119,14 +123,14 @@ export function RecipeFormPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!targetProductId || !standardOutput || ingredients.length === 0) {
-            toast.error("Please fill all required fields and add at least one ingredient.")
+            toast.error("Mohon lengkapi semua kolom wajib dan tambahkan minimal satu bahan baku.")
             return
         }
 
         // Validate rows
         for (const row of ingredients) {
             if (!row.materialId || row.qty <= 0) {
-                toast.error("Invalid ingredient row. Check material and quantity.")
+                toast.error("Data bahan baku tidak valid. Periksa pilihan bahan dan jumlah yang dibutuhkan.")
                 return
             }
         }
@@ -135,9 +139,13 @@ export function RecipeFormPage() {
         try {
             let result
 
+            // Determine accurate outlet from target product or logged in user
+            const targetProduct = allProducts.find(p => p.id.toString() === targetProductId)
+            const targetOutlet = targetProduct?.kode_outlet || user?.kode_outlet || '111'
+
             const payload = {
                 barang_id: parseInt(targetProductId),
-                kode_outlet: user?.kode_outlet || '',
+                kode_outlet: targetOutlet,
                 description,
                 standard_qty_output: standardOutput,
                 items: ingredients.map(i => ({
@@ -156,14 +164,14 @@ export function RecipeFormPage() {
             }
 
             if (result.isSuccess) {
-                toast.success(id ? "Recipe updated successfully!" : "Recipe created successfully!")
+                toast.success(id ? "Resep berhasil diperbarui!" : "Resep berhasil dibuat!")
                 navigate('/production/recipes')
             } else {
-                toast.error(result.error || "Operation failed")
+                toast.error(result.error || "Operasi gagal")
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            toast.error("An unexpected error occurred.")
+            toast.error(error?.message || "Terjadi kesalahan yang tidak terduga.")
         } finally {
             setIsSubmitting(false)
         }
@@ -173,7 +181,7 @@ export function RecipeFormPage() {
         return (
             <DashboardLayout>
                 <div className="flex h-screen items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             </DashboardLayout>
         )
@@ -188,27 +196,27 @@ export function RecipeFormPage() {
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{id ? 'Edit Recipe' : 'New Recipe'}</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">{id ? 'Ubah Resep' : 'Tambah Resep Baru'}</h1>
                         <p className="text-muted-foreground text-sm">
-                            {id ? 'Modify existing formulation' : 'Define the formulation for a finished good.'}
+                            {id ? 'Perbarui formulasi dan komposisi resep' : 'Tentukan formula dan bahan baku untuk menghasilkan produk barang jadi.'}
                         </p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Header Card */}
-                    <Card className="border-indigo-100 shadow-sm">
-                        <CardHeader className="bg-indigo-50/30 pb-4">
-                            <CardTitle className="text-lg">Header Information</CardTitle>
+                    <Card className="border shadow-sm">
+                        <CardHeader className="bg-muted/40 pb-4">
+                            <CardTitle className="text-lg">Informasi Resep</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Target Product (Finished Good)</Label>
+                                    <Label>Produk Target (Barang Jadi)</Label>
                                     <SearchableSelect
                                         value={targetProductId}
                                         onChange={setTargetProductId}
-                                        placeholder="Select Product..."
+                                        placeholder="Pilih Produk..."
                                         options={allProducts.map(p => ({
                                             value: p.id.toString(),
                                             label: p.name || 'Unknown',
@@ -217,31 +225,30 @@ export function RecipeFormPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Standard Output Qty</Label>
+                                    <Label>Jumlah Output Standar</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
                                             type="number"
                                             min="0.01"
                                             step="0.01"
                                             value={standardOutput}
-                                            onChange={(e) => setStandardOutput(parseFloat(e.target.value))}
+                                            onChange={(e) => setStandardOutput(parseFloat(e.target.value) || 0)}
                                             className="font-mono"
                                         />
                                         <span className="text-sm font-medium text-muted-foreground w-20 truncate">
                                             {(() => {
-                                                if (!targetProductId) return 'Unit(s)'
+                                                if (!targetProductId) return 'Satuan'
                                                 const p = allProducts.find(x => x.id.toString() === targetProductId)
-                                                // Check purchase_uom or base_uom
-                                                return p?.barang_units?.[0]?.purchase_uom || p?.barang_units?.[0]?.base_uom || 'PCS'
+                                                return getProductUom(p)
                                             })()}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>Description / Notes</Label>
+                                <Label>Deskripsi / Catatan</Label>
                                 <Input
-                                    placeholder="e.g., Standard batch for daily production"
+                                    placeholder="Contoh: Batch standar untuk produksi harian"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                 />
@@ -250,20 +257,20 @@ export function RecipeFormPage() {
                     </Card>
 
                     {/* Ingredients Card */}
-                    <Card className="border-indigo-100 shadow-sm">
-                        <CardHeader className="bg-indigo-50/30 pb-4 flex flex-row items-center justify-between">
-                            <CardTitle className="text-lg">Ingredients</CardTitle>
+                    <Card className="border shadow-sm">
+                        <CardHeader className="bg-muted/40 pb-4 flex flex-row items-center justify-between">
+                            <CardTitle className="text-lg">Daftar Bahan Baku</CardTitle>
                             <Button type="button" size="sm" onClick={handleAddIngredient} variant="secondary">
-                                <Plus className="h-4 w-4 mr-1" /> Add Ingredient
+                                <Plus className="h-4 w-4 mr-1" /> Tambah Bahan
                             </Button>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[40%]">Raw Material</TableHead>
-                                        <TableHead className="w-[20%]">Qty Required</TableHead>
-                                        <TableHead className="w-[20%]">Unit</TableHead>
+                                        <TableHead className="w-[40%]">Bahan Baku</TableHead>
+                                        <TableHead className="w-[20%]">Jumlah Dibutuhkan</TableHead>
+                                        <TableHead className="w-[20%]">Satuan</TableHead>
                                         <TableHead className="w-[10%]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -271,7 +278,7 @@ export function RecipeFormPage() {
                                     {ingredients.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                                No ingredients added yet.
+                                                Belum ada bahan baku yang ditambahkan.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -281,7 +288,7 @@ export function RecipeFormPage() {
                                                     <SearchableSelect
                                                         value={row.materialId}
                                                         onChange={(val) => updateIngredient(row.tempId, 'materialId', val)}
-                                                        placeholder="Select Material..."
+                                                        placeholder="Pilih Bahan Baku..."
                                                         options={allProducts.map(p => ({
                                                             value: p.id.toString(),
                                                             label: p.name || 'Unknown',
@@ -297,7 +304,7 @@ export function RecipeFormPage() {
                                                         step="any"
                                                         className="h-9 font-mono text-right"
                                                         value={row.qty}
-                                                        onChange={(e) => updateIngredient(row.tempId, 'qty', parseFloat(e.target.value))}
+                                                        onChange={(e) => updateIngredient(row.tempId, 'qty', parseFloat(e.target.value) || 0)}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -330,11 +337,11 @@ export function RecipeFormPage() {
                         <Button
                             type="submit"
                             size="lg"
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[150px]"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[150px]"
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            {id ? 'Update Recipe' : 'Save Recipe'}
+                            {id ? 'Perbarui Resep' : 'Simpan Resep'}
                         </Button>
                     </div>
                 </form>

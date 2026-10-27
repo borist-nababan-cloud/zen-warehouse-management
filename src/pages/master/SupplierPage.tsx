@@ -367,15 +367,15 @@ export function SupplierPage() {
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold">Suppliers</h1>
+                            <h1 className="text-3xl font-bold">Pemasok (Supplier)</h1>
                             <p className="text-muted-foreground mt-1">
-                                Manage supplier data for {userOutlet === '111' ? 'Holding' : `Outlet ${userOutlet}`}
+                                Kelola data mitra pemasok untuk {userOutlet === '111' ? 'Holding' : `Gerai ${userOutlet}`}
                             </p>
                         </div>
                         {canEdit && (
                             <Button onClick={handleCreate}>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Add Supplier
+                                Tambah Pemasok
                             </Button>
                         )}
                     </div>
@@ -384,7 +384,7 @@ export function SupplierPage() {
                     <div className="grid gap-4 md:grid-cols-4">
                         <Card>
                             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                                <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
+                                <CardTitle className="text-sm font-medium">Total Pemasok</CardTitle>
                                 <Truck className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
@@ -399,7 +399,7 @@ export function SupplierPage() {
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by name, city, or PIC..."
+                                    placeholder="Cari berdasarkan nama pemasok, kota, atau PIC..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-10"
@@ -415,13 +415,13 @@ export function SupplierPage() {
                                 <table className="w-full">
                                     <thead className="bg-pastel-blue/30 text-blue-900">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-sm font-medium">Outlet</th>
-                                            <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
-                                            <th className="px-4 py-3 text-left text-sm font-medium">Contact</th>
-                                            <th className="px-4 py-3 text-left text-sm font-medium">Bank Info</th>
+                                            <th className="px-4 py-3 text-left text-sm font-medium">Gerai</th>
+                                            <th className="px-4 py-3 text-left text-sm font-medium">Nama Pemasok</th>
+                                            <th className="px-4 py-3 text-left text-sm font-medium">Kontak</th>
+                                            <th className="px-4 py-3 text-left text-sm font-medium">Info Rekening</th>
                                             <th className="px-4 py-3 text-left text-sm font-medium">PIC</th>
                                             {canEdit && (
-                                                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                                                <th className="px-4 py-3 text-right text-sm font-medium">Aksi</th>
                                             )}
                                         </tr>
                                     </thead>
@@ -429,7 +429,7 @@ export function SupplierPage() {
                                         {filteredData.length === 0 ? (
                                             <tr>
                                                 <td colSpan={canEdit ? 6 : 5} className="px-4 py-8 text-center text-muted-foreground">
-                                                    No suppliers found
+                                                    Data pemasok tidak ditemukan
                                                 </td>
                                             </tr>
                                         ) : (

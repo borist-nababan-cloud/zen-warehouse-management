@@ -24,6 +24,16 @@ import { Search, Save, Lock, RefreshCw, AlertCircle, ChevronLeft, ChevronRight }
 import { toast } from 'sonner'
 import type { BarangPriceUnit, PriceUnitUpdateData } from '@/types/database'
 
+const formatThousand = (val: number | undefined | null) => {
+  if (val === undefined || val === null || isNaN(val)) return '0'
+  return new Intl.NumberFormat('id-ID').format(val)
+}
+
+const parseThousand = (val: string) => {
+  const raw = val.replace(/\D/g, '')
+  return raw ? parseInt(raw, 10) : 0
+}
+
 // ============================================
 // ROW EDIT STATE TYPE
 // ============================================
@@ -110,11 +120,9 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
       {/* Buy Price */}
       <td className="px-4 py-2 text-sm">
         <Input
-          type="number"
-          step="0.01"
-          min="0"
-          value={editState.buy_price || 0}
-          onChange={(e) => handleInputChange('buy_price', e.target.value)}
+          type="text"
+          value={formatThousand(editState.buy_price)}
+          onChange={(e) => onEditChange(item.id, 'buy_price', parseThousand(e.target.value))}
           disabled={!canEditItem || editState.isSaving}
           className={canEditItem ? 'h-9 w-32 text-right font-mono text-xs' : 'h-9 w-32 text-right font-mono bg-muted cursor-not-allowed text-xs'}
           placeholder="0"
@@ -124,11 +132,9 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
       {/* Sell Price */}
       <td className="px-4 py-2 text-sm">
         <Input
-          type="number"
-          step="0.01"
-          min="0"
-          value={editState.sell_price || 0}
-          onChange={(e) => handleInputChange('sell_price', e.target.value)}
+          type="text"
+          value={formatThousand(editState.sell_price)}
+          onChange={(e) => onEditChange(item.id, 'sell_price', parseThousand(e.target.value))}
           disabled={!canEditItem || editState.isSaving}
           className={canEditItem ? 'h-9 w-32 text-right font-mono text-xs' : 'h-9 w-32 text-right font-mono bg-muted cursor-not-allowed text-xs'}
           placeholder="0"
@@ -145,12 +151,12 @@ function EditableRow({ item, userOutletCode, canEditItem, editState, onEditChang
         ) : (
           <div className="flex items-center gap-2">
             {editState.isDirty && (
-              <span className="text-xs text-muted-foreground mr-1">Unsaved</span>
+              <span className="text-xs text-amber-600 font-medium mr-1">Belum Disimpan</span>
             )}
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8"
+              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
               onClick={() => onSave(item.id)}
               disabled={!editState.isDirty || editState.isSaving || !canEditItem}
             >
@@ -206,20 +212,18 @@ export function PriceUnitManagerPage() {
 
   // Get or create edit state for a row
   const getEditState = (item: BarangPriceUnit): RowEditState => {
-    if (!rowEditStates[item.id]) {
-      const initialState = initializeEditState(item)
-      setRowEditStates((prev) => ({ ...prev, [item.id]: initialState }))
-      return initialState
+    const existing = rowEditStates[item.id]
+    // If no edit state or row is clean, dynamically use fresh data from item (refetched)
+    if (!existing || (!existing.isDirty && !existing.isSaving)) {
+      return initializeEditState(item)
     }
-    return rowEditStates[item.id]
+    return existing
   }
 
   // Handle edit change
   const handleEditChange = (barangId: number, field: keyof RowEditState, value: string | number) => {
     setRowEditStates((prev) => {
-      const current = prev[barangId]
-      if (!current) return prev
-
+      const current = prev[barangId] || initializeEditState(items.find((i) => i.id === barangId)!)
       return {
         ...prev,
         [barangId]: {
@@ -233,44 +237,64 @@ export function PriceUnitManagerPage() {
 
   // Handle save for a row
   const handleSave = async (barangId: number) => {
-    const editState = rowEditStates[barangId]
-    if (!editState || !editState.isDirty || !user?.kode_outlet || !user?.email) return
+    const item = items.find((i) => i.id === barangId)
+    const editState = rowEditStates[barangId] || (item ? initializeEditState(item) : null)
+    const userUuid = user?.id || null
+    if (!editState || !editState.isDirty || !userUuid) return
+
+    const targetOutlet = item?.kode_outlet || user?.kode_outlet || '111'
 
     // Set saving state
     setRowEditStates((prev) => ({
       ...prev,
-      [barangId]: { ...prev[barangId]!, isSaving: true },
+      [barangId]: { ...editState, isSaving: true },
     }))
 
+    const normalizedUom = (editState.purchase_uom || 'PCS').trim().toUpperCase()
     const updateData: PriceUnitUpdateData = {
       barang_id: barangId,
-      kode_outlet: user.kode_outlet,
-      purchase_uom: editState.purchase_uom,
+      kode_outlet: targetOutlet,
+      purchase_uom: normalizedUom,
+      base_uom: normalizedUom,
       conversion_rate: editState.conversion_rate,
       buy_price: editState.buy_price,
       sell_price: editState.sell_price,
     }
 
-    const result = await updateMutation.mutateAsync({
-      updateData,
-      updatedBy: user.email,
-    })
+    try {
+      const result = await updateMutation.mutateAsync({
+        updateData,
+        updatedBy: userUuid,
+      })
 
-    // Reset saving state
-    setRowEditStates((prev) => ({
-      ...prev,
-      [barangId]: {
-        ...prev[barangId]!,
-        isSaving: false,
-        isDirty: false,
-      },
-    }))
-
-    if (result.isSuccess) {
-      toast.success('Price and unit updated successfully')
-      refetch()
-    } else {
-      toast.error(result.error || 'Failed to update price and unit')
+      if (result.isSuccess) {
+        // Clear rowEditStates entry for this product so next render loads fresh item data
+        setRowEditStates((prev) => {
+          const next = { ...prev }
+          delete next[barangId]
+          return next
+        })
+        toast.success('Harga dan satuan berhasil diperbarui')
+        await refetch()
+      } else {
+        setRowEditStates((prev) => ({
+          ...prev,
+          [barangId]: {
+            ...editState,
+            isSaving: false,
+          },
+        }))
+        toast.error(result.error || 'Gagal memperbarui harga dan satuan')
+      }
+    } catch (err: any) {
+      setRowEditStates((prev) => ({
+        ...prev,
+        [barangId]: {
+          ...editState,
+          isSaving: false,
+        },
+      }))
+      toast.error(err?.message || 'Gagal memperbarui harga dan satuan')
     }
   }
 
@@ -298,7 +322,7 @@ export function PriceUnitManagerPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center gap-3 text-muted-foreground">
             <RefreshCw className="h-5 w-5 animate-spin" />
-            <p>Loading prices and units...</p>
+            <p>Memuat harga dan satuan...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -311,9 +335,9 @@ export function PriceUnitManagerPage() {
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <div className="flex items-center gap-3 text-destructive">
             <AlertCircle className="h-5 w-5" />
-            <p>Failed to load prices and units</p>
+            <p>Gagal memuat harga dan satuan</p>
           </div>
-          <Button onClick={() => refetch()}>Retry</Button>
+          <Button onClick={() => refetch()}>Coba Lagi</Button>
         </div>
       </DashboardLayout>
     )
@@ -326,27 +350,25 @@ export function PriceUnitManagerPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Price & Unit Management</h1>
+              <h1 className="text-2xl font-bold">Manajemen Harga & Satuan</h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Manage product prices and unit conversions
-                {user?.kode_outlet && <span> (Outlet: {user.kode_outlet})</span>}
+                Kelola harga beli, harga jual, dan konversi satuan produk
+                {user?.kode_outlet && <span> (Gerai: {user.kode_outlet})</span>}
               </p>
             </div>
           </div>
 
           {/* Info Notice + Stats in Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-
-
             <Card className="shadow-sm">
               <CardContent className="pt-4 pb-4">
-                <p className="text-xs text-muted-foreground">Products</p>
+                <p className="text-xs text-muted-foreground">Total Produk</p>
                 <p className="text-2xl font-bold">{totalCount}</p>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
               <CardContent className="pt-4 pb-4">
-                <p className="text-xs text-muted-foreground">Outlet</p>
+                <p className="text-xs text-muted-foreground">Gerai Pengguna</p>
                 <p className="text-2xl font-bold">
                   {user?.kode_outlet || '-'}
                 </p>
@@ -359,7 +381,7 @@ export function PriceUnitManagerPage() {
             <div className="relative w-full">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search SKU..."
+                placeholder="Cari SKU atau nama produk..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 pl-9 text-sm"
@@ -375,20 +397,20 @@ export function PriceUnitManagerPage() {
                   <thead className="bg-muted sticky top-0 z-20 shadow-sm">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">SKU</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">Product Name</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">Owner</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-24">Unit</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-24">Conv</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-36">Buy Price</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-36">Sell Price</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-20">Action</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">Nama Produk</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted">Pemilik</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-24">Satuan</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-24">Konversi</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-36">Harga Beli</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-36">Harga Jual</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-muted w-20">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {filteredItems.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                          {searchQuery ? 'No products match your search' : 'No products found'}
+                          {searchQuery ? 'Tidak ada produk yang cocok dengan pencarian' : 'Produk tidak ditemukan'}
                         </td>
                       </tr>
                     ) : (
@@ -419,7 +441,7 @@ export function PriceUnitManagerPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-end gap-2 text-sm">
               <span className="text-muted-foreground">
-                Page {page + 1} of {totalPages}
+                Halaman {page + 1} dari {totalPages}
               </span>
               <div className="flex items-center gap-1">
                 <Button

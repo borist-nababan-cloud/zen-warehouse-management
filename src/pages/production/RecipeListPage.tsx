@@ -41,25 +41,25 @@ export function RecipeListPage() {
             <div className="space-y-6 max-w-7xl mx-auto">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Recipe Manager</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Manajemen Resep</h1>
                         <p className="text-muted-foreground mt-1">
-                            Define standard recipes (Bill of Materials) for your products.
+                            Kelola formula dan komposisi bahan baku (Bill of Materials) untuk produk jadi.
                         </p>
                     </div>
-                    <Button onClick={() => navigate('/production/recipes/create')} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                    <Button onClick={() => navigate('/production/recipes/create')} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
                         <Plus className="mr-2 h-4 w-4" />
-                        Create New Recipe
+                        Tambah Resep Baru
                     </Button>
                 </div>
 
-                <Card className="border-indigo-100 shadow-sm bg-white/50 backdrop-blur-sm">
-                    <CardHeader className="bg-indigo-50/50 pb-4">
-                        <CardTitle className="flex items-center gap-2 text-indigo-900">
-                            <BookOpen className="h-5 w-5 text-indigo-600" />
-                            Active Recipes
+                <Card className="border shadow-sm bg-card">
+                    <CardHeader className="bg-muted/40 pb-4">
+                        <CardTitle className="flex items-center gap-2">
+                            <BookOpen className="h-5 w-5 text-primary" />
+                            Daftar Resep Aktif
                         </CardTitle>
                         <CardDescription>
-                            List of all defined product recipes and their standard outputs.
+                            Daftar seluruh formula resep produk dan jumlah output standar produksi.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -67,40 +67,39 @@ export function RecipeListPage() {
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
                                     <TableHead className="w-[50px]">#</TableHead>
-                                    <TableHead>Target Product</TableHead>
-                                    <TableHead>Standard Output</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
+                                    <TableHead>Produk Target</TableHead>
+                                    <TableHead>Output Standar</TableHead>
+                                    <TableHead>Deskripsi</TableHead>
+                                    <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                                            Loading recipes...
+                                            Memuat data resep...
                                         </TableCell>
                                     </TableRow>
                                 ) : recipes.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                                            No recipes found. Create one to get started.
+                                            Belum ada resep. Klik Tambah Resep Baru untuk membuat formulasi.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     recipes.map((recipe, index) => (
                                         <TableRow
                                             key={recipe.id}
-                                            className="cursor-pointer hover:bg-indigo-50/30 transition-colors"
-                                        // onClick={() => navigate(`/production/recipes/${recipe.id}`)} // Future feature: view detailed
+                                            className="hover:bg-muted/50 transition-colors"
                                         >
                                             <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {index + 1}
                                             </TableCell>
-                                            <TableCell className="font-medium text-gray-900">
-                                                {recipe.product_name || 'Unknown Product'}
+                                            <TableCell className="font-medium">
+                                                {recipe.product_name || 'Produk Tidak Dikenal'}
                                             </TableCell>
                                             <TableCell>
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                                     {recipe.standard_qty_output}
                                                 </span>
                                             </TableCell>
@@ -112,7 +111,7 @@ export function RecipeListPage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                        className="h-8 w-8 p-0 text-primary hover:text-primary hover:bg-primary/10"
                                                         onClick={(e) => {
                                                             e.stopPropagation()
                                                             navigate(`/production/recipes/edit/${recipe.id}`)

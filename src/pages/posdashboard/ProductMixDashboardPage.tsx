@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { ProductMixLiveSection } from '@/components/features/product-mix/ProductMixLiveSection'
 import { ProductMixHistoricalSection } from '@/components/features/product-mix/ProductMixHistoricalSection'
 
-import { AIChatWidget } from '@/components/features/ai/AIChatWidget'
 
 export function ProductMixDashboardPage() {
     const { user } = useAuthUser()
@@ -56,15 +55,6 @@ export function ProductMixDashboardPage() {
                     />
                 </div>
 
-                {/* AI Chat Widget */}
-                <AIChatWidget
-                    pageName="Product & Service Mix Dashboard"
-                    contextData={{
-                        userRole: user?.user_role,
-                        userOutlet: user?.kode_outlet,
-                        availableOutlets: availableOutlets
-                    }}
-                />
             </div>
         </DashboardLayout>
     )

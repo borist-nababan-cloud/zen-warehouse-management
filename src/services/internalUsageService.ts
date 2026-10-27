@@ -7,19 +7,103 @@ import {
 } from '@/types/database'
 
 export const internalUsageService = {
-  // Get Categories
-  async getCategories(): Promise<ApiResponse<MasterIssueCategory[]>> {
+  // Get Categories (defaults to only active for operational forms)
+  async getCategories(onlyActive = true): Promise<ApiResponse<MasterIssueCategory[]>> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('master_issue_category')
         .select('*')
         .order('category_name')
+
+      if (onlyActive) {
+        query = query.eq('is_active', true)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       return { data, error: null, isSuccess: true }
     } catch (error: any) {
       return { data: null, error: error.message, isSuccess: false }
     }
+  },
+
+  // Get All Categories for Master Data Management (includes active & inactive)
+  async getAllCategories(): Promise<ApiResponse<MasterIssueCategory[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('master_issue_category')
+        .select('*')
+        .order('id', { ascending: true })
+
+      if (error) throw error
+      return { data, error: null, isSuccess: true }
+    } catch (error: any) {
+      return { data: null, error: error.message, isSuccess: false }
+    }
+  },
+
+  // Create Category (No delete allowed in system)
+  async createCategory(
+    payload: { category_name: string; description?: string; is_active?: boolean },
+    userId?: string
+  ): Promise<ApiResponse<MasterIssueCategory>> {
+    try {
+      const { data, error } = await supabase
+        .from('master_issue_category')
+        .insert({
+          category_name: payload.category_name.trim(),
+          description: payload.description ? payload.description.trim() : null,
+          is_active: payload.is_active ?? true,
+          created_by: userId || null,
+          update_by: userId || null
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data, error: null, isSuccess: true }
+    } catch (error: any) {
+      return { data: null, error: error.message, isSuccess: false }
+    }
+  },
+
+  // Update Category
+  async updateCategory(
+    id: number,
+    payload: { category_name?: string; description?: string; is_active?: boolean },
+    userId?: string
+  ): Promise<ApiResponse<MasterIssueCategory>> {
+    try {
+      const updateData: any = {
+        update_by: userId || null,
+        update_at: new Date().toISOString()
+      }
+      if (payload.category_name !== undefined) updateData.category_name = payload.category_name.trim()
+      if (payload.description !== undefined) updateData.description = payload.description ? payload.description.trim() : null
+      if (payload.is_active !== undefined) updateData.is_active = payload.is_active
+
+      const { data, error } = await supabase
+        .from('master_issue_category')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data, error: null, isSuccess: true }
+    } catch (error: any) {
+      return { data: null, error: error.message, isSuccess: false }
+    }
+  },
+
+  // Toggle Category Active Status
+  async toggleCategoryStatus(
+    id: number,
+    isActive: boolean,
+    userId?: string
+  ): Promise<ApiResponse<MasterIssueCategory>> {
+    return this.updateCategory(id, { is_active: isActive }, userId)
   },
 
   // Get List

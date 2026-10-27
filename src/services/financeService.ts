@@ -103,6 +103,63 @@ export async function getTransactionCategories(type: 'IN' | 'OUT'): Promise<ApiR
   }
 }
 
+export async function getAllTransactionCategories(): Promise<ApiResponse<FinanceTransactionCategory[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('finance_transaction_categories')
+      .select('*')
+      .order('type', { ascending: true })
+      .order('name', { ascending: true })
+
+    if (error) throw error
+
+    return { data: data as FinanceTransactionCategory[], error: null, isSuccess: true }
+  } catch (error: any) {
+    console.error('Error fetching all categories:', error)
+    return { data: null, error: error.message, isSuccess: false }
+  }
+}
+
+export async function createTransactionCategory(
+  category: Omit<FinanceTransactionCategory, 'id'>
+): Promise<ApiResponse<FinanceTransactionCategory>> {
+  try {
+    const { data, error } = await supabase
+      .from('finance_transaction_categories')
+      .insert(category)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { data: data as FinanceTransactionCategory, error: null, isSuccess: true }
+  } catch (error: any) {
+    console.error('Error creating category:', error)
+    return { data: null, error: error.message, isSuccess: false }
+  }
+}
+
+export async function updateTransactionCategory(
+  id: string,
+  updates: Partial<Omit<FinanceTransactionCategory, 'id'>>
+): Promise<ApiResponse<FinanceTransactionCategory>> {
+  try {
+    const { data, error } = await supabase
+      .from('finance_transaction_categories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { data: data as FinanceTransactionCategory, error: null, isSuccess: true }
+  } catch (error: any) {
+    console.error('Error updating category:', error)
+    return { data: null, error: error.message, isSuccess: false }
+  }
+}
+
 export async function createGeneralTransaction(params: GeneralTransactionParams): Promise<ApiResponse<boolean>> {
   try {
     const { error } = await supabase

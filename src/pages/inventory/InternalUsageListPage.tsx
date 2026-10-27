@@ -66,92 +66,108 @@ export default function InternalUsageListPage() {
             <div className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Internal Consumption</h1>
-                        <p className="text-slate-500">
-                            Track office supplies, cleaning materials, and other internal expenses.
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-[#EBE6DF]">
+                            Pemakaian Internal
+                        </h1>
+                        <p className="text-slate-500 dark:text-[#A6A095]">
+                            Catat dan pantau pemakaian perlengkapan operasional, bahan pembersih, dan kebutuhan internal outlet.
                         </p>
                     </div>
-                    <Button onClick={() => navigate('/inventory/internal-usage/create')} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button
+                        onClick={() => navigate('/inventory/internal-usage/create')}
+                        className="bg-[#889D35] hover:bg-[#72842B] text-white font-medium shadow-sm"
+                    >
                         <Plus className="h-4 w-4 mr-2" />
-                        Create Usage
+                        Catat Pemakaian Baru
                     </Button>
                 </div>
 
-                <Card className="bg-white shadow-sm border-slate-200">
+                <Card className="bg-white dark:bg-[#22221B] shadow-sm border-slate-200 dark:border-[#38382E]">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
-                            <Search className="h-4 w-4 text-indigo-500" />
-                            Filters & Search
+                        <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-[#EBE6DF]">
+                            <Search className="h-4 w-4 text-[#889D35]" />
+                            Filter & Pencarian
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                             <div className="space-y-2">
-                                <Label>Start Date</Label>
-                                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>End Date</Label>
-                                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Search</Label>
+                                <Label className="dark:text-[#EBE6DF]">Tanggal Mulai</Label>
                                 <Input
-                                    placeholder="Search Doc No, Requestor..."
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="dark:text-[#EBE6DF]">Tanggal Akhir</Label>
+                                <Input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="dark:text-[#EBE6DF]">Pencarian</Label>
+                                <Input
+                                    placeholder="Cari No. Dokumen, Pemohon, Catatan..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
                                 />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <div className="rounded-md border bg-white shadow-sm overflow-hidden">
+                <div className="rounded-xl border border-slate-200 dark:border-[#38382E] bg-white dark:bg-[#22221B] shadow-sm overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-slate-50/80">
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Doc Number</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Requested By</TableHead>
-                                <TableHead>Notes</TableHead>
-                                <TableHead className="text-center w-[100px]">Action</TableHead>
+                        <TableHeader className="bg-slate-50/80 dark:bg-[#191914]">
+                            <TableRow className="border-b border-slate-200 dark:border-[#38382E]">
+                                <TableHead className="dark:text-[#EBE6DF]">Tanggal</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">No. Dokumen</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Kategori</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Pemohon</TableHead>
+                                <TableHead className="dark:text-[#EBE6DF]">Catatan</TableHead>
+                                <TableHead className="text-center w-[100px] dark:text-[#EBE6DF]">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center dark:text-[#A6A095]">
                                         <div className="flex items-center justify-center gap-2">
-                                            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-                                            <span>Loading...</span>
+                                            <Loader2 className="h-5 w-5 animate-spin text-[#889D35]" />
+                                            <span>Memuat data pemakaian...</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ) : filteredData.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-slate-500">
-                                        No records found.
+                                    <TableCell colSpan={6} className="h-24 text-center text-slate-500 dark:text-[#A6A095]">
+                                        Tidak ada riwayat pemakaian internal ditemukan.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 filteredData.map((item) => (
-                                    <TableRow key={item.id} className="hover:bg-slate-50/50">
-                                        <TableCell className="font-medium text-slate-600">
+                                    <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-[#191914]/50 border-b border-slate-100 dark:border-[#38382E]/50">
+                                        <TableCell className="font-medium text-slate-600 dark:text-[#EBE6DF] whitespace-nowrap">
                                             {formatDate(item.transaction_date)}
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs text-slate-500">
+                                        <TableCell className="font-mono text-xs text-slate-500 dark:text-[#A6A095]">
                                             {item.document_number}
                                         </TableCell>
                                         <TableCell>
-                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#889D35]/15 text-[#6E8027] dark:text-[#9BB33B] border border-[#889D35]/20">
                                                 {item.master_issue_category?.category_name || '-'}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-slate-700">
+                                        <TableCell className="text-slate-700 dark:text-[#EBE6DF]">
                                             {item.requested_by || '-'}
                                         </TableCell>
-                                        <TableCell className="text-slate-500 text-sm max-w-[200px] truncate" title={item.notes || ''}>
+                                        <TableCell className="text-slate-500 dark:text-[#A6A095] text-sm max-w-[200px] truncate" title={item.notes || ''}>
                                             {item.notes || '-'}
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -159,8 +175,8 @@ export default function InternalUsageListPage() {
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => handlePrint(item.id)}
-                                                className="text-slate-500 hover:text-indigo-600"
-                                                title="Print Receipt"
+                                                className="text-slate-500 dark:text-[#A6A095] hover:text-[#889D35] dark:hover:text-[#9BB33B]"
+                                                title="Cetak Bukti Pemakaian"
                                             >
                                                 <Printer className="h-4 w-4" />
                                             </Button>

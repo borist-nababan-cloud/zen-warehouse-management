@@ -12,12 +12,12 @@ export function UnauthorizedPage() {
             </div>
 
             <h1 className="mb-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Access Denied
+                Akses Ditolak
             </h1>
 
             <p className="mb-8 max-w-md text-lg text-muted-foreground">
-                You do not have permission to view this page.
-                Please contact your administrator if you believe this is an error.
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+                Silakan hubungi administrator sistem jika Anda membutuhkan akses.
             </p>
 
             <Button
@@ -26,7 +26,7 @@ export function UnauthorizedPage() {
                 size="lg"
             >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
+                Kembali ke Dasbor
             </Button>
         </div>
     )

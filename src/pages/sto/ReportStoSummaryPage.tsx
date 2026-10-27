@@ -96,43 +96,43 @@ export function ReportStoSummaryPage() {
         <DashboardLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Summary Report</h1>
-                    <p className="text-muted-foreground">Overview of incoming and outgoing stock transfers.</p>
+                    <h1 className="text-2xl font-bold font-serif tracking-tight text-zen-charcoal">Ringkasan Laporan STO</h1>
+                    <p className="text-muted-foreground text-sm">Ikhtisar seluruh pergerakan transfer stok barang masuk dan keluar.</p>
                 </div>
 
                 {/* Filters */}
-                <Card className="bg-indigo-50/30 border-indigo-100">
+                <Card className="bg-zen-sand/10 dark:bg-zen-stone/40 border-zen-border shadow-xs">
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Filter className="h-4 w-4" /> Filter Options
+                        <CardTitle className="text-sm font-semibold text-zen-charcoal flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-zen-moss" /> Parameter Filter
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Start Date</Label>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-zen-charcoal">Dari Tanggal</Label>
                                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
                             </div>
-                            <div className="space-y-2">
-                                <Label>End Date</Label>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-zen-charcoal">Sampai Tanggal</Label>
                                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Direction</Label>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-zen-charcoal">Arah Transfer</Label>
                                 <Select value={direction} onValueChange={(v: any) => setDirection(v)}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select Direction" />
+                                        <SelectValue placeholder="Pilih Arah" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="ALL">All Directions</SelectItem>
-                                        <SelectItem value="INCOMING">Incoming (To Me)</SelectItem>
-                                        <SelectItem value="OUTGOING">Outgoing (From Me)</SelectItem>
+                                        <SelectItem value="ALL">Semua Arah</SelectItem>
+                                        <SelectItem value="INCOMING">Barang Masuk (Ke Gerai Ini)</SelectItem>
+                                        <SelectItem value="OUTGOING">Barang Keluar (Dari Gerai Ini)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button onClick={fetchReport} disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                            <Button onClick={fetchReport} disabled={isLoading} className="bg-zen-moss hover:bg-zen-moss/90 text-white font-medium">
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Apply Filter
+                                Terapkan Filter
                             </Button>
                         </div>
                     </CardContent>
@@ -140,85 +140,85 @@ export function ReportStoSummaryPage() {
 
                 {/* Summary Cards */}
                 <div className="grid gap-4 md:grid-cols-3">
-                    <Card className="border-l-4 border-l-blue-500 shadow-sm">
+                    <Card className="border-l-4 border-l-zen-moss border-zen-border shadow-xs">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Outgoing</CardTitle>
-                            <ArrowUpRight className="h-4 w-4 text-blue-500" />
+                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Barang Keluar</CardTitle>
+                            <ArrowUpRight className="h-4 w-4 text-zen-moss" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(summaries.outgoing)}</div>
-                            <p className="text-xs text-muted-foreground">Sales/Transfers out</p>
+                            <div className="text-2xl font-bold font-mono text-zen-charcoal">{formatCurrency(summaries.outgoing)}</div>
+                            <p className="text-xs text-muted-foreground">Kirim transfer ke gerai cabang lain</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-green-500 shadow-sm">
+                    <Card className="border-l-4 border-l-emerald-600 border-zen-border shadow-xs">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Incoming</CardTitle>
-                            <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Barang Masuk</CardTitle>
+                            <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(summaries.incoming)}</div>
-                            <p className="text-xs text-muted-foreground">Stock replenishment</p>
+                            <div className="text-2xl font-bold font-mono text-zen-charcoal">{formatCurrency(summaries.incoming)}</div>
+                            <p className="text-xs text-muted-foreground">Penerimaan pasokan stok dari gerai lain</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-amber-500 shadow-sm">
+                    <Card className="border-l-4 border-l-amber-500 border-zen-border shadow-xs">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Shipping Cost</CardTitle>
+                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Ongkos Kirim</CardTitle>
                             <Truck className="h-4 w-4 text-amber-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(summaries.shipping)}</div>
-                            <p className="text-xs text-muted-foreground">Logistics expenses</p>
+                            <div className="text-2xl font-bold font-mono text-zen-charcoal">{formatCurrency(summaries.shipping)}</div>
+                            <p className="text-xs text-muted-foreground">Biaya logistik pengiriman antar gerai</p>
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Data Table */}
-                <Card>
+                <Card className="shadow-xs border-zen-border overflow-hidden">
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-muted/50">
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Doc No</TableHead>
-                                    <TableHead className="text-center">Route</TableHead>
-                                    <TableHead>Sender Status</TableHead>
-                                    <TableHead>Recipient Status</TableHead>
-                                    <TableHead>Items</TableHead>
-                                    <TableHead className="text-right">Total Value</TableHead>
+                                <TableRow className="bg-muted/40">
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>No. Dokumen</TableHead>
+                                    <TableHead className="text-center">Rute Pengiriman</TableHead>
+                                    <TableHead>Status Pengirim</TableHead>
+                                    <TableHead>Status Penerima</TableHead>
+                                    <TableHead>Rincian Barang</TableHead>
+                                    <TableHead className="text-right">Total Nilai</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {data.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No data found.</TableCell>
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground text-sm">Tidak ada data transfer pada periode ini.</TableCell>
                                     </TableRow>
                                 ) : (
                                     data.map((item, idx) => (
                                         <TableRow key={`${item.id}-${idx}`}>
-                                            <TableCell className="whitespace-nowrap">{format(new Date(item.order_date), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell className="font-medium">{item.document_number}</TableCell>
+                                            <TableCell className="whitespace-nowrap font-mono text-xs">{format(new Date(item.order_date), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell className="font-medium font-mono text-xs">{item.document_number}</TableCell>
                                             <TableCell>
-                                                <div className="flex items-center justify-center gap-2 text-sm">
-                                                    <span className={item.from_outlet === user?.kode_outlet ? "font-bold text-blue-600" : "text-muted-foreground"}>
-                                                        {item.from_outlet}
+                                                <div className="flex items-center justify-center gap-2 text-xs">
+                                                    <span className={item.from_outlet === user?.kode_outlet ? "font-bold text-zen-moss dark:text-zen-matcha" : "text-muted-foreground"}>
+                                                        {item.from_outlet_name || item.from_outlet}
                                                     </span>
-                                                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                                                    <span className={item.to_outlet === user?.kode_outlet ? "font-bold text-green-600" : "text-muted-foreground"}>
-                                                        {item.to_outlet}
+                                                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    <span className={item.to_outlet === user?.kode_outlet ? "font-bold text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}>
+                                                        {item.to_outlet_name || item.to_outlet}
                                                     </span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zen-sand/20 text-zen-charcoal">
                                                     {item.sender_status}
                                                 </span>
                                             </TableCell>
                                             <TableCell>
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zen-matcha/20 text-zen-moss">
                                                     {item.recipient_status}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground" title={item.items_summary}>
+                                            <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground" title={item.items_summary}>
                                                 {item.items_summary}
                                             </TableCell>
                                             <TableCell className="text-right font-bold font-mono">

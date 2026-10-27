@@ -10,13 +10,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   signIn,
+  signInWithGoogle,
   signOut,
   getCurrentUser,
   onAuthStateChange,
   getStoredUserRole,
   updatePassword,
 } from '@/services/authService'
-import type { LoginFormData, RoleId } from '@/types/database'
+import { ROLE_MENU_PERMISSIONS, type LoginFormData, type RoleId } from '@/types/database'
 
 // Query keys for cache management
 export const authQueryKeys = {
@@ -83,6 +84,21 @@ export function useSignIn() {
 }
 
 /**
+ * Hook for Google OAuth sign in mutation
+ * For Superuser (Role 8) and Outlet Admin (Role 6)
+ */
+export function useSignInWithGoogle() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (redirectTo?: string | void) => signInWithGoogle(typeof redirectTo === 'string' ? redirectTo : undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+    },
+  })
+}
+
+/**
  * Hook for sign out mutation
  * Handles logout
  */
@@ -135,34 +151,23 @@ export function useCanAccessMenu(menu: string) {
 
   // Get stored role from localStorage for immediate access
   const storedRole = getStoredUserRole()
+  const role = (user?.user_role ?? storedRole) as RoleId | undefined
 
   // SUPERUSER (8) can access everything
-  if (user?.user_role === 8 || storedRole === 8) {
+  if (role === 8) {
     return { canAccess: true, isLoading }
   }
 
-  // UNASSIGNED (9) has no access
-  if (user?.user_role === 9 || storedRole === 9) {
+  // UNASSIGNED (9) and MEMBER (17) have no warehouse access
+  if (role === 9 || role === 17) {
     return { canAccess: false, isLoading }
   }
 
-  // Check menu permissions based on role
-  const role = user?.user_role ?? storedRole
-
-  const menuPermissions: Record<RoleId, string[]> = {
-    1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users'],
-    2: ['dashboard', 'inventory', 'purchase-orders'],
-    3: ['dashboard', 'laundry'],
-    4: ['dashboard', 'laundry'],
-    5: ['dashboard', 'finance'],
-    6: ['dashboard', 'inventory'],
-    7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type'],
-    8: ['*'],
-    9: [],
-    10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'],
+  if (!role) {
+    return { canAccess: false, isLoading }
   }
 
-  const permissions = role ? menuPermissions[role] : []
+  const permissions = ROLE_MENU_PERMISSIONS[role] || []
 
   return {
     canAccess: permissions.includes('*') || permissions.includes(menu),

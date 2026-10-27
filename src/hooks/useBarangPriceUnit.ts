@@ -72,9 +72,13 @@ export function useUpdatePriceUnit() {
     mutationFn: ({ updateData, updatedBy }: { updateData: PriceUnitUpdateData; updatedBy: string }) =>
       updatePriceUnit(updateData, updatedBy),
     onSuccess: () => {
-      // Invalidate the list query to refetch
+      // Invalidate the price/unit queries
       queryClient.invalidateQueries({
-        queryKey: barangPriceUnitQueryKeys.lists(),
+        queryKey: barangPriceUnitQueryKeys.all,
+      })
+      // Invalidate master_barang queries so pages like RecipeFormPage get fresh unit data
+      queryClient.invalidateQueries({
+        queryKey: ['master_barang'],
       })
     },
   })

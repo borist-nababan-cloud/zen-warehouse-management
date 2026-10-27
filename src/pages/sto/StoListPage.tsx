@@ -59,34 +59,34 @@ export default function StoListPage() {
             <div className="p-6 space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Stock Transfers</h1>
-                        <p className="text-muted-foreground">Manage your incoming and outgoing stock transfers</p>
+                        <h1 className="text-2xl font-bold font-serif tracking-tight text-zen-charcoal">Kirim Barang Ke Outlet (STO)</h1>
+                        <p className="text-muted-foreground text-sm">Kelola daftar pengiriman dan transfer stok antar outlet</p>
                     </div>
-                    <Button onClick={() => navigate('/sto/create')} className="bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={() => navigate('/sto/create')} className="bg-zen-moss hover:bg-zen-moss/90 text-white font-medium">
                         <Plus className="mr-2 h-4 w-4" />
-                        New Transfer
+                        Kirim Barang Baru (STO)
                     </Button>
                 </div>
 
                 {/* Filters & Stats could go here */}
 
-                <Card className="shadow-sm">
-                    <CardHeader className="bg-slate-50 border-b pb-4">
+                <Card className="shadow-xs border-zen-border">
+                    <CardHeader className="bg-zen-sand/10 dark:bg-zen-stone/40 border-b border-zen-border pb-4">
                         <div className="flex items-center gap-2">
-                            <Truck className="h-5 w-5 text-gray-500" />
-                            <CardTitle className="text-lg">Transfer Orders</CardTitle>
+                            <Truck className="h-5 w-5 text-zen-moss" />
+                            <CardTitle className="text-base font-semibold text-zen-charcoal">Daftar Dokumen Transfer (STO)</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Document No</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Route</TableHead>
-                                    <TableHead>Sender Status</TableHead>
-                                    <TableHead>Recipient Status</TableHead>
-                                    <TableHead className="text-right">Total Amount</TableHead>
+                                <TableRow className="bg-muted/40">
+                                    <TableHead>No. Dokumen</TableHead>
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>Rute Pengiriman</TableHead>
+                                    <TableHead>Status Pengirim</TableHead>
+                                    <TableHead>Status Penerima</TableHead>
+                                    <TableHead className="text-right">Total Nilai</TableHead>
                                     <TableHead className="w-[100px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -94,13 +94,13 @@ export default function StoListPage() {
                                 {isLoading ? (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
-                                            Loading transfers...
+                                            Memuat data transfer stok...
                                         </TableCell>
                                     </TableRow>
                                 ) : stoData?.data?.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
-                                            No stock transfers found.
+                                            Belum ada data transfer stok.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -142,7 +142,7 @@ export default function StoListPage() {
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Button variant="ghost" size="sm" onClick={() => navigate(`/sto/${sto.id}`)}>
-                                                        View
+                                                        Detail
                                                     </Button>
                                                     <Button variant="outline" size="sm" onClick={() => window.open(`/sto/${sto.id}/print`, '_blank')}>
                                                         <Printer className="h-4 w-4" />

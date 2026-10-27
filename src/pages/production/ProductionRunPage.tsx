@@ -22,7 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Calendar as CalendarIcon, Save, Loader2, Info } from 'lucide-react'
+import { Calendar as CalendarIcon, Save, Loader2, Info, Factory, Layers } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -98,7 +98,7 @@ export function ProductionRunPage() {
                     }))
                     setIngredients(mappedItems)
 
-                    // If actual output is already set (e.g. user typed it before selecting product?), recalc
+                    // If actual output is already set, recalculate
                     if (actualOutput > 0) {
                         const ratio = actualOutput / recipe.standard_qty_output
                         setIngredients(prev => prev.map(item => ({
@@ -108,12 +108,12 @@ export function ProductionRunPage() {
                     }
                 }
             } else {
-                toast.warning("No standard recipe found. Please define one first.")
+                toast.warning("Resep standar tidak ditemukan. Silakan atur terlebih dahulu di Manajemen Resep.")
                 setIngredients([])
             }
         } catch (err) {
             console.error(err)
-            toast.error("Failed to load recipe.")
+            toast.error("Gagal memuat resep produk.")
         } finally {
             setIsLoadingRecipe(false)
         }
@@ -121,14 +121,14 @@ export function ProductionRunPage() {
 
     const updateIngredientQty = (barangId: number, newQty: number) => {
         setIngredients(prev => prev.map(item =>
-            item.barang_id === barangId ? { ...item, qty: newQty } : item
+            item.barang_id === barangId ? { ...item, qty: isNaN(newQty) ? 0 : newQty } : item
         ))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!selectedProductId || actualOutput <= 0) {
-            toast.error("Please select a product and enter actual output.")
+            toast.error("Silakan pilih produk jadi dan masukkan jumlah output aktual yang valid (lebih dari 0).")
             return
         }
 
@@ -147,17 +147,17 @@ export function ProductionRunPage() {
             })
 
             if (result.isSuccess) {
-                toast.success("Production Run recorded successfully!")
+                toast.success("Proses produksi berhasil dicatat dan diproses!")
                 // Reset form
                 setActualOutput(0)
                 setSelectedProductId('')
                 setIngredients([])
             } else {
-                toast.error(result.error || "Failed to submit production run.")
+                toast.error(result.error || "Gagal memproses produksi.")
             }
         } catch (error) {
             console.error(error)
-            toast.error("An unexpected error occurred.")
+            toast.error("Terjadi kesalahan yang tidak terduga saat memproses produksi.")
         } finally {
             setIsSubmitting(false)
         }
@@ -165,50 +165,55 @@ export function ProductionRunPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6 max-w-5xl mx-auto pb-20">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-indigo-950">Production Worksheet</h1>
-                    <p className="text-muted-foreground text-indigo-600/70">
-                        Record daily production and material usage.
-                    </p>
+            <div className="space-y-6 max-w-5xl mx-auto pb-24">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <Factory className="h-6 w-6 text-primary" />
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground">Proses Produksi</h1>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Pencatatan aktivitas produksi harian dan alokasi pemakaian bahan baku.
+                        </p>
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Top Section: Header Info */}
-                    <Card className="border-indigo-100 shadow-sm bg-white/70 backdrop-blur-sm">
-                        <CardHeader className="bg-indigo-50/40 pb-4">
-                            <CardTitle className="text-indigo-900 flex items-center gap-2">
-                                <Info className="h-5 w-5 text-indigo-500" />
-                                Run Details
+                    <Card className="border border-border/60 shadow-sm bg-card">
+                        <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+                            <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                                <Info className="h-4 w-4 text-primary" />
+                                Informasi Produksi
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="space-y-2">
-                                <Label>Production Date</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">Tanggal Produksi</Label>
                                 <div className="relative">
                                     <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="pl-9 border-indigo-200 focus-visible:ring-indigo-500"
+                                        className="pl-9 h-10 border-input bg-background focus-visible:ring-primary"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Product (Finished Good)</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">Produk (Barang Jadi)</Label>
                                 <Select
                                     value={selectedProductId}
                                     onValueChange={setSelectedProductId}
                                 >
-                                    <SelectTrigger className="border-indigo-200 focus:ring-indigo-500">
-                                        <SelectValue placeholder="Select Product..." />
+                                    <SelectTrigger className="h-10 border-input bg-background focus:ring-primary">
+                                        <SelectValue placeholder="Pilih Produk Jadi..." />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {allProducts.map(p => (
                                             <SelectItem key={p.id} value={p.id.toString()}>
-                                                {p.name}
+                                                {p.name} ({p.sku})
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -216,24 +221,23 @@ export function ProductionRunPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Actual Output Qty</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">Jumlah Output Aktual</Label>
                                 <div className="relative">
                                     <Input
                                         type="number"
                                         min="0"
                                         step="any"
-                                        value={actualOutput}
-                                        onChange={(e) => setActualOutput(parseFloat(e.target.value))}
-                                        className="font-mono text-lg font-semibold text-indigo-900 border-indigo-200 bg-indigo-50/30"
+                                        value={actualOutput || ''}
+                                        onChange={(e) => setActualOutput(parseFloat(e.target.value) || 0)}
+                                        className="font-mono text-base font-semibold text-foreground border-input bg-background pr-28 h-10"
                                         placeholder="0.00"
                                     />
-                                    <div className="absolute right-3 top-2.5 text-xs text-muted-foreground pointer-events-none w-24 text-right truncate">
+                                    <div className="absolute right-3 top-2.5 text-xs text-muted-foreground pointer-events-none text-right truncate">
                                         {(() => {
-                                            if (!selectedProductId) return `BASE: ${standardOutputBase}`
+                                            if (!selectedProductId) return `Standar: ${standardOutputBase}`
                                             const p = allProducts.find(x => x.id.toString() === selectedProductId)
-                                            // Check purchase_uom or base_uom
                                             const unit = p?.barang_units?.[0]?.purchase_uom || p?.barang_units?.[0]?.base_uom || ''
-                                            return unit ? `${unit} (Base: ${standardOutputBase})` : `BASE: ${standardOutputBase}`
+                                            return unit ? `${unit} (Std: ${standardOutputBase})` : `Std: ${standardOutputBase}`
                                         })()}
                                     </div>
                                 </div>
@@ -242,57 +246,60 @@ export function ProductionRunPage() {
                     </Card>
 
                     {/* Middle Section: Ingredients Worksheet */}
-                    <Card className="border-indigo-100 shadow-md overflow-hidden">
-                        <CardHeader className="bg-indigo-100/50 border-b border-indigo-100 pb-4">
+                    <Card className="border border-border/60 shadow-sm overflow-hidden bg-card">
+                        <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-indigo-900">Ingredients Usage</CardTitle>
-                                    <CardDescription>
-                                        Adjust actual quantities consumed if different from standard.
+                                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                                        <Layers className="h-4 w-4 text-primary" />
+                                        Penggunaan Bahan Baku
+                                    </CardTitle>
+                                    <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                                        Sesuaikan kuantitas aktual bahan baku yang terpakai jika berbeda dari standar resep.
                                     </CardDescription>
                                 </div>
                                 {ingredients.length > 0 && (
-                                    <div className="bg-white px-3 py-1 rounded-full text-xs font-medium text-indigo-600 shadow-sm border border-indigo-100">
-                                        {ingredients.length} Items Loaded
+                                    <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium border border-primary/20">
+                                        {ingredients.length} Bahan Dimuat
                                     </div>
                                 )}
                             </div>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
-                                <TableHeader className="bg-indigo-50/30">
+                                <TableHeader className="bg-muted/40">
                                     <TableRow>
-                                        <TableHead className="w-[40%]">Material</TableHead>
-                                        <TableHead className="w-[15%] text-right">Standard Qty</TableHead>
-                                        <TableHead className="w-[20%] text-right">Actual Usage</TableHead>
-                                        <TableHead className="w-[10%] pl-4">Unit</TableHead>
-                                        <TableHead className="w-[15%] text-right">Unit Cost (Est.)</TableHead>
+                                        <TableHead className="w-[35%] text-xs font-semibold">Bahan Baku</TableHead>
+                                        <TableHead className="w-[15%] text-right text-xs font-semibold">Jumlah Standar</TableHead>
+                                        <TableHead className="w-[20%] text-right text-xs font-semibold">Pemakaian Aktual</TableHead>
+                                        <TableHead className="w-[12%] pl-4 text-xs font-semibold">Satuan</TableHead>
+                                        <TableHead className="w-[18%] text-right text-xs font-semibold">Estimasi Biaya Satuan</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoadingRecipe ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-indigo-400" />
-                                                <span className="text-xs text-muted-foreground mt-2 block">Loading Recipe...</span>
+                                            <TableCell colSpan={5} className="h-28 text-center">
+                                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                                                <span className="text-xs text-muted-foreground mt-2 block">Memuat Resep Produk...</span>
                                             </TableCell>
                                         </TableRow>
                                     ) : ingredients.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                                                Select a product to load the recipe worksheet.
+                                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
+                                                Pilih produk jadi di atas untuk memuat lembar kerja bahan baku resep.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         ingredients.map((item) => (
-                                            <TableRow key={item.barang_id} className="hover:bg-indigo-50/20">
+                                            <TableRow key={item.barang_id} className="hover:bg-muted/30">
                                                 <TableCell>
                                                     <div>
-                                                        <div className="font-medium text-gray-900">{item.material_name}</div>
+                                                        <div className="font-medium text-foreground">{item.material_name}</div>
                                                         <div className="text-xs text-muted-foreground">{item.material_sku}</div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-right font-mono text-muted-foreground">
+                                                <TableCell className="text-right font-mono text-xs text-muted-foreground">
                                                     {(item.standard_qty * (actualOutput / standardOutputBase)).toFixed(4)}
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -301,14 +308,14 @@ export function ProductionRunPage() {
                                                         step="any"
                                                         value={item.qty}
                                                         onChange={(e) => updateIngredientQty(item.barang_id, parseFloat(e.target.value))}
-                                                        className="h-8 w-full text-right font-mono bg-white border-indigo-200 focus:border-indigo-500"
+                                                        className="h-8 w-full text-right font-mono text-sm bg-background border-input focus:border-primary"
                                                     />
                                                 </TableCell>
                                                 <TableCell className="pl-4 text-xs font-medium text-muted-foreground">
                                                     {item.uom}
                                                 </TableCell>
-                                                <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                                    {item.cost.toLocaleString()}
+                                                <TableCell className="text-right font-mono text-xs text-foreground">
+                                                    Rp {Number(item.cost || 0).toLocaleString('id-ID')}
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -319,11 +326,11 @@ export function ProductionRunPage() {
                     </Card>
 
                     {/* Action Bar */}
-                    <div className="fixed bottom-6 right-6 z-10">
+                    <div className="flex justify-end pt-2">
                         <Button
                             type="submit"
                             size="lg"
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 rounded-full px-8"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md px-8 rounded-lg"
                             disabled={isSubmitting || ingredients.length === 0}
                         >
                             {isSubmitting ? (
@@ -331,7 +338,7 @@ export function ProductionRunPage() {
                             ) : (
                                 <Save className="mr-2 h-4 w-4" />
                             )}
-                            Finalize Production Run
+                            Simpan & Proses Produksi
                         </Button>
                     </div>
                 </form>

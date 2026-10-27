@@ -76,12 +76,12 @@ export default function StoCreatePage() {
     const createStoMutation = useMutation({
         mutationFn: stoService.createSto.bind(stoService),
         onSuccess: () => {
-            toast.success('STO Created Successfully')
+            toast.success('Dokumen STO Berhasil Dibuat')
             queryClient.invalidateQueries({ queryKey: ['sto_orders'] })
             navigate('/sto')
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to create STO')
+            toast.error(error.message || 'Gagal membuat dokumen STO')
         }
     })
 
@@ -130,15 +130,15 @@ export default function StoCreatePage() {
 
     const handleSubmit = () => {
         if (!user || !user.kode_outlet) {
-            toast.error('User outlet not defined')
+            toast.error('Outlet pengguna tidak terdefinisi')
             return
         }
         if (!toOutlet) {
-            toast.error('Please select destination outlet')
+            toast.error('Silakan pilih outlet tujuan pengiriman')
             return
         }
         if (items.length === 0) {
-            toast.error('Please add at least one item')
+            toast.error('Silakan tambahkan minimal satu barang untuk dikirim')
             return
         }
 
@@ -159,7 +159,7 @@ export default function StoCreatePage() {
         return (
             <DashboardLayout>
                 <div className="flex h-screen items-center justify-center">
-                    <p>Loading user data...</p>
+                    <p className="text-muted-foreground text-sm">Memuat data pengguna...</p>
                 </div>
             </DashboardLayout>
         )
@@ -167,14 +167,14 @@ export default function StoCreatePage() {
 
     return (
         <DashboardLayout>
-            <div className="p-6 space-y-6 max-w-5xl mx-auto pb-20">
+            <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto pb-20">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/sto')}>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/sto')} className="text-zen-charcoal hover:bg-zen-sand/20">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create Stock Transfer</h1>
-                        <p className="text-muted-foreground">Request inventory shipment to another outlet</p>
+                        <h1 className="text-2xl font-bold font-serif tracking-tight text-zen-charcoal">Kirim Barang Ke Outlet (STO)</h1>
+                        <p className="text-muted-foreground text-sm">Buat pengiriman dan transfer stok barang ke outlet tujuan</p>
                     </div>
                 </div>
 
@@ -183,24 +183,24 @@ export default function StoCreatePage() {
                     <div className="md:col-span-2 space-y-6">
 
                         {/* 1. ALLOCATION */}
-                        <Card className="border-t-4 border-t-purple-500 shadow-sm">
+                        <Card className="border-t-4 border-t-zen-moss border-zen-border shadow-xs">
                             <CardHeader className="pb-3">
                                 <div className="flex items-center gap-2">
-                                    <Truck className="h-5 w-5 text-purple-600" />
-                                    <CardTitle className="text-base">Allocation Details</CardTitle>
+                                    <Truck className="h-5 w-5 text-zen-moss" />
+                                    <CardTitle className="text-base font-semibold text-zen-charcoal">Detail Pengiriman & Alokasi</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>From Outlet (Sender)</Label>
-                                        <Input value={user?.outlet?.name_outlet || user?.kode_outlet || '-'} disabled className="bg-muted" />
+                                        <Label className="text-xs font-semibold text-zen-charcoal">Outlet Pengirim (Asal)</Label>
+                                        <Input value={user?.outlet?.name_outlet || user?.kode_outlet || '-'} disabled className="bg-muted/60" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>To Outlet (Recipient)</Label>
+                                        <Label className="text-xs font-semibold text-zen-charcoal">Outlet Penerima (Tujuan) *</Label>
                                         <Select value={toOutlet} onValueChange={setToOutlet}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select Outlet" />
+                                                <SelectValue placeholder="Pilih Outlet Tujuan" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {outlets?.filter(o => o.kode_outlet !== user?.kode_outlet).map(outlet => (
@@ -213,36 +213,37 @@ export default function StoCreatePage() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Estimated Shipping Cost (IDR)</Label>
+                                    <Label className="text-xs font-semibold text-zen-charcoal">Estimasi Ongkos Kirim (Rp)</Label>
                                     <Input
                                         type="number"
                                         min={0}
-                                        value={shippingCost}
+                                        value={shippingCost === 0 ? '' : shippingCost}
                                         onChange={(e) => setShippingCost(Number(e.target.value))}
+                                        placeholder="0"
                                     />
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* 2. ITEMS */}
-                        <Card className="border-t-4 border-t-blue-500 shadow-sm">
+                        <Card className="border-t-4 border-t-zen-matcha border-zen-border shadow-xs">
                             <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Package className="h-5 w-5 text-blue-600" />
-                                        <CardTitle className="text-base">Items to Ship</CardTitle>
+                                        <Package className="h-5 w-5 text-zen-moss" />
+                                        <CardTitle className="text-base font-semibold text-zen-charcoal">Daftar Barang yang Dikirim</CardTitle>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {/* Add Item Row */}
-                                <div className="flex items-end gap-3 p-3 bg-slate-50 rounded-lg border">
-                                    <div className="flex-1 space-y-2">
-                                        <Label>Product</Label>
+                                {/* Add Item Row - Responsive & Protected Against Qty Shrinkage */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 p-3.5 bg-zen-sand/10 dark:bg-zen-stone/40 rounded-xl border border-zen-border">
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                        <Label className="text-xs font-semibold text-zen-charcoal">Pilih Produk / Barang</Label>
                                         <SearchableSelect
                                             value={selectedProductId}
                                             onChange={setSelectedProductId}
-                                            placeholder="Select Product..."
+                                            placeholder="Cari atau pilih barang..."
                                             options={products?.data?.map(p => ({
                                                 value: p.id.toString(),
                                                 label: `${p.sku || 'No SKU'} - ${p.name}`,
@@ -250,57 +251,64 @@ export default function StoCreatePage() {
                                             })) || []}
                                         />
                                     </div>
-                                    <div className="w-24 space-y-2">
-                                        <Label>Qty</Label>
+                                    <div className="w-full sm:w-28 shrink-0 space-y-1.5">
+                                        <Label className="text-xs font-semibold text-zen-charcoal">Jumlah (Qty)</Label>
                                         <Input
                                             type="number"
                                             min={1}
-                                            value={qtyInput}
-                                            onChange={(e) => setQtyInput(Number(e.target.value))}
+                                            value={qtyInput <= 0 ? '' : qtyInput}
+                                            onChange={(e) => setQtyInput(Math.max(0, Number(e.target.value)))}
+                                            placeholder="0"
+                                            className="w-full font-mono text-center"
                                         />
                                     </div>
-                                    <Button onClick={handleAddItem} size="icon" className="shrink-0 bg-blue-600 hover:bg-blue-700">
-                                        <Plus className="h-4 w-4" />
+                                    <Button 
+                                        type="button"
+                                        onClick={handleAddItem} 
+                                        disabled={!selectedProductId || qtyInput <= 0}
+                                        className="shrink-0 bg-zen-moss hover:bg-zen-moss/90 text-white font-medium px-4 h-9"
+                                    >
+                                        <Plus className="h-4 w-4 mr-1.5" /> Tambah
                                     </Button>
                                 </div>
 
                                 {/* Items Table */}
-                                <div className="rounded-md border">
+                                <div className="rounded-xl border border-zen-border overflow-hidden">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow className="bg-slate-50">
-                                                <TableHead>SKU</TableHead>
-                                                <TableHead>Product</TableHead>
-                                                <TableHead className="text-right">Price</TableHead>
-                                                <TableHead className="text-right">Qty</TableHead>
-                                                <TableHead className="text-center">Unit</TableHead>
-                                                <TableHead className="text-right">Subtotal</TableHead>
+                                            <TableRow className="bg-muted/40">
+                                                <TableHead className="w-[110px]">SKU</TableHead>
+                                                <TableHead>Nama Barang</TableHead>
+                                                <TableHead className="text-right w-[120px]">Harga Satuan</TableHead>
+                                                <TableHead className="text-right w-[80px]">Qty</TableHead>
+                                                <TableHead className="text-center w-[80px]">Satuan</TableHead>
+                                                <TableHead className="text-right w-[130px]">Subtotal</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {items.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
-                                                        No items added yet.
+                                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground text-sm">
+                                                        Belum ada barang yang ditambahkan.
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
                                                 items.map((item, index) => (
-                                                    <TableRow key={`${item.barang_id} -${index} `}>
+                                                    <TableRow key={`${item.barang_id}-${index}`}>
                                                         <TableCell className="font-mono text-xs">{item.sku}</TableCell>
-                                                        <TableCell className="font-medium">{item.name}</TableCell>
-                                                        <TableCell className="text-right">{formatCurrency(item.price_unit)}</TableCell>
-                                                        <TableCell className="text-right">{item.qty_requested}</TableCell>
+                                                        <TableCell className="font-medium text-zen-charcoal">{item.name}</TableCell>
+                                                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatCurrency(item.price_unit)}</TableCell>
+                                                        <TableCell className="text-right font-semibold">{item.qty_requested}</TableCell>
                                                         <TableCell className="text-center text-muted-foreground font-mono text-xs">{item.uom}</TableCell>
-                                                        <TableCell className="text-right font-medium">
+                                                        <TableCell className="text-right font-semibold font-mono">
                                                             {formatCurrency(item.price_unit * item.qty_requested)}
                                                         </TableCell>
                                                         <TableCell>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                                                                 onClick={() => handleRemoveItem(index)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -319,36 +327,36 @@ export default function StoCreatePage() {
 
                     {/* RIGHT COLUMN - SUMMARY */}
                     <div className="space-y-6">
-                        <Card className="shadow-sm sticky top-6">
-                            <CardHeader className="bg-slate-50 border-b pb-4">
-                                <CardTitle className="text-lg">Order Summary</CardTitle>
+                        <Card className="shadow-xs border-zen-border sticky top-6">
+                            <CardHeader className="bg-zen-sand/10 dark:bg-zen-stone/40 border-b border-zen-border pb-4">
+                                <CardTitle className="text-base font-semibold text-zen-charcoal">Ringkasan Pengiriman</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Items Subtotal</span>
-                                    <span>{formatCurrency(subtotal)}</span>
+                                    <span className="text-muted-foreground">Subtotal Barang</span>
+                                    <span className="font-mono font-medium">{formatCurrency(subtotal)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Shipping Cost</span>
-                                    <span>{formatCurrency(shippingCost)}</span>
+                                    <span className="text-muted-foreground">Ongkos Kirim</span>
+                                    <span className="font-mono font-medium">{formatCurrency(shippingCost)}</span>
                                 </div>
                                 <Separator />
                                 <div className="flex justify-between items-center">
-                                    <span className="font-bold text-lg">Total</span>
-                                    <span className="font-bold text-xl text-blue-600">{formatCurrency(grandTotal)}</span>
+                                    <span className="font-bold text-base text-zen-charcoal">Total Keseluruhan</span>
+                                    <span className="font-bold text-lg text-zen-moss dark:text-zen-matcha font-mono">{formatCurrency(grandTotal)}</span>
                                 </div>
 
                                 <Button
-                                    className="w-full mt-6 bg-slate-900 hover:bg-slate-800"
+                                    className="w-full mt-6 bg-zen-moss hover:bg-zen-moss/90 text-white font-medium"
                                     size="lg"
                                     onClick={handleSubmit}
                                     disabled={isSubmitting || items.length === 0}
                                 >
-                                    {isSubmitting ? 'Creating Order...' : 'Create STO'}
+                                    {isSubmitting ? 'Memproses Dokumen...' : 'Kirim Barang (Buat STO)'}
                                 </Button>
 
-                                <p className="text-xs text-center text-muted-foreground mt-2">
-                                    Order will be saved as DRAFT and must be shipped by Warehouse.
+                                <p className="text-xs text-center text-muted-foreground mt-2 leading-relaxed">
+                                    Dokumen STO akan disimpan sebagai status <strong>DRAFT</strong> dan selanjutnya diproses pengeluarannya oleh tim Gudang.
                                 </p>
                             </CardContent>
                         </Card>

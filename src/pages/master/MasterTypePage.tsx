@@ -77,11 +77,11 @@ export function MasterTypePage() {
         <div className="space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-3xl font-bold">Product Types</h1>
+            <h1 className="text-3xl font-bold">Kategori Produk</h1>
             <p className="text-muted-foreground mt-1">
-              View all product type categories
+              Daftar seluruh tipe dan kategori produk
               <span className="ml-2 text-amber-600 font-medium">
-                (Read-only)
+                (Hanya Lihat)
               </span>
             </p>
           </div>
@@ -93,11 +93,11 @@ export function MasterTypePage() {
                 <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
                 <div className="text-sm">
                   <p className="font-medium text-amber-900 dark:text-amber-100">
-                    Read-Only Access
+                    Akses Hanya Lihat
                   </p>
                   <p className="text-amber-700 dark:text-amber-300 mt-1">
-                    Product types are managed by administrators through Supabase Studio.
-                    Contact your system administrator to add, modify, or remove product types.
+                    Kategori produk dikelola secara terpusat oleh Administrator.
+                    Hubungi administrator sistem untuk penambahan atau pembaruan kategori.
                   </p>
                 </div>
               </div>
@@ -108,13 +108,13 @@ export function MasterTypePage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Total Types</p>
+                <p className="text-sm text-muted-foreground">Total Kategori</p>
                 <p className="text-3xl font-bold mt-1">{types.length}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Displayed</p>
+                <p className="text-sm text-muted-foreground">Ditampilkan</p>
                 <p className="text-3xl font-bold mt-1">{filteredTypes.length}</p>
               </CardContent>
             </Card>
@@ -126,7 +126,7 @@ export function MasterTypePage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by ID, type name, or description..."
+                  placeholder="Cari berdasarkan ID, nama kategori, atau keterangan..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -143,9 +143,9 @@ export function MasterTypePage() {
                   <thead className="bg-muted">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Type Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Created At</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Nama Kategori</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Keterangan</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Tanggal Dibuat</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -153,8 +153,8 @@ export function MasterTypePage() {
                       <tr>
                         <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                           {searchQuery
-                            ? 'No product types match your search'
-                            : 'No product types found'}
+                            ? 'Tidak ada kategori yang cocok dengan pencarian'
+                            : 'Kategori produk tidak ditemukan'}
                         </td>
                       </tr>
                     ) : (
@@ -171,7 +171,7 @@ export function MasterTypePage() {
                           </td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">
                             {type.created_at
-                              ? new Date(type.created_at).toLocaleDateString('en-US', {
+                              ? new Date(type.created_at).toLocaleDateString('id-ID', {
                                   year: 'numeric',
                                   month: 'short',
                                   day: 'numeric',

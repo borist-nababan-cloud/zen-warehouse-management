@@ -18,6 +18,8 @@ dist-ssr
 !.vscode/settings.json
 .idea
 .DS_Store
+.antigravity/
+.antigraviy/
 *.suo
 *.ntvs*
 *.njsproj
@@ -31,10 +33,14 @@ dist-ssr
 *.key
 
 # Secure/Private Directories
-docs/
 database-docs/
 my-cred/
 scripts/
+
+# Docs: Ignore all internal docs except official Coolify guide and README
+docs/*
+!docs/DEPLOY_COOLIFY.md
+frontendplan.md
 
 # Database dumps and scripts
 *.sql
@@ -42,30 +48,8 @@ scripts/
 *.backup
 *.bak
 
-# Documentation (Sensitive)
-frontendplan.md
-
-# whitelist specific files if necessary
+# Whitelist specific files if necessary
 !README.md
 !package.json
 !tsconfig.json
 build_errors.txt
-
-# Added by Agent for safety
-.env
-*.sql
-*.md
-!README.md
-docs/
-
-*.env
-.env
-*.sql
-docs/
-
-
-*.env
-.env
-*.sql
-docs/
-

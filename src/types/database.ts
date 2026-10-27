@@ -18,10 +18,14 @@
  * 7  - warehouse_staff    (Warehouse operations)
  * 8  - SUPERUSER          (ALL ACCESS, no outlet restriction)
  * 9  - UNASSIGNED         (Default for new users, should be blocked)
+ * 10 - finance_outlet     (Finance outlet scope)
+ * 12 - operational_staff  (Zen Internal App staff/therapist, blocked from WHMS)
+ * 17 - member             (Customer/Member role, blocked from WHMS)
+ * 18 - web_admin          (Web Administrator with full WHM access)
  */
 
 
-export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18
 
 /**
  * Legacy Role Names (for backward compatibility)
@@ -35,11 +39,20 @@ export type UserRole =
   | 'outlet_admin'
   | 'warehouse_staff'
   | 'finance_outlet'
+  | 'operational_staff'
+  | 'therapist'
+  | 'role_11'
+  | 'role_13'
+  | 'role_14'
+  | 'role_15'
+  | 'role_16'
+  | 'member'
+  | 'web_admin'
 
 /**
  * Map RoleId to UserRole string
  */
-export const ROLE_ID_TO_NAME: Record<RoleId, UserRole | 'SUPERUSER' | 'UNASSIGNED'> = {
+export const ROLE_ID_TO_NAME: Record<RoleId, string> = {
   1: 'admin_holding',
   2: 'staff_holding',
   3: 'laundry_admin',
@@ -50,12 +63,20 @@ export const ROLE_ID_TO_NAME: Record<RoleId, UserRole | 'SUPERUSER' | 'UNASSIGNE
   8: 'SUPERUSER',
   9: 'UNASSIGNED',
   10: 'finance_outlet',
+  11: 'therapist',
+  12: 'operational_staff',
+  13: 'role_13',
+  14: 'role_14',
+  15: 'role_15',
+  16: 'role_16',
+  17: 'member',
+  18: 'web_admin',
 }
 
 /**
  * Map UserRole string to RoleId
  */
-export const ROLE_NAME_TO_ID: Record<UserRole, RoleId> = {
+export const ROLE_NAME_TO_ID: Record<string, RoleId> = {
   admin_holding: 1,
   staff_holding: 2,
   laundry_admin: 3,
@@ -63,7 +84,18 @@ export const ROLE_NAME_TO_ID: Record<UserRole, RoleId> = {
   finance: 5,
   outlet_admin: 6,
   warehouse_staff: 7,
+  SUPERUSER: 8,
+  UNASSIGNED: 9,
   finance_outlet: 10,
+  therapist: 11,
+  role_11: 11,
+  operational_staff: 12,
+  role_13: 13,
+  role_14: 14,
+  role_15: 15,
+  role_16: 16,
+  member: 17,
+  web_admin: 18,
 }
 
 // ============================================
@@ -91,22 +123,33 @@ export interface UserProfile {
   created_at: string
 }
 
+export interface OutletLocation {
+  lat: number
+  lng: number
+  address?: string
+}
+
 /**
  * master_outlet table - Outlet master data
  */
 export interface MasterOutlet {
   kode_outlet: string      // Primary key
   name_outlet: string
-  alamat: string
-  no_telp: string
-  no_wa: string
-  location: string
-  province: string
-  outlet_group_id: number  // References group_outlet.group_id
-  active: boolean          // Active status
-  city: string
-  email: string
-  can_sto?: boolean        // Capable of STO transfers
+  alamat: string | null
+  no_telp: string | null
+  no_wa: string | null
+  location: OutletLocation | string | null
+  province: string | null
+  outlet_group_id: number | null // References group_outlet.group_id
+  active: boolean | null   // Active status
+  city: string | null
+  email: string | null
+  can_sto?: boolean | null // Capable of STO transfers
+  created_by?: string | null
+  created_at?: string
+  update_by?: string | null
+  update_at?: string
+  group_outlet?: GroupOutlet | null
 }
 
 /**
@@ -140,9 +183,12 @@ export interface MasterBarang {
   kode_outlet: string           // References master_outlet.kode_outlet, part of composite PK
   name: string | null           // Product name
   deleted: boolean              // Soft delete flag
+  is_laundry?: boolean          // Linen / Laundry item flag
   image1_url: string | null     // Product image 1
-  iamge2_url: string | null     // Product image 2 (note: column typo in database)
+  image2_url?: string | null    // Product image 2
+  iamge2_url: string | null     // Product image 2 (legacy column alias)
 }
+
 
 /**
  * MasterBarang with relations joined
@@ -200,6 +246,7 @@ export interface PriceUnitUpdateData {
   buy_price?: number
   sell_price?: number
   purchase_uom?: string
+  base_uom?: string
   conversion_rate?: number
 }
 
@@ -212,8 +259,11 @@ export interface BarangPrice {
   kode_outlet: string           // References master_outlet.kode_outlet
   buy_price: number             // Buy price (default 0)
   sell_price: number            // Sell price (default 0)
-  updated_at: string            // Last update timestamp
-  update_by: string | null      // User who updated
+  updated_at?: string           // Last update timestamp
+  update_by?: string | null     // User UUID who updated
+  created_at?: string
+  created_by?: string | null
+  update_at?: string
 }
 
 /**
@@ -226,8 +276,29 @@ export interface BarangUnit {
   base_uom: string              // Base unit of measure (default 'PCS')
   purchase_uom: string          // Purchase unit of measure (default 'PCS')
   conversion_rate: number       // Conversion rate (default 1, e.g., 1 BOX = 12 PCS)
-  updated_at: string            // Last update timestamp
-  update_by: string | null      // User who updated
+  updated_at?: string           // Last update timestamp
+  update_by?: string | null     // User UUID who updated
+  created_at?: string
+  created_by?: string | null
+  update_at?: string
+}
+
+/**
+ * barang_price_history table - Track price adjustments
+ */
+export interface BarangPriceHistory {
+  id: number
+  barang_id: number
+  kode_outlet: string
+  old_price: number | null
+  new_price: number
+  price_type: 'BUY' | 'SELL'
+  changed_at: string
+  changed_by: string | null
+  created_by?: string | null
+  created_at?: string
+  update_by?: string | null
+  update_at?: string
 }
 
 /**
@@ -608,6 +679,8 @@ export interface AuthUser {
   user_role: RoleId
   kode_outlet: string | null
   full_name?: string | null
+  provider?: string
+  app_metadata?: Record<string, any>
   profile?: UserProfile
   outlet?: MasterOutlet | null
 }
@@ -618,43 +691,61 @@ export interface AuthUser {
 
 export const ROLE_LABELS: Record<RoleId, string> = {
   1: 'Admin Holding',
-  2: 'Staff Holding',
-  3: 'Laundry Admin',
-  4: 'Laundry Staff',
-  5: 'Finance',
-  6: 'Outlet Admin',
-  7: 'Warehouse Staff',
+  2: 'Staf Holding',
+  3: 'Admin Laundry',
+  4: 'Staf Laundry',
+  5: 'Finance Holding',
+  6: 'Admin Gerai / Outlet',
+  7: 'Staf Gudang Outlet',
   8: 'Superuser',
-  9: 'Unassigned',
-  10: 'Finance Outlet',
+  9: 'Belum Ditugaskan (Unassigned)',
+  10: 'Finance Gerai / Outlet',
+  11: 'Terapis (Role 11)',
+  12: 'Staf Operasional',
+  13: 'Role 13',
+  14: 'Role 14',
+  15: 'Role 15',
+  16: 'Role 16',
+  17: 'Member (Pelanggan)',
+  18: 'Web Admin',
 }
 
 /**
  * Menu Permissions per Role
- * Role 8 (SUPERUSER) has access to all menus
- * Role 9 (UNASSIGNED) has no access
+ * Role 1, 2, 3, 4, 5, 6, 7, 10: Standard operational and warehouse permissions
+ * Role 8: SUPERUSER has full access to all menus
+ * Role 9 (UNASSIGNED) & Role 17 (MEMBER): Cannot access / blocked from login
+ * Role 11, 12, 13, 14, 15, 16, 18: Can login/register, menu permissions pending future implementation
  */
 export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
-  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'users', 'product', 'price-unit', 'supplier'],      // admin_holding
+  1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'product', 'price-unit', 'supplier'],      // admin_holding
   2: ['dashboard', 'inventory', 'purchase-orders'],                           // staff_holding
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'product', 'price-unit', 'supplier'],                       // finance
-  6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier'],                     // outlet_admin
-  7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type'],                           // warehouse_staff
+  5: ['dashboard', 'finance', 'product', 'price-unit', 'supplier'],           // finance
+  6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier', 'users'], // outlet_admin
+  7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type'], // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
-  9: [],                                                                      // UNASSIGNED - no access
-  10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'],          // Finance Outlet
+  9: [],                                                                      // UNASSIGNED - blocked from login
+  10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'], // Finance Outlet
+  11: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  12: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  13: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  14: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  15: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  16: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  17: [],                                                                     // MEMBER - blocked from login
+  18: [],                                                                     // WEB_ADMIN - pending ROLE_MENU_PERMISSION
 }
 
 /**
  * Check if a role has permission to access a menu
  */
 export function hasRolePermission(roleId: RoleId, menu: string): boolean {
-  const permissions = ROLE_MENU_PERMISSIONS[roleId]
+  const permissions = ROLE_MENU_PERMISSIONS[roleId] || []
 
   // SUPERUSER has all permissions
-  if (permissions.includes('*')) return true
+  if (roleId === 8 || permissions.includes('*')) return true
 
   // UNASSIGNED has no permissions
   if (permissions.length === 0) return false
@@ -950,7 +1041,12 @@ export interface ViewReportPurchaseOrders {
 export interface MasterIssueCategory {
   id: number
   category_name: string
+  description?: string | null
+  is_active: boolean
   created_at?: string
+  created_by?: string | null
+  update_at?: string | null
+  update_by?: string | null
 }
 
 export interface InternalUsageHeader {

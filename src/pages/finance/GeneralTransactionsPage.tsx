@@ -34,16 +34,17 @@ export function GeneralTransactionsPage() {
         description: ''
     })
 
-    // Fetch Accounts on Mount
-    useEffect(() => {
-        const fetchAccounts = async () => {
-            if (!user?.kode_outlet) return
-            const result = await getFinancialAccounts(user.kode_outlet)
-            if (result.isSuccess && result.data) {
-                setAccounts(result.data)
-            }
-            setIsLoading(false)
+    // Fetch Accounts
+    const fetchAccounts = async () => {
+        if (!user?.kode_outlet) return
+        const result = await getFinancialAccounts(user.kode_outlet)
+        if (result.isSuccess && result.data) {
+            setAccounts(result.data)
         }
+        setIsLoading(false)
+    }
+
+    useEffect(() => {
         fetchAccounts()
     }, [user?.kode_outlet])
 
@@ -57,7 +58,7 @@ export function GeneralTransactionsPage() {
             if (result.isSuccess && result.data) {
                 setCategories(result.data)
             } else {
-                toast.error("Failed to load categories")
+                toast.error("Gagal memuat kategori transaksi")
             }
         }
         fetchCategories()
@@ -74,18 +75,23 @@ export function GeneralTransactionsPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!user?.kode_outlet || !user.id || !formData.account_id || !formData.category_id) {
-            toast.error("Please fill all required fields")
+            toast.error("Harap lengkapi semua bidang yang wajib diisi")
             return
         }
 
         // Strip non-numeric chars for calculation
         const numericAmount = Number(formData.amount.replace(/\./g, '').replace(/,/g, ''))
+        if (!numericAmount || numericAmount <= 0) {
+            toast.error("Nominal transaksi harus lebih dari 0")
+            return
+        }
 
-        if (!confirm(`Are you sure you want to record ${activeTab === 'IN' ? 'Money IN' : 'Money OUT'} of ${formData.amount}?`)) return
+        const transLabel = activeTab === 'IN' ? 'Kas Masuk' : 'Kas Keluar'
+        if (!confirm(`Apakah Anda yakin ingin mencatat ${transLabel} sebesar Rp ${formData.amount}?`)) return
 
         setIsSubmitting(true)
         const result = await createGeneralTransaction({
-            document_number: `GEN-${Date.now()}`, // Temporary doc number generation
+            document_number: `GEN-${Date.now()}`,
             kode_outlet: user.kode_outlet,
             financial_account_id: formData.account_id,
             transaction_type: activeTab,
@@ -97,10 +103,12 @@ export function GeneralTransactionsPage() {
         })
 
         if (result.isSuccess) {
-            toast.success("Transaction recorded successfully")
+            toast.success(`Transaksi ${transLabel.toLowerCase()} berhasil dicatat!`)
             setFormData(prev => ({ ...prev, amount: '', category_id: '', description: '' }))
+            // Refresh account balances
+            fetchAccounts()
         } else {
-            toast.error(result.error || "Failed to record transaction")
+            toast.error(result.error || "Gagal mencatat transaksi kas")
         }
         setIsSubmitting(false)
     }
@@ -109,63 +117,76 @@ export function GeneralTransactionsPage() {
         <DashboardLayout>
             <div className="max-w-4xl mx-auto space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">General Transactions</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Record miscellaneous expenses or capital injections.
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Transaksi Kas & Bank</h1>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        Catat penerimaan kas masuk (modal/pendapatan lain) atau pengeluaran kas keluar (biaya operasional).
                     </p>
                 </div>
 
                 <div className="flex gap-4 mb-6">
                     <button
+                        type="button"
                         onClick={() => setActiveTab('IN')}
-                        className={`flex-1 py-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${activeTab === 'IN' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-bold' : 'border-gray-200 hover:border-emerald-200 text-gray-400'}`}
+                        className={`flex-1 py-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                            activeTab === 'IN' 
+                                ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold shadow-sm' 
+                                : 'border-border/60 hover:border-emerald-200 text-muted-foreground bg-card'
+                        }`}
                     >
-                        <ArrowDownCircle className={`h-8 w-8 ${activeTab === 'IN' ? 'text-emerald-600' : 'text-gray-300'}`} />
-                        <span>MONEY IN</span>
+                        <ArrowDownCircle className={`h-8 w-8 ${activeTab === 'IN' ? 'text-emerald-600' : 'text-muted-foreground/60'}`} />
+                        <span className="tracking-wide">KAS MASUK (IN)</span>
                     </button>
                     <button
+                        type="button"
                         onClick={() => setActiveTab('OUT')}
-                        className={`flex-1 py-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${activeTab === 'OUT' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-gray-200 hover:border-rose-200 text-gray-400'}`}
+                        className={`flex-1 py-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                            activeTab === 'OUT' 
+                                ? 'border-rose-600 bg-rose-50 text-rose-800 font-semibold shadow-sm' 
+                                : 'border-border/60 hover:border-rose-200 text-muted-foreground bg-card'
+                        }`}
                     >
-                        <ArrowUpCircle className={`h-8 w-8 ${activeTab === 'OUT' ? 'text-rose-600' : 'text-gray-300'}`} />
-                        <span>MONEY OUT</span>
+                        <ArrowUpCircle className={`h-8 w-8 ${activeTab === 'OUT' ? 'text-rose-600' : 'text-muted-foreground/60'}`} />
+                        <span className="tracking-wide">KAS KELUAR (OUT)</span>
                     </button>
                 </div>
 
-                <Card className={`border-t-4 ${activeTab === 'IN' ? 'border-t-emerald-500' : 'border-t-rose-500'} shadow-md`}>
-                    <CardHeader>
-                        <CardTitle>
-                            {activeTab === 'IN' ? 'Record Revenue / Top Up' : 'Record Expense / Withdrawal'}
+                <Card className={`border-t-4 ${activeTab === 'IN' ? 'border-t-emerald-600' : 'border-t-rose-600'} border-border/60 shadow-sm`}>
+                    <CardHeader className="bg-muted/20 border-b border-border/40">
+                        <CardTitle className="text-lg font-semibold text-foreground">
+                            {activeTab === 'IN' ? 'Catat Kas Masuk (Penerimaan / Modal)' : 'Catat Kas Keluar (Pengeluaran / Biaya)'}
                         </CardTitle>
-                        <CardDescription>
-                            This will {activeTab === 'IN' ? 'increase' : 'decrease'} the selected account balance.
+                        <CardDescription className="text-sm">
+                            Transaksi ini akan {activeTab === 'IN' ? 'menambah (+)' : 'mengurangi (-)'} saldo pada rekening kas/bank yang dipilih.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label>Financial Account</Label>
+                                    <Label className="text-sm font-medium">Rekening Kas / Bank <span className="text-destructive">*</span></Label>
                                     <Select
                                         value={formData.account_id}
                                         onValueChange={(val) => setFormData({ ...formData, account_id: val })}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Account" />
+                                        <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="Pilih Rekening Kas/Bank" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {accounts.map(acc => (
                                                 <SelectItem key={acc.id} value={acc.id}>
-                                                    {acc.account_name} ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(acc.balance)})
+                                                    {acc.account_name} ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(acc.balance)})
                                                 </SelectItem>
                                             ))}
+                                            {accounts.length === 0 && (
+                                                <div className="p-2 text-sm text-muted-foreground">Belum ada data rekening kas/bank</div>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>Transaction Date</Label>
-                                    <div className="relative">
+                                    <Label className="text-sm font-medium">Tanggal Transaksi <span className="text-destructive">*</span></Label>
+                                    <div className="relative mt-1">
                                         <Input
                                             type="date"
                                             value={formData.date}
@@ -173,49 +194,54 @@ export function GeneralTransactionsPage() {
                                             required
                                             className="pl-10"
                                         />
-                                        <Calendar className="h-4 w-4 absolute left-3 top-3 text-gray-500" />
+                                        <Calendar className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Amount (IDR)</Label>
+                                <Label className="text-sm font-medium">Nominal Transaksi (Rp) <span className="text-destructive">*</span></Label>
                                 <Input
                                     type="text"
                                     placeholder="0"
                                     value={formData.amount}
                                     onChange={handleAmountChange}
                                     required
-                                    className="text-lg font-mono"
+                                    className="text-lg font-mono text-foreground mt-1"
                                 />
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label>Category ({activeTab})</Label>
+                                    <Label className="text-sm font-medium">
+                                        Kategori {activeTab === 'IN' ? 'Kas Masuk' : 'Kas Keluar'} <span className="text-destructive">*</span>
+                                    </Label>
                                     <Select
                                         value={formData.category_id}
                                         onValueChange={(val) => setFormData({ ...formData, category_id: val })}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Category" />
+                                        <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="Pilih Kategori Transaksi" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {categories.map(cat => (
                                                 <SelectItem key={cat.id} value={cat.id}>
-                                                    {cat.name} {cat.description && `- ${cat.description}`}
+                                                    {cat.name} {cat.description ? `- ${cat.description}` : ''}
                                                 </SelectItem>
                                             ))}
-                                            {categories.length === 0 && <span className="p-2 text-sm text-gray-500">Loading categories...</span>}
+                                            {categories.length === 0 && (
+                                                <div className="p-2 text-sm text-muted-foreground">Memuat kategori...</div>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Description (Optional)</Label>
+                                    <Label className="text-sm font-medium">Keterangan / Catatan (Opsional)</Label>
                                     <Input
-                                        placeholder="Add notes..."
+                                        placeholder="Tambahkan catatan atau keterangan transaksi..."
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="mt-1"
                                     />
                                 </div>
                             </div>
@@ -224,7 +250,11 @@ export function GeneralTransactionsPage() {
                                 <Button
                                     type="submit"
                                     disabled={isSubmitting || isLoading}
-                                    className={activeTab === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}
+                                    className={
+                                        activeTab === 'IN' 
+                                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm' 
+                                            : 'bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm'
+                                    }
                                 >
                                     {isSubmitting ? (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -233,7 +263,7 @@ export function GeneralTransactionsPage() {
                                     ) : (
                                         <ArrowUpCircle className="mr-2 h-4 w-4" />
                                     )}
-                                    Submit
+                                    Simpan Transaksi
                                 </Button>
                             </div>
                         </form>

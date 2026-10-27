@@ -9,18 +9,23 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query'
 import { Toaster, toast } from 'sonner'
 import { LoginPage } from '@/pages/LoginPage'
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
 import { DashboardPage } from '@/pages/DashboardPage'
-import { ProductPage } from '@/pages/ProductPage'
-import { MasterTypePage } from '@/pages/MasterTypePage'
-import { PriceUnitManagerPage } from '@/pages/PriceUnitManagerPage'
+import { ProductPage } from '@/pages/master/ProductPage'
+import { MasterTypePage } from '@/pages/master/MasterTypePage'
+import { PriceUnitManagerPage } from '@/pages/master/PriceUnitManagerPage'
 import { FinancialDashboardPage } from './pages/posdashboard/FinancialDashboardPage'
 import { FinancialAccountsPage } from './pages/finance/FinancialAccountsPage'
 import { GeneralTransactionsPage } from './pages/finance/GeneralTransactionsPage'
+import { TransactionCategoriesPage } from './pages/finance/TransactionCategoriesPage'
 import { SupplierPaydownPage } from './pages/finance/SupplierPaydownPage'
 import { OperationalDashboardPage } from './pages/posdashboard/OperationalDashboardPage'
 import { ProductMixDashboardPage } from './pages/posdashboard/ProductMixDashboardPage'
 import { PeakHoursDashboardPage } from './pages/posdashboard/PeakHoursDashboardPage'
-import { SupplierPage } from '@/pages/SupplierPage'
+import { OutletInfoPage } from './pages/master/OutletInfoPage'
+import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
+import { SupplierPage } from '@/pages/master/SupplierPage'
+import { UserManagementPage } from '@/pages/UserManagementPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
 import { PurchaseOrderCreatePage } from '@/pages/procurement/PurchaseOrderCreatePage'
@@ -134,6 +139,10 @@ function App() {
               </PublicRoute>
             }
           />
+          <Route
+            path="/auth/callback"
+            element={<AuthCallbackPage />}
+          />
 
           {/* Protected Routes */}
           <Route
@@ -191,6 +200,26 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
                 <ProductPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Master Outlet Info Page - Master Data (Role 6 only) */}
+          <Route
+            path="/master/outlet-info"
+            element={
+              <ProtectedRoute allowedRoles={[6]}>
+                <OutletInfoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Master Issue Categories (Kategori Pemakaian) - Master Data (Roles 5, 6, 8, 10) */}
+          <Route
+            path="/master/issue-categories"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 10]}>
+                <IssueCategoriesPage />
               </ProtectedRoute>
             }
           />
@@ -580,7 +609,7 @@ function App() {
           <Route
             path="/inventory/report"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 8, 10]}>
                 <InventoryReportPage />
               </ProtectedRoute>
             }
@@ -692,6 +721,14 @@ function App() {
             }
           />
           <Route
+            path="/finance/categories"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8]}>
+                <TransactionCategoriesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/finance/report-ap-aging"
             element={
               <ProtectedRoute allowedRoles={[1, 3, 6]}>
@@ -758,8 +795,8 @@ function App() {
           <Route
             path="/users"
             element={
-              <ProtectedRoute allowedRoles={[1, 8]}>
-                <UnderConstructionPage />
+              <ProtectedRoute allowedRoles={[6, 8]}>
+                <UserManagementPage />
               </ProtectedRoute>
             }
           />

@@ -53,6 +53,17 @@ interface POItemRow {
     subtotal: number
 }
 
+// Indonesian Thousand Formatter Helpers
+const formatThousand = (val: number | undefined | null) => {
+    if (val === undefined || val === null || isNaN(val)) return '0'
+    return new Intl.NumberFormat('id-ID').format(val)
+}
+
+const parseThousand = (val: string) => {
+    const raw = val.replace(/\D/g, '')
+    return raw ? parseInt(raw, 10) : 0
+}
+
 export function PurchaseOrderCreatePage() {
     const navigate = useNavigate()
     const { id } = useParams() // Check for Edit Mode
@@ -65,8 +76,8 @@ export function PurchaseOrderCreatePage() {
     const [isGeneratingNo, setIsGeneratingNo] = useState(true)
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>('')
     const [expectedDate, setExpectedDate] = useState('')
-    const [roNumber, setRoNumber] = useState('')  // [NEW] RO Number
-    const [notes, setNotes] = useState('')        // [NEW] Notes
+    const [roNumber, setRoNumber] = useState('')
+    const [notes, setNotes] = useState('')
     const [items, setItems] = useState<POItemRow[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -97,7 +108,7 @@ export function PurchaseOrderCreatePage() {
     useEffect(() => {
         if (isEditMode && id) {
             loadPoForEdit(id)
-            setIsGeneratingNo(false) // Don't generate
+            setIsGeneratingNo(false)
         }
     }, [isEditMode, id])
 
@@ -117,16 +128,16 @@ export function PurchaseOrderCreatePage() {
             setDocNumber(po.document_number)
             setSelectedSupplierId(po.kode_supplier)
             setExpectedDate(po.expected_delivery_date || '')
-            setRoNumber(po.ro_number || '') // [NEW] Bind RO
-            setNotes(po.notes || '')        // [NEW] Bind Notes
+            setRoNumber(po.ro_number || '')
+            setNotes(po.notes || '')
 
             // Map items
             if (po.purchase_order_items) {
                 const mappedItems: POItemRow[] = po.purchase_order_items.map(i => ({
-                    id: Date.now() + Math.random(), // Temp unique key for react
-                    db_id: i.id, // Keep Track of real ID
+                    id: Date.now() + Math.random(),
+                    db_id: i.id,
                     barang_id: i.barang_id,
-                    productName: i.master_barang?.name || 'Unknown',
+                    productName: i.master_barang?.name || 'Tidak Diketahui',
                     sku: i.master_barang?.sku || '',
                     qty: i.qty_ordered,
                     unit: i.uom_purchase,
@@ -139,10 +150,10 @@ export function PurchaseOrderCreatePage() {
 
             // Check Status Restriction
             if (po.status !== 'DRAFT' && po.status !== 'ISSUED') {
-                toast.warning(`This PO is ${po.status}. You can view it but cannot edit items.`)
+                toast.warning(`PO ini berstatus ${po.status}. Anda dapat melihat rincian tetapi tidak dapat mengubah data.`)
             }
         } else {
-            toast.error('Failed to load PO')
+            toast.error('Gagal memuat data PO')
             navigate('/procurement/purchase-orders')
         }
         setIsSubmitting(false)
@@ -156,7 +167,7 @@ export function PurchaseOrderCreatePage() {
             if (data) setDocNumber(data)
         } catch (err) {
             console.error('Failed to generate PO Number:', err)
-            toast.error('Failed to generate PO Number')
+            toast.error('Gagal membuat Nomor PO otomatis')
         } finally {
             setIsGeneratingNo(false)
         }
@@ -207,7 +218,7 @@ export function PurchaseOrderCreatePage() {
         // Check barang_units
         const { data: unitData } = await supabase
             .from('barang_units')
-            .select('conversion_rate, purchase_uom')
+            .select('conversion_rate, purchase_uom, base_uom')
             .eq('barang_id', productId)
             .eq('kode_outlet', user?.kode_outlet)
             .maybeSingle()
@@ -222,7 +233,7 @@ export function PurchaseOrderCreatePage() {
 
         if (unitData) {
             convRate = unitData.conversion_rate || 1
-            purchaseUom = unitData.purchase_uom || 'PCS'
+            purchaseUom = unitData.purchase_uom || unitData.base_uom || 'PCS'
         }
 
         let buyPrice = 0
@@ -240,8 +251,8 @@ export function PurchaseOrderCreatePage() {
                         sku: product.sku || '',
                         unit: purchaseUom,
                         conversion_rate: convRate,
-                        price: buyPrice, // Auto-fill price
-                        subtotal: item.qty * buyPrice, // recalculate
+                        price: buyPrice,
+                        subtotal: item.qty * buyPrice,
                     }
                     : item
             )
@@ -257,7 +268,7 @@ export function PurchaseOrderCreatePage() {
 
                 // Auto-calc subtotal
                 if (field === 'qty' || field === 'price') {
-                    updated.subtotal = updated.qty * updated.price
+                    updated.subtotal = Number(updated.qty || 0) * Number(updated.price || 0)
                 }
                 return updated
             })
@@ -270,34 +281,34 @@ export function PurchaseOrderCreatePage() {
 
     const handleSubmit = async (status: 'DRAFT' | 'ISSUED') => {
         if (!user?.kode_outlet) {
-            toast.error('User outlet not found')
+            toast.error('Kode outlet pengguna tidak ditemukan')
             return
         }
         if (!selectedSupplierId) {
-            toast.error('Please select a supplier')
+            toast.error('Silakan pilih pemasok terlebih dahulu')
             return
         }
         if (items.length === 0) {
-            toast.error('Please add at least one item')
+            toast.error('Harap tambahkan minimal satu barang pesanan')
             return
         }
 
-        const isReadOnly = existingPo && (existingPo.status !== 'DRAFT' && existingPo.status !== 'ISSUED')
-        if (isReadOnly) {
-            toast.error('Cannot edit this PO (Status restrictions)')
+        const isReadOnlyMode = existingPo && (existingPo.status !== 'DRAFT' && existingPo.status !== 'ISSUED')
+        if (isReadOnlyMode) {
+            toast.error('Tidak dapat mengubah PO ini karena statusnya sudah dikunci')
             return
         }
 
         // Validate items
         const invalidItems = items.filter(i => !i.barang_id || i.qty <= 0)
         if (invalidItems.length > 0) {
-            toast.error('Please fix invalid items (check product selection or quantity)')
+            toast.error('Harap lengkapi item yang belum valid (pilihan produk atau jumlah)')
             return
         }
 
         setIsSubmitting(true)
         try {
-            // 2. Prepare Items Data
+            // Prepare Items Data
             const itemsData = items.map(item => ({
                 id: item.db_id, // Pass DB ID if exists (for Update)
                 barang_id: item.barang_id!,
@@ -312,15 +323,15 @@ export function PurchaseOrderCreatePage() {
                 const result = await updatePurchaseOrderItems(id, {
                     total_amount: calculateGrandTotal(),
                     status: status,
-                    ro_number: roNumber, // [NEW]
-                    notes: notes         // [NEW]
+                    ro_number: roNumber,
+                    notes: notes
                 }, itemsData)
 
                 if (result.isSuccess) {
-                    toast.success(`Purchase Order Updated Successfully!`)
+                    toast.success('Pesanan Pembelian (PO) berhasil diperbarui!')
                     navigate('/procurement/purchase-orders')
                 } else {
-                    toast.error(result.error || 'Failed to update PO')
+                    toast.error(result.error || 'Gagal memperbarui Pesanan Pembelian')
                 }
 
             } else {
@@ -332,9 +343,9 @@ export function PurchaseOrderCreatePage() {
                     total_amount: calculateGrandTotal(),
                     expected_delivery_date: expectedDate || new Date().toISOString().split('T')[0],
                     status: status,
-                    created_by: user.id, // Track user creation
-                    ro_number: roNumber, // [NEW]
-                    notes: notes         // [NEW]
+                    created_by: user.id,
+                    ro_number: roNumber,
+                    notes: notes
                 }
 
                 const payloadItems = items.map(item => ({
@@ -348,23 +359,25 @@ export function PurchaseOrderCreatePage() {
                 const result = await createPurchaseOrder(headerData, payloadItems)
 
                 if (result.isSuccess) {
-                    toast.success(`Purchase Order ${status === 'DRAFT' ? 'Saved' : 'Issued'} Successfully!`)
+                    toast.success(`Pesanan Pembelian berhasil ${status === 'DRAFT' ? 'disimpan sebagai draf' : 'diterbitkan'}!`)
                     fetchNextPoNumber(user.kode_outlet)
                     setItems([])
                     setSelectedSupplierId('')
+                    setRoNumber('')
+                    setNotes('')
                 } else {
                     if (result.error && (result.error.includes('duplicate key') || result.error.includes('23505'))) {
-                        toast.warning('Document Number was taken. Generating a new one...')
+                        toast.warning('Nomor dokumen sudah digunakan. Menghasilkan nomor baru...')
                         await fetchNextPoNumber(user.kode_outlet)
                     } else {
-                        toast.error(result.error || 'Failed to create PO')
+                        toast.error(result.error || 'Gagal membuat Pesanan Pembelian')
                     }
                 }
             }
 
         } catch (err) {
             console.error(err)
-            toast.error('An unexpected error occurred')
+            toast.error('Terjadi kesalahan yang tidak diharapkan')
         } finally {
             setIsSubmitting(false)
         }
@@ -372,7 +385,7 @@ export function PurchaseOrderCreatePage() {
 
     const handleCreateInvoice = async () => {
         if (!invNumber || !invDueDate) {
-            toast.error('Please fill in all invoice fields')
+            toast.error('Harap lengkapi semua bidang rincian faktur')
             return
         }
         if (!id) return
@@ -382,12 +395,11 @@ export function PurchaseOrderCreatePage() {
         setIsCreatingInvoice(false)
 
         if (result.isSuccess) {
-            toast.success('Invoice created successfully!')
+            toast.success('Faktur pembelian berhasil dibuat!')
             setIsInvoiceDialogOpen(false)
-            // Reload PO to update status
             loadPoForEdit(id)
         } else {
-            toast.error(result.error || 'Failed to create Invoice')
+            toast.error(result.error || 'Gagal membuat faktur pembelian')
         }
     }
 
@@ -396,44 +408,46 @@ export function PurchaseOrderCreatePage() {
             <div className="space-y-6 max-w-6xl mx-auto">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => navigate('/procurement/purchase-orders')}>
-                            <ArrowLeft className="w-5 h-5" />
+                        <Button variant="ghost" size="icon" onClick={() => navigate('/procurement/purchase-orders')} className="hover:bg-primary/10">
+                            <ArrowLeft className="w-5 h-5 text-primary" />
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</h1>
-                            <p className="text-muted-foreground mt-1">
-                                {isEditMode ? 'Modify existing order details.' : 'Create a new order for suppliers.'}
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                                {isEditMode ? 'Ubah Pesanan Pembelian (PO)' : 'Buat Pesanan Pembelian (PO)'}
+                            </h1>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                                {isEditMode ? 'Perbarui rincian dokumen pesanan pembelian yang sudah ada.' : 'Terbitkan pesanan pembelian resmi kepada pemasok.'}
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Header Form */}
-                <Card className="border-pastel-blue/20 shadow-sm">
-                    <CardHeader className="bg-pastel-blue/10 pb-4">
-                        <CardTitle className="text-lg">Order Details</CardTitle>
+                <Card className="border-border/60 shadow-sm">
+                    <CardHeader className="bg-primary/5 pb-4 border-b border-border/40">
+                        <CardTitle className="text-base font-semibold text-primary">Informasi Dokumen PO</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             {/* Document Number */}
                             <div>
-                                <Label htmlFor="doc_number">Document Number</Label>
+                                <Label htmlFor="doc_number" className="text-sm font-medium">Nomor Dokumen PO</Label>
                                 <Input
                                     id="doc_number"
-                                    value={isGeneratingNo ? 'Generating...' : docNumber}
-                                    readOnly={true} // Always read only for Doc Number as it is auto-gen or locked on edit
-                                    className="mt-2 font-mono bg-muted"
+                                    value={isGeneratingNo ? 'Menghasilkan nomor...' : docNumber}
+                                    readOnly={true}
+                                    className="mt-2 font-mono bg-muted text-muted-foreground"
                                 />
                             </div>
 
-                            {/* [NEW] RO Number */}
+                            {/* RO Number */}
                             <div>
-                                <Label htmlFor="ro_number">RO Number</Label>
+                                <Label htmlFor="ro_number" className="text-sm font-medium">Nomor RO</Label>
                                 <Input
                                     id="ro_number"
                                     value={roNumber}
                                     onChange={(e) => setRoNumber(e.target.value)}
-                                    placeholder="Optional"
+                                    placeholder="Opsional (misal: RO-001)"
                                     className="mt-2"
                                     disabled={isReadOnly}
                                 />
@@ -441,14 +455,14 @@ export function PurchaseOrderCreatePage() {
 
                             {/* Supplier */}
                             <div className="md:col-span-1">
-                                <Label>Supplier</Label>
+                                <Label className="text-sm font-medium">Pemasok</Label>
                                 <Select
                                     value={selectedSupplierId}
                                     onValueChange={setSelectedSupplierId}
-                                    disabled={isEditMode} // Lock supplier on edit
+                                    disabled={isEditMode}
                                 >
                                     <SelectTrigger className={`mt-2 ${isEditMode ? 'bg-muted opacity-100' : ''}`}>
-                                        <SelectValue placeholder="Select Supplier" />
+                                        <SelectValue placeholder="Pilih Pemasok" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {suppliers.map(s => (
@@ -462,13 +476,14 @@ export function PurchaseOrderCreatePage() {
 
                             {/* Delivery Date */}
                             <div>
-                                <Label htmlFor="date">Expected Delivery</Label>
+                                <Label htmlFor="date" className="text-sm font-medium">Perkiraan Pengiriman</Label>
                                 <Input
                                     id="date"
                                     type="date"
                                     value={expectedDate}
                                     onChange={e => setExpectedDate(e.target.value)}
                                     className="mt-2"
+                                    disabled={isReadOnly}
                                 />
                             </div>
 
@@ -477,86 +492,84 @@ export function PurchaseOrderCreatePage() {
                 </Card>
 
                 {/* Items Table */}
-                <Card className="border-pastel-blue/20 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between bg-pastel-blue/10 pb-4">
-                        <CardTitle className="text-lg">Order Items</CardTitle>
+                <Card className="border-border/60 shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between bg-primary/5 pb-4 border-b border-border/40">
+                        <CardTitle className="text-base font-semibold text-primary">Daftar Barang Pesanan</CardTitle>
                         {!isReadOnly && (
-                            <Button size="sm" onClick={handleAddItem} variant="outline" className="border-blue-200 hover:bg-blue-50 text-blue-700">
+                            <Button size="sm" onClick={handleAddItem} variant="outline" className="border-primary/40 hover:bg-primary/10 text-primary">
                                 <Plus className="w-4 h-4 mr-2" />
-                                Add Item
+                                Tambah Barang
                             </Button>
                         )}
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[30%]">Product</TableHead>
-                                    <TableHead className="w-[10%]">Qty</TableHead>
-                                    <TableHead className="w-[10%]">Unit</TableHead>
-                                    <TableHead className="w-[20%]">Price / Unit</TableHead>
-                                    <TableHead className="w-[20%] text-right">Subtotal</TableHead>
-                                    <TableHead className="w-[10%]"></TableHead>
+                                <TableRow className="bg-muted/30">
+                                    <TableHead className="w-[35%] font-medium">Barang / Produk</TableHead>
+                                    <TableHead className="w-[12%] font-medium">Jumlah</TableHead>
+                                    <TableHead className="w-[10%] font-medium">Satuan</TableHead>
+                                    <TableHead className="w-[20%] font-medium text-right">Harga / Satuan</TableHead>
+                                    <TableHead className="w-[18%] font-medium text-right">Subtotal</TableHead>
+                                    <TableHead className="w-[5%]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {items.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                            No items added yet. Click "Add Item" to start.
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm">
+                                            Belum ada barang pesanan. Klik "Tambah Barang" untuk memulai.
                                         </TableCell>
                                     </TableRow>
                                 )}
                                 {items.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell>
-                                            <TableCell>
-                                                <SearchableSelect
-                                                    value={item.barang_id ? String(item.barang_id) : ''}
-                                                    onChange={(val: string) => handleProductChange(item.id, val)}
-                                                    disabled={isReadOnly}
-                                                    placeholder="Select Product"
-                                                    options={products.map(p => ({
-                                                        value: String(p.id),
-                                                        label: p.name || 'Unknown',
-                                                        subLabel: p.sku || ''
-                                                    }))}
-                                                />
-                                            </TableCell>
+                                            <SearchableSelect
+                                                value={item.barang_id ? String(item.barang_id) : ''}
+                                                onChange={(val: string) => handleProductChange(item.id, val)}
+                                                disabled={isReadOnly}
+                                                placeholder="Pilih Produk / Bahan Baku"
+                                                options={products.map(p => ({
+                                                    value: String(p.id),
+                                                    label: p.name || 'Tidak Diketahui',
+                                                    subLabel: p.sku || ''
+                                                }))}
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <Input
                                                 type="number"
                                                 min="1"
                                                 value={item.qty}
-                                                onChange={(e) => handleItemChange(item.id, 'qty', Number(e.target.value))}
+                                                onChange={(e) => handleItemChange(item.id, 'qty', Math.max(1, Number(e.target.value)))}
                                                 className="h-9"
                                                 disabled={isReadOnly}
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center h-9 px-3 bg-muted/50 rounded-md text-sm border">
+                                            <div className="flex items-center h-9 px-3 bg-muted/50 rounded-md text-sm border border-border/40 text-muted-foreground">
                                                 {item.unit}
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <Input
-                                                type="number"
-                                                min="0"
-                                                value={item.price}
-                                                onChange={(e) => handleItemChange(item.id, 'price', Number(e.target.value))}
-                                                className="h-9"
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={formatThousand(item.price)}
+                                                onChange={(e) => handleItemChange(item.id, 'price', parseThousand(e.target.value))}
+                                                className="h-9 text-right font-mono text-sm"
                                                 disabled={isReadOnly}
                                             />
                                         </TableCell>
-                                        <TableCell className="text-right font-medium">
-                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.subtotal)}
+                                        <TableCell className="text-right font-medium font-mono text-sm">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.subtotal)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                 onClick={() => handleRemoveItem(item.id)}
                                                 disabled={isReadOnly}
                                             >
@@ -569,21 +582,21 @@ export function PurchaseOrderCreatePage() {
                         </Table>
 
                         {/* Footer Totals */}
-                        <div className="flex justify-end p-6 bg-slate-50 border-t">
+                        <div className="flex justify-end p-6 bg-muted/20 border-t border-border/40">
                             <div className="text-right">
-                                <span className="text-muted-foreground mr-4">Grand Total:</span>
-                                <span className="text-2xl font-bold text-blue-900">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(calculateGrandTotal())}
+                                <span className="text-muted-foreground mr-4 text-sm font-medium">Total Pesanan:</span>
+                                <span className="text-2xl font-bold text-primary font-mono">
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(calculateGrandTotal())}
                                 </span>
                             </div>
                         </div>
 
-                        {/* [NEW] Notes Section */}
-                        <div className="mt-6 px-6 pb-6">
-                            <Label htmlFor="notes">Notes</Label>
+                        {/* Notes Section */}
+                        <div className="mt-4 px-6 pb-6">
+                            <Label htmlFor="notes" className="text-sm font-medium">Catatan</Label>
                             <Textarea
                                 id="notes"
-                                placeholder="Add notes here..."
+                                placeholder="Tambahkan catatan untuk pesanan ini..."
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 className="mt-2"
@@ -595,7 +608,7 @@ export function PurchaseOrderCreatePage() {
                 </Card>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end gap-4 pt-4">
+                <div className="flex justify-end gap-3 pt-2">
                     {!isReadOnly ? (
                         <>
                             <Button
@@ -603,46 +616,47 @@ export function PurchaseOrderCreatePage() {
                                 size="lg"
                                 onClick={() => handleSubmit('DRAFT')}
                                 disabled={isSubmitting}
+                                className="border-border/80"
                             >
                                 <Save className="w-4 h-4 mr-2" />
-                                Save as Draft
+                                Simpan Draf
                             </Button>
                             <Button
                                 size="lg"
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
                                 onClick={() => handleSubmit('ISSUED')}
                                 disabled={isSubmitting}
                             >
                                 <Send className="w-4 h-4 mr-2" />
-                                Issue PO (Final)
+                                Terbitkan PO
                             </Button>
                         </>
                     ) : (
-                        <div className="text-muted-foreground italic flex items-center">
+                        <div className="text-muted-foreground italic flex items-center text-sm">
                             <Lock className="w-4 h-4 mr-2" />
-                            This Order is {existingPo?.status} and cannot be edited.
+                            Pesanan ini berstatus {existingPo?.status} dan tidak dapat diubah.
                         </div>
                     )}
 
                     {/* Invoice Link / Create Button */}
                     {isEditMode && existingPo?.status !== 'DRAFT' && existingPo?.status !== 'INVOICED' && (
-                        <div className="ml-2 pl-2 border-l border-gray-300">
+                        <div className="ml-2 pl-3 border-l border-border">
                             <Button
                                 variant="secondary"
-                                className="bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                className="bg-primary/10 text-primary hover:bg-primary/20"
                                 onClick={() => setIsInvoiceDialogOpen(true)}
                             >
                                 <FileText className="w-4 h-4 mr-2" />
-                                Create Invoice
+                                Buat Faktur
                             </Button>
                         </div>
                     )}
 
                     {existingPo?.status === 'INVOICED' && (
-                        <div className="ml-2 pl-2 border-l border-gray-300">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <FileText className="w-3 h-3 mr-1" />
-                                Invoiced
+                        <div className="ml-2 pl-3 border-l border-border">
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                <FileText className="w-3.5 h-3.5 mr-1" />
+                                Sudah Ditagih
                             </span>
                         </div>
                     )}
@@ -652,23 +666,23 @@ export function PurchaseOrderCreatePage() {
                 <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Create Purchase Invoice</DialogTitle>
+                            <DialogTitle>Buat Faktur Pembelian (Invoice)</DialogTitle>
                             <DialogDescription>
-                                Enter the supplier's invoice details to process this PO.
+                                Masukkan rincian faktur dari pemasok untuk memproses penagihan pesanan pembelian ini.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="inv-no">Supplier Invoice Number</Label>
+                                <Label htmlFor="inv-no">Nomor Faktur Pemasok</Label>
                                 <Input
                                     id="inv-no"
                                     value={invNumber}
                                     onChange={(e) => setInvNumber(e.target.value)}
-                                    placeholder="e.g. INV-2023-001"
+                                    placeholder="misal: INV-2026-001"
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="inv-due">Payment Due Date</Label>
+                                <Label htmlFor="inv-due">Tanggal Jatuh Tempo Pembayaran</Label>
                                 <Input
                                     id="inv-due"
                                     type="date"
@@ -677,16 +691,16 @@ export function PurchaseOrderCreatePage() {
                                 />
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsInvoiceDialogOpen(false)}>Cancel</Button>
-                            <Button onClick={handleCreateInvoice} disabled={isCreatingInvoice}>
-                                {isCreatingInvoice ? 'Creating...' : 'Create Invoice'}
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button variant="outline" onClick={() => setIsInvoiceDialogOpen(false)}>Batal</Button>
+                            <Button onClick={handleCreateInvoice} disabled={isCreatingInvoice} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                                {isCreatingInvoice ? 'Menyimpan...' : 'Simpan Faktur'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
             </div>
-        </DashboardLayout >
+        </DashboardLayout>
     )
 }

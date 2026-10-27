@@ -100,7 +100,7 @@ export function SearchableSelect({
                 variant="outline"
                 role="combobox"
                 aria-expanded={open}
-                className="w-full justify-between bg-background px-3 font-normal"
+                className="w-full min-w-0 overflow-hidden justify-between bg-background px-3 font-normal"
                 onClick={() => !disabled && setOpen(!open)}
                 disabled={disabled}
             >

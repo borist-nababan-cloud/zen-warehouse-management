@@ -78,8 +78,8 @@ export function ProtectedRoute({
 
   // Check role-based access
   if (allowedRoles && user) {
-    // SUPERUSER (8) bypasses all role checks
-    if (user.user_role === 8) {
+    // SUPERUSER (8) and WEB_ADMIN (18) bypass all role checks
+    if (user.user_role === 8 || user.user_role === 18) {
       return <>{children}</>
     }
 
