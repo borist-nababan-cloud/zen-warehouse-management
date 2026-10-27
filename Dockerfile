@@ -10,7 +10,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy package manifests
-COPY package.json ./
+COPY package.json package-lock.json* ./
 
 # Install dependencies
 RUN npm install

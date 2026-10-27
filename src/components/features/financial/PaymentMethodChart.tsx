@@ -56,8 +56,8 @@ export function PaymentMethodChart({ data, loading }: PaymentMethodChartProps) {
                                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                                     }}
                                     itemStyle={{ color: '#1e293b', fontSize: '12px' }}
-                                    formatter={(value: number | undefined) => [
-                                        new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value || 0),
+                                    formatter={(value: any) => [
+                                        new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value) || 0),
                                         'Amount'
                                     ]}
                                 />
