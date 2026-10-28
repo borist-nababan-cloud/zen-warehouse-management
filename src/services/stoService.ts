@@ -2,13 +2,31 @@ import { supabase } from '@/lib/supabase'
 import { 
   StoOrder, 
   StoStatus, 
-  StoRecipientStatus
+  StoRecipientStatus,
+  StoRequest,
+  StoRequestStatus
 } from '@/types/database'
+
+export interface CreateStoRequestPayload {
+  requesting_outlet: string
+  target_outlet: string
+  request_date: string
+  notes?: string | null
+  items: {
+    barang_id: number
+    qty_requested: number
+    uom?: string
+    notes?: string
+  }[]
+  created_by: string
+}
 
 export interface CreateStoPayload {
   from_outlet: string
   to_outlet: string
   shipping_cost: number
+  sto_request_id?: string | null
+  request_number?: string | null
   items: {
     barang_id: number
     qty_requested: number
@@ -38,6 +56,118 @@ export interface ReceiveStoPayload {
 }
 
 export const stoService = {
+  // 0. STO Requests (Request Kirim Barang)
+  async createStoRequest(payload: CreateStoRequestPayload) {
+    const { data: header, error: headerError } = await supabase
+      .from('sto_requests')
+      .insert({
+        requesting_outlet: payload.requesting_outlet,
+        target_outlet: payload.target_outlet,
+        request_date: payload.request_date,
+        notes: payload.notes || null,
+        status: 'SUBMITTED',
+        created_by: payload.created_by,
+        update_by: payload.created_by
+      })
+      .select()
+      .single()
+
+    if (headerError) throw headerError
+    if (!header) throw new Error('Gagal membuat dokumen Request Barang')
+
+    const itemsData = payload.items.map(item => ({
+      request_id: header.id,
+      barang_id: item.barang_id,
+      qty_requested: item.qty_requested,
+      uom: item.uom || 'PCS',
+      notes: item.notes || null,
+      created_by: payload.created_by
+    }))
+
+    const { error: itemsError } = await supabase
+      .from('sto_request_items')
+      .insert(itemsData)
+
+    if (itemsError) {
+      await supabase.from('sto_requests').delete().eq('id', header.id)
+      throw itemsError
+    }
+
+    return header as StoRequest
+  },
+
+  async getStoRequests(filters?: {
+    outlet_code?: string
+    direction?: 'ALL' | 'OUTGOING' | 'INCOMING'
+    status?: StoRequestStatus | 'ALL'
+  }) {
+    let query = supabase
+      .from('sto_requests')
+      .select(`
+        *,
+        requesting_master_outlet:master_outlet!sto_requests_requesting_outlet_fkey(*),
+        target_master_outlet:master_outlet!sto_requests_target_outlet_fkey(*),
+        sto_request_items(
+          *,
+          master_barang(*)
+        )
+      `)
+
+    if (filters?.outlet_code && filters.outlet_code !== 'ALL') {
+      if (filters.direction === 'OUTGOING') {
+        query = query.eq('requesting_outlet', filters.outlet_code)
+      } else if (filters.direction === 'INCOMING') {
+        query = query.eq('target_outlet', filters.outlet_code)
+      } else {
+        query = query.or(`requesting_outlet.eq.${filters.outlet_code},target_outlet.eq.${filters.outlet_code}`)
+      }
+    }
+
+    if (filters?.status && filters.status !== 'ALL') {
+      query = query.eq('status', filters.status)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) throw error
+    return (data || []) as StoRequest[]
+  },
+
+  async getOpenStoRequestsForSender(senderOutletCode: string) {
+    const { data, error } = await supabase
+      .from('sto_requests')
+      .select(`
+        *,
+        requesting_master_outlet:master_outlet!sto_requests_requesting_outlet_fkey(*),
+        target_master_outlet:master_outlet!sto_requests_target_outlet_fkey(*),
+        sto_request_items(
+          *,
+          master_barang(*)
+        )
+      `)
+      .eq('target_outlet', senderOutletCode)
+      .eq('status', 'SUBMITTED')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return (data || []) as StoRequest[]
+  },
+
+  async updateStoRequestStatus(id: string, status: StoRequestStatus, userId?: string) {
+    const { data, error } = await supabase
+      .from('sto_requests')
+      .update({
+        status,
+        update_by: userId || null,
+        update_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data as StoRequest
+  },
+
   // 1. Create STO (Admin Sender)
   async createSto(payload: CreateStoPayload) {
     // A. Insert Header
@@ -57,6 +187,8 @@ export const stoService = {
         to_outlet: payload.to_outlet,
         shipping_cost: payload.shipping_cost,
         total_items_price: total_items_price,
+        sto_request_id: payload.sto_request_id || null,
+        request_number: payload.request_number || null,
         sender_status: 'DRAFT',
         recipient_status: 'PENDING',
         created_by: payload.created_by
@@ -83,6 +215,18 @@ export const stoService = {
       // Rollback header (Manual cleanup since no TX in client)
       await supabase.from('sto_orders').delete().eq('id', header.id)
       throw itemsError
+    }
+
+    // C. If linked to a Request Kirim Barang, mark that request as FULFILLED
+    if (payload.sto_request_id) {
+      await supabase
+        .from('sto_requests')
+        .update({
+          status: 'FULFILLED',
+          update_by: payload.created_by,
+          update_at: new Date().toISOString()
+        })
+        .eq('id', payload.sto_request_id)
     }
 
     return header

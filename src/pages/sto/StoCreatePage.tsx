@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, Truck, Package } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Plus, Trash2, Truck, Package, FileText } from 'lucide-react'
 import { toast } from 'sonner'
-import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
@@ -47,13 +47,13 @@ interface StoItemRow {
 
 export default function StoCreatePage() {
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const { user, isLoading: isAuthLoading } = useAuthUser()
     const queryClient = useQueryClient()
 
-
-
     // State
     const [toOutlet, setToOutlet] = useState<string>('')
+    const [selectedRequestId, setSelectedRequestId] = useState<string>('NONE')
     const [shippingCost, setShippingCost] = useState<number>(0)
 
     // Item Entry State
@@ -68,6 +68,47 @@ export default function StoCreatePage() {
     // Fetch products from the SENDER outlet (current user)
     const { data: products } = useProductsByOutlet(user?.kode_outlet || '')
 
+    // Fetch open STO Requests addressed to this sender outlet
+    const { data: openRequests = [] } = useQuery({
+        queryKey: ['sto_requests', 'open_for_sender', user?.kode_outlet],
+        queryFn: () => stoService.getOpenStoRequestsForSender(user?.kode_outlet || ''),
+        enabled: !!user?.kode_outlet
+    })
+
+    // Pre-select from URL query params if navigated from Request List ("Proses Kirim STO")
+    useEffect(() => {
+        const paramReqId = searchParams.get('request_id')
+        const paramToOutlet = searchParams.get('to_outlet')
+        if (paramToOutlet && !toOutlet) {
+            setToOutlet(paramToOutlet)
+        }
+        if (paramReqId && selectedRequestId === 'NONE') {
+            setSelectedRequestId(paramReqId)
+        }
+    }, [searchParams])
+
+    // Filter open requests if toOutlet is already selected, or show all open requests to this sender
+    const availableRequests = useMemo(() => {
+        if (!toOutlet) return openRequests
+        return openRequests.filter(r => r.requesting_outlet === toOutlet)
+    }, [openRequests, toOutlet])
+
+    const selectedRequestObj = useMemo(() => {
+        if (!selectedRequestId || selectedRequestId === 'NONE') return null
+        return openRequests.find(r => r.id === selectedRequestId) || null
+    }, [openRequests, selectedRequestId])
+
+    // Handler when user picks a Request Number (STRICTLY LINK ONLY — DO NOT AUTO-INSERT ITEMS)
+    const handleSelectRequest = (reqId: string) => {
+        setSelectedRequestId(reqId)
+        if (reqId !== 'NONE') {
+            const req = openRequests.find(r => r.id === reqId)
+            if (req && req.requesting_outlet && toOutlet !== req.requesting_outlet) {
+                setToOutlet(req.requesting_outlet)
+            }
+        }
+    }
+
     // Computed
     const subtotal = items.reduce((sum, item) => sum + (item.price_unit * item.qty_requested), 0)
     const grandTotal = subtotal + shippingCost
@@ -78,6 +119,7 @@ export default function StoCreatePage() {
         onSuccess: () => {
             toast.success('Dokumen STO Berhasil Dibuat')
             queryClient.invalidateQueries({ queryKey: ['sto_orders'] })
+            queryClient.invalidateQueries({ queryKey: ['sto_requests'] })
             navigate('/sto')
         },
         onError: (error: any) => {
@@ -146,6 +188,8 @@ export default function StoCreatePage() {
             from_outlet: user.kode_outlet,
             to_outlet: toOutlet,
             shipping_cost: shippingCost,
+            sto_request_id: selectedRequestObj?.id || null,
+            request_number: selectedRequestObj?.document_number || null,
             items: items.map(item => ({
                 barang_id: item.barang_id,
                 qty_requested: item.qty_requested,
@@ -198,7 +242,15 @@ export default function StoCreatePage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-xs font-semibold text-zen-charcoal">Outlet Penerima (Tujuan) *</Label>
-                                        <Select value={toOutlet} onValueChange={setToOutlet}>
+                                        <Select
+                                            value={toOutlet}
+                                            onValueChange={(val) => {
+                                                setToOutlet(val)
+                                                if (selectedRequestObj && selectedRequestObj.requesting_outlet !== val) {
+                                                    setSelectedRequestId('NONE')
+                                                }
+                                            }}
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Pilih Outlet Tujuan" />
                                             </SelectTrigger>
@@ -212,15 +264,44 @@ export default function StoCreatePage() {
                                         </Select>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold text-zen-charcoal">Estimasi Ongkos Kirim (Rp)</Label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        value={shippingCost === 0 ? '' : shippingCost}
-                                        onChange={(e) => setShippingCost(Number(e.target.value))}
-                                        placeholder="0"
-                                    />
+
+                                {/* Referensi No. Request Kirim Barang (Link Only - No Auto-Insert Items) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-zen-charcoal flex items-center gap-1.5">
+                                            <FileText className="h-3.5 w-3.5 text-zen-moss" />
+                                            Referensi No. Request Barang (Opsional)
+                                        </Label>
+                                        <Select value={selectedRequestId} onValueChange={handleSelectRequest}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih No. Request Barang (Jika Ada)" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="NONE">-- Tanpa Referensi Request --</SelectItem>
+                                                {availableRequests.map(req => (
+                                                    <SelectItem key={req.id} value={req.id}>
+                                                        {req.document_number} ({req.requesting_master_outlet?.name_outlet || req.requesting_outlet})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {selectedRequestObj && (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Terhubung ke <strong>{selectedRequestObj.document_number}</strong> ({selectedRequestObj.sto_request_items?.length || 0} jenis barang diminta). Silakan input barang yang dikirim secara manual di bawah.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-zen-charcoal">Estimasi Ongkos Kirim (Rp)</Label>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            value={shippingCost === 0 ? '' : shippingCost}
+                                            onChange={(e) => setShippingCost(Number(e.target.value))}
+                                            placeholder="0"
+                                        />
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

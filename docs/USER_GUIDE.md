@@ -1,8 +1,8 @@
 # Panduan Pengguna (User Guide)
-## Zen Warehouse Management System (WHMS) & POS Analytics
+## Zen Management System
 **Zen Family Spa & Reflexology**
 
-Selamat datang di Panduan Pengguna resmi **Zen Warehouse Management System (WHMS)**. Dokumen ini dirancang sebagai pegangan praktis bagi staf gudang, admin cabang, tim keuangan (*finance*), dan manajemen holding dalam mengoperasikan seluruh fitur aplikasi gudang dan inventaris secara akurat dan sesuai prosedur standar perusahaan.
+Selamat datang di Panduan Pengguna resmi **Zen Warehouse and Management System (WHMS)**. Dokumen ini dirancang sebagai pegangan praktis bagi staf gudang, admin cabang, tim keuangan (*finance*), dan manajemen holding dalam mengoperasikan seluruh fitur aplikasi gudang dan inventaris secara akurat dan sesuai prosedur standar perusahaan.
 
 ---
 
@@ -74,7 +74,17 @@ Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, 
 
 ---
 
-### C. Info Outlet (`Master Data > Info Outlet`)
+### C. Kategori Penyusutan (`Master Data > Kategori Penyusutan`)
+> [!NOTE]
+> Modul ini dialokasikan khusus hanya untuk **Role 5 (Finance)** dan **Role 8 (Superuser)**.
+1. Digunakan untuk mengelola daftar alasan/kategori penyusutan atau pemusnahan stok barang di gudang (misal: *Barang Kadaluarsa (Expired)*, *Barang Rusak / Pecah / Bocor*, *Tumpah / Terkontaminasi*, *Kehilangan / Selisih Stok*, *Linen / Handuk Rusak Tidak Layak Pakai*, *Lainnya*).
+2. **Kebijakan Integritas Ketat (No-Delete)**:
+   - Data kategori penyusutan **TIDAK DAPAT DIHAPUS** untuk menjaga keutuhan jejak audit (*audit trail*) transaksi penyusutan historis.
+   - Untuk menonaktifkan kategori yang sudah tidak dipakai, gunakan tombol saklar **Aktif / Nonaktif** (`is_active`).
+
+---
+
+### D. Info Outlet (`Master Data > Info Outlet`)
 > [!NOTE]
 > Khusus untuk **Role 6 (Outlet Admin)**.
 1. Sistem otomatis mendeteksi dan mengunci data hanya pada cabang milik admin yang bersangkutan.
@@ -85,7 +95,7 @@ Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, 
 
 ---
 
-### D. Pengaturan Satuan & Harga (`Master Data > Atur Harga & Satuan`)
+### E. Pengaturan Satuan & Harga (`Master Data > Atur Harga & Satuan`)
 1. Menentukan konversi satuan (*UOM*) dan harga beli serta harga jual barang.
 2. Setiap input nominal otomatis terformat dengan pemisah ribuan Rupiah (`Rp`).
 3. Mengubah satuan beli (*Purchase UOM*) otomatis menyinkronkan satuan dasar (*Base UOM*) untuk mencegah selisih konversi pada resep dan produksi.
@@ -146,34 +156,52 @@ Gunakan formulir ini jika barang yang sebelumnya diambil untuk operasional dikem
 
 ---
 
-### D. Pemusnahan / Penyesuaian Kerusakan (Shrinkage)
-1. Buka menu **Inventaris & Stok > Shrinkage / Kerusakan**.
-2. Gunakan saat menemukan barang rusak, pecah, tumpah, atau kadaluarsa di rak gudang.
-3. Pilih produk, jumlah unit rusak, dan alasan (*Reason*).
-4. Klik **Kirim**. Stok dipotong dengan riwayat audit pemusnahan resmi.
+### D. Penyusutan / Pemusnahan (`Inventaris & Stok > Penyusutan / Pemusnahan`)
+1. Buka menu **Inventaris & Stok > Penyusutan / Pemusnahan**.
+2. Gunakan formulir ini saat menemukan barang rusak, pecah, tumpah, kadaluarsa, atau selisih hilang di rak gudang cabang.
+3. Pilih **Produk** menggunakan kotak pencarian produk (*Searchable Select*), pilih **Kategori Penyusutan** (dari Master Kategori Penyusutan), masukkan **Jumlah Penyusutan** (tidak boleh melebihi stok tersedia saat ini), dan isi **Keterangan / Catatan**.
+4. Klik **Simpan Penyusutan**. Saldo stok cabang akan langsung dikurangi dan tercatat pada riwayat audit pemusnahan resmi.
 
 ---
 
-## 5. Kirim Barang Ke Outlet / STO (Stock Transfer Order)
+## 5. Transfer Stok (STO) Antar-Outlet
 
-Modul ini memfasilitasi pengiriman logistik antar-cabang atau distribusi dari gudang pusat (*holding*) ke cabang-cabang Zen Family Spa.
+Modul ini memfasilitasi permintaan dan pengiriman logistik antar-cabang atau distribusi dari gudang pusat (*holding*) ke cabang-cabang Zen Family Spa.
 
-### A. Membuat Pengiriman Barang (STO Baru)
-1. Buka menu **Kirim Barang (STO) > Kirim Barang Ke Outlet (STO)**.
-2. Klik tombol **+ Buat STO Baru**.
-3. Pilih **Outlet Tujuan** penerima barang.
+### A. Request Kirim Barang (`Transfer Stok (STO) > Request Kirim Barang`)
+Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purchase Order* namun untuk transaksi antar-outlet) di mana cabang yang membutuhkan stok mengajukan permintaan barang ke cabang pemasok:
+1. Buka menu **Transfer Stok (STO) > Request Kirim Barang**.
+2. Klik tombol **+ Buat Request Barang**.
+3. Pilih **Outlet Tujuan Permintaan (Pemasok)** yang dimintai barang dan **Tanggal Request**.
+4. Pada bagian tambah item:
+   - Cari dan pilih **Produk** yang dibutuhkan.
+   - Masukkan **Jumlah Diminta (Qty)** dan catatan khusus per item (opsional), lalu klik **Tambah ke Daftar**.
+5. Periksa daftar rincian barang yang diminta, lalu klik **Ajukan Request Barang**.
+6. Sistem otomatis menerbitkan nomor dokumen resmi **`REQ-YYYYMMDD-XXXX`** dengan status `OPEN`.
+7. Pada halaman **Daftar Request Kirim Barang**:
+   - Cabang peminta maupun cabang pemasok dapat melihat rincian item yang diminta.
+   - Cabang pemasok dapat langsung mengklik tombol **Proses Buat STO** pada baris request berstatus `OPEN` untuk menindaklanjuti pengiriman.
+
+---
+
+### B. Membuat Pengiriman Barang (`Transfer Stok (STO) > Kirim Barang Ke Outlet`)
+1. Buka menu **Transfer Stok (STO) > Kirim Barang Ke Outlet**.
+2. **Referensi No. Request Barang (Opsional)**:
+   - Jika pengiriman ini menindaklanjuti permintaan dari cabang lain, pilih nomor **`REQ-YYYYMMDD-XXXX`** pada kolom **Referensi No. Request Barang**.
+   - **Penting**: Pemilihan nomor Request hanya menautkan nomor referensi dokumen (`request_number`) dan otomatis memilih Outlet Penerima, namun **tidak otomatis memasukkan daftar barang** ke tabel pengiriman. Staf pengirim tetap menginput fisik barang dan kuantitas aktual yang benar-benar siap dikirim dari gudang pengirim.
+3. Pilih **Outlet Penerima** (jika belum terisi dari referensi Request).
 4. Pada baris pemilihan item:
-   - Pilih produk dari kotak dropdown pencarian (telah dioptimalkan agar nama produk panjang tidak menutupi kotak kuantitas).
-   - Masukkan **Jumlah (Qty)** kirim.
-   - Klik **Tambah**.
-5. Periksa ringkasan daftar barang dan total estimasi transfer, lalu klik **Ajukan Pengiriman (Submit STO)**.
+   - Pilih produk dari kotak dropdown pencarian.
+   - Masukkan **Jumlah (Qty)** kirim dan harga satuan.
+   - Klik **Tambah ke Daftar**.
+5. Periksa ringkasan daftar barang dan total estimasi transfer, lalu klik **Buat Dokumen STO**. Jika tertaut dengan dokumen Request, status Request tersebut otomatis diperbarui menjadi `FULFILLED` (Terpenuhi).
 
 ---
 
-### B. Alur Pelacakan Pengiriman
-* **Status DRAFT / ISSUED**: Dokumen pengiriman telah dibuat dan barang sedang disiapkan di gudang pengirim.
-* **Barang Dalam Perjalanan (In Transit)**: Barang telah diberangkatkan dan saldo keluar dari cabang pengirim namun belum tiba di cabang penerima.
-* **Penerimaan di Cabang Tujuan (Goods Receipt STO)**: Staf cabang penerima memeriksa fisik barang yang datang, mencocokkan jumlah, dan mengklik **Konfirmasi Penerimaan STO**. Stok cabang tujuan bertambah secara resmi.
+### C. Alur Persetujuan & Pelacakan Pengiriman STO
+* **Persetujuan Pengiriman (`Transfer Stok (STO) > Persetujuan Pengiriman`)**: Manajer/pihak berwenang menyetujui atau menolak dokumen STO yang diajukan.
+* **Pengeluaran Barang (`Transfer Stok (STO) > Pengeluaran Barang`)**: Gudang pengirim memproses pengeluaran fisik barang (*Goods Issue*), memotong stok cabang pengirim, dan mengubah status menjadi **Dalam Perjalanan (`IN_TRANSIT`)**.
+* **Penerimaan Barang (`Transfer Stok (STO) > Penerimaan Barang`)**: Staf cabang penerima memeriksa fisik barang yang tiba, mencocokkan jumlah, dan mengklik **Konfirmasi Penerimaan STO**. Stok cabang penerima bertambah secara resmi.
 
 ---
 
@@ -231,7 +259,8 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
    - Merekap seluruh barang yang dipakai untuk operasional, total biaya pengeluaran, perincian kategori pemakaian, dan staf penanggung jawab.
 2. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
    - Memantau nilai barang yang dikembalikan ke gudang beserta persentase kondisi barang (Baik vs Rusak).
-3. **Laporan STO Lengkap (`Kirim Barang (STO) > Laporan STO`)**:
+3. **Laporan STO Lengkap (`Transfer Stok (STO)`)**:
+   - **Laporan Request Barang (`Transfer Stok (STO) > Laporan Request Barang`)**: Laporan komprehensif 2-tab yang memantau **Ringkasan Dokumen Request** (status pemenuhan `OPEN`/`FULFILLED`/`CANCELLED` beserta tautan nomor STO realisasi) serta **Detail Item: Request vs Realisasi STO** (membandingkan jumlah diminta vs jumlah dipesan di STO, dikirim, diterima, dan selisih pemenuhan).
    - **Ringkasan STO**: Rekapitulasi volume dan nilai transfer antar-cabang.
    - **STO Transit**: Melacak barang yang masih dalam perjalanan ekspedisi antar-outlet.
    - **Piutang Antar-Outlet (STO AR Report)**: Memantau saldo piutang yang belum dilunasi oleh cabang penerima barang.

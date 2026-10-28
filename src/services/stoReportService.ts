@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { ApiResponse, StoSummaryReportItem, StoTransitReportItem, StoOrderList, StoOrderItem, StoReceiptList, StoReceiptItem } from '@/types/database'
+import { ApiResponse, StoSummaryReportItem, StoTransitReportItem, StoOrderList, StoOrderItem, StoReceiptList, StoReceiptItem, StoRequestReportItem, StoRequestItemReportItem } from '@/types/database'
 import { format } from 'date-fns'
 
 interface StoReportFilters {
@@ -156,6 +156,82 @@ export async function getStoReceiptItemsReport(filters: StoReportFilters): Promi
         const { data, error } = await query
         if (error) throw error
         return { isSuccess: true, data: data as StoReceiptItem[], error: null }
+    } catch (err: any) {
+        return { isSuccess: false, data: null, error: err.message }
+    }
+}
+
+// 5. STO Requests Header Report
+export async function getStoRequestsReport(
+    filters: StoReportFilters & { direction?: 'ALL' | 'OUTGOING' | 'INCOMING'; status?: string }
+): Promise<ApiResponse<StoRequestReportItem[]>> {
+    try {
+        let query = supabase
+            .from('view_report_sto_requests')
+            .select('*')
+            .order('request_date', { ascending: false })
+
+        if (filters.startDate) query = query.gte('request_date', format(filters.startDate, 'yyyy-MM-dd'))
+        if (filters.endDate) query = query.lte('request_date', format(filters.endDate, 'yyyy-MM-dd'))
+
+        const targetOutlet = filters.outlet && filters.outlet !== 'ALL' ? filters.outlet : filters.userOutlet
+
+        if (filters.direction === 'OUTGOING') {
+            query = query.eq('requesting_outlet', targetOutlet)
+        } else if (filters.direction === 'INCOMING') {
+            query = query.eq('target_outlet', targetOutlet)
+        } else if (!filters.outlet || filters.outlet !== 'ALL') {
+            query = applyOutletFilter(query, filters.userOutlet, filters.outlet, {
+                from: 'requesting_outlet',
+                to: 'target_outlet'
+            })
+        }
+
+        if (filters.status && filters.status !== 'ALL') {
+            query = query.eq('status', filters.status)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        return { isSuccess: true, data: (data || []) as StoRequestReportItem[], error: null }
+    } catch (err: any) {
+        return { isSuccess: false, data: null, error: err.message }
+    }
+}
+
+// 6. STO Request Items Report
+export async function getStoRequestItemsReport(
+    filters: StoReportFilters & { direction?: 'ALL' | 'OUTGOING' | 'INCOMING'; status?: string }
+): Promise<ApiResponse<StoRequestItemReportItem[]>> {
+    try {
+        let query = supabase
+            .from('view_report_sto_request_items')
+            .select('*')
+            .order('request_date', { ascending: false })
+
+        if (filters.startDate) query = query.gte('request_date', format(filters.startDate, 'yyyy-MM-dd'))
+        if (filters.endDate) query = query.lte('request_date', format(filters.endDate, 'yyyy-MM-dd'))
+
+        const targetOutlet = filters.outlet && filters.outlet !== 'ALL' ? filters.outlet : filters.userOutlet
+
+        if (filters.direction === 'OUTGOING') {
+            query = query.eq('requesting_outlet', targetOutlet)
+        } else if (filters.direction === 'INCOMING') {
+            query = query.eq('target_outlet', targetOutlet)
+        } else if (!filters.outlet || filters.outlet !== 'ALL') {
+            query = applyOutletFilter(query, filters.userOutlet, filters.outlet, {
+                from: 'requesting_outlet',
+                to: 'target_outlet'
+            })
+        }
+
+        if (filters.status && filters.status !== 'ALL') {
+            query = query.eq('status', filters.status)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        return { isSuccess: true, data: (data || []) as StoRequestItemReportItem[], error: null }
     } catch (err: any) {
         return { isSuccess: false, data: null, error: err.message }
     }

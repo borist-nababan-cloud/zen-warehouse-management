@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useProductsPaginated } from '@/hooks/useMasterBarang'
 import { getShrinkageCategories, createShrinkageLog } from '@/services/inventoryService'
@@ -7,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
     Select,
     SelectContent,
@@ -16,16 +15,16 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, AlertTriangle, Save } from 'lucide-react'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import { Loader2, AlertTriangle, Save, Store, Calendar, Package, Tags, FileText } from 'lucide-react'
 import { format } from 'date-fns'
-
 import { toast } from 'sonner'
 import { MasterShrinkageCategory } from '@/types/database'
 
 export function ShrinkageFormPage() {
-    // const navigate = useNavigate()
     const { user } = useAuthUser()
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
     // Form State
     const [date, setDate] = useState<Date | undefined>(new Date())
@@ -37,123 +36,183 @@ export function ShrinkageFormPage() {
     // Data State
     const [categories, setCategories] = useState<MasterShrinkageCategory[]>([])
 
-    // Fetch Products (Paginated hook is enough for search dropdown if we implemented search, 
-    // but for now standard select with limited list or assuming small catalog. 
-    // Ideally we should use a command palette/combobox for large product lists, 
-    // but preserving simplicity as per request first)
-    const { data: productsData } = useProductsPaginated(0, 1000, false, user?.kode_outlet || undefined)
+    // Fetch Products
+    const { data: productsData, isLoading: isLoadingProducts } = useProductsPaginated(
+        0,
+        1000,
+        false,
+        user?.kode_outlet || undefined
+    )
     const allProducts = productsData?.data || []
 
+    const productOptions = useMemo(() => {
+        return allProducts.map(p => ({
+            value: p.id.toString(),
+            label: p.name || 'Produk Tanpa Nama',
+            subLabel: `SKU: ${p.sku || '-'}`
+        }))
+    }, [allProducts])
+
     useEffect(() => {
-        if (user?.kode_outlet) {
-            loadCategories(user.kode_outlet)
-        }
+        loadCategories(user?.kode_outlet || '111')
     }, [user?.kode_outlet])
 
     async function loadCategories(outletId: string) {
+        setIsLoadingCategories(true)
         const res = await getShrinkageCategories(outletId)
         if (res.isSuccess && res.data) {
             setCategories(res.data)
+        } else if (res.error) {
+            toast.error('Gagal memuat kategori penyusutan: ' + res.error)
         }
+        setIsLoadingCategories(false)
     }
+
+    const selectedCategoryObj = useMemo(() => {
+        return categories.find(c => c.id === selectedCategory)
+    }, [categories, selectedCategory])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!date || !selectedProduct || !selectedCategory || qtyLost <= 0) {
-            toast.error("Please fill all fields correctly.")
+        if (!date || !selectedProduct || !selectedCategory || !qtyLost || qtyLost <= 0) {
+            toast.error('Harap lengkapi seluruh kolom wajib dan pastikan jumlah penyusutan lebih dari 0.')
+            return
+        }
+
+        if (!user?.kode_outlet) {
+            toast.error('Akun Anda belum terhubung dengan kode outlet aktif.')
             return
         }
 
         setIsSubmitting(true)
         try {
             const product = allProducts.find(p => p.id.toString() === selectedProduct)
-            if (!product) throw new Error("Product not found")
+            if (!product) throw new Error('Produk tidak ditemukan di katalog.')
 
             const result = await createShrinkageLog({
-                barang_id: parseInt(selectedProduct),
-                kode_outlet: user?.kode_outlet || '',
+                barang_id: parseInt(selectedProduct, 10),
+                kode_outlet: user.kode_outlet,
                 shrinkage_category_id: selectedCategory,
                 qty_lost: qtyLost,
-                notes: description,
+                notes: description.trim() || null,
                 transaction_date: format(date, 'yyyy-MM-dd')
             })
 
             if (result.isSuccess) {
-                toast.success("Shrinkage recorded successfully.")
+                toast.success('Catatan penyusutan / pemusnahan stok berhasil disimpan.')
                 // Reset form
                 setQtyLost(0)
                 setDescription('')
                 setSelectedProduct('')
                 setSelectedCategory('')
             } else {
-                toast.error(result.error || "Failed to save record.")
+                toast.error(result.error || 'Gagal menyimpan catatan penyusutan.')
             }
         } catch (err: any) {
-            toast.error("Error: " + err.message)
+            toast.error('Terjadi kesalahan: ' + err.message)
         } finally {
             setIsSubmitting(false)
         }
     }
 
+    const outletDisplay = user?.outlet?.name_outlet
+        ? `${user.kode_outlet} - ${user.outlet.name_outlet}`
+        : user?.kode_outlet || 'Outlet Belum Ditetapkan'
+
     return (
         <DashboardLayout>
             <div className="space-y-6 max-w-2xl mx-auto pb-10">
-                <div className="flex items-center gap-3 text-red-600">
-                    <AlertTriangle className="h-8 w-8" />
+                {/* Page Header */}
+                <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                        <AlertTriangle className="h-6 w-6" />
+                    </div>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Inventory Shrinkage</h1>
-                        <p className="text-muted-foreground text-sm">Record stock write-offs (spoilage, damage, etc).</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-[#EBE6DF]">
+                            Penyusutan / Pemusnahan Stok
+                        </h1>
+                        <p className="text-slate-500 dark:text-[#A6A095] text-sm mt-1">
+                            Pencatatan penghapusan stok barang karena rusak, kadaluarsa, tumpah, atau susut di gudang outlet.
+                        </p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <Card className="border-red-100 shadow-sm border-t-4 border-t-red-500">
-                        <CardHeader className="bg-red-50/10 pb-4">
-                            <CardTitle className="text-lg text-red-900">Write-off Details</CardTitle>
+                    <Card className="border-slate-200 dark:border-[#38382E] bg-white dark:bg-[#22221B] shadow-sm border-t-4 border-t-[#889D35]">
+                        <CardHeader className="bg-[#F8F5F1]/60 dark:bg-[#191914]/50 border-b border-slate-100 dark:border-[#38382E] pb-4">
+                            <CardTitle className="text-lg font-bold text-slate-900 dark:text-[#EBE6DF]">
+                                Rincian Penghapusan Stok (Write-off)
+                            </CardTitle>
+                            <CardDescription className="text-xs text-slate-500 dark:text-[#A6A095]">
+                                Pastikan jumlah fisik barang yang rusak atau dimusnahkan telah diverifikasi sebelum disimpan.
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4 pt-4">
 
+                        <CardContent className="space-y-5 pt-6">
                             {/* Outlet (Read Only) */}
                             <div className="space-y-2">
-                                <Label>Outlet</Label>
-                                <Input disabled value={user?.outlet?.name_outlet || user?.kode_outlet || ''} />
+                                <Label className="flex items-center gap-1.5 text-slate-700 dark:text-[#EBE6DF]">
+                                    <Store className="w-3.5 h-3.5 text-[#889D35]" />
+                                    Lokasi Outlet
+                                </Label>
+                                <Input
+                                    disabled
+                                    value={outletDisplay}
+                                    className="bg-slate-50 dark:bg-[#191914] border-slate-200 dark:border-[#38382E] text-slate-700 dark:text-[#EBE6DF] font-medium"
+                                />
                             </div>
 
-                            {/* Date */}
+                            {/* Tanggal Transaksi */}
                             <div className="space-y-2">
-                                <Label>Transaction Date</Label>
+                                <Label className="flex items-center gap-1.5 text-slate-700 dark:text-[#EBE6DF]">
+                                    <Calendar className="w-3.5 h-3.5 text-[#889D35]" />
+                                    Tanggal Transaksi <span className="text-rose-500">*</span>
+                                </Label>
                                 <Input
                                     type="date"
                                     value={date ? format(date, 'yyyy-MM-dd') : ''}
                                     onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
+                                    required
                                 />
                             </div>
 
-                            {/* Product */}
+                            {/* Nama Barang / Produk */}
                             <div className="space-y-2">
-                                <Label>Item Name</Label>
-                                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Product..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {allProducts.map(p => (
-                                            <SelectItem key={p.id} value={p.id.toString()}>
-                                                {p.name} ({p.sku})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Label className="flex items-center gap-1.5 text-slate-700 dark:text-[#EBE6DF]">
+                                    <Package className="w-3.5 h-3.5 text-[#889D35]" />
+                                    Nama Barang / Produk <span className="text-rose-500">*</span>
+                                </Label>
+                                <SearchableSelect
+                                    options={productOptions}
+                                    value={selectedProduct}
+                                    onChange={setSelectedProduct}
+                                    placeholder={isLoadingProducts ? 'Memuat daftar produk...' : 'Cari dan pilih produk (Nama / SKU)...'}
+                                    disabled={isLoadingProducts}
+                                />
                             </div>
 
-                            {/* Category */}
+                            {/* Kategori Penyusutan */}
                             <div className="space-y-2">
-                                <Label>Shrinkage Category</Label>
-                                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Reason..." />
+                                <Label className="flex items-center gap-1.5 text-slate-700 dark:text-[#EBE6DF]">
+                                    <Tags className="w-3.5 h-3.5 text-[#889D35]" />
+                                    Kategori Penyusutan <span className="text-rose-500">*</span>
+                                </Label>
+                                <Select
+                                    value={selectedCategory}
+                                    onValueChange={setSelectedCategory}
+                                    disabled={isLoadingCategories}
+                                >
+                                    <SelectTrigger className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]">
+                                        <SelectValue
+                                            placeholder={
+                                                isLoadingCategories
+                                                    ? 'Memuat kategori penyusutan...'
+                                                    : 'Pilih alasan penyusutan / pemusnahan...'
+                                            }
+                                        />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="dark:bg-[#22221B] dark:border-[#38382E]">
                                         {categories.map(c => (
                                             <SelectItem key={c.id} value={c.id}>
                                                 {c.name}
@@ -161,41 +220,59 @@ export function ShrinkageFormPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {selectedCategoryObj?.description && (
+                                    <p className="text-xs text-slate-500 dark:text-[#A6A095] italic">
+                                        Keterangan kategori: {selectedCategoryObj.description}
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Qty */}
+                            {/* Jumlah Penyusutan */}
                             <div className="space-y-2">
-                                <Label>Quantity Lost</Label>
+                                <Label className="text-slate-700 dark:text-[#EBE6DF]">
+                                    Jumlah Penyusutan / Rusak (Qty) <span className="text-rose-500">*</span>
+                                </Label>
                                 <Input
                                     type="number"
                                     min="0.01"
                                     step="0.01"
+                                    placeholder="Masukkan jumlah kuantitas yang dihapus..."
                                     value={qtyLost || ''}
-                                    onChange={e => setQtyLost(parseFloat(e.target.value))}
-                                    className="border-red-200 focus-visible:ring-red-500"
+                                    onChange={e => setQtyLost(parseFloat(e.target.value) || 0)}
+                                    className="dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus-visible:ring-[#889D35]"
+                                    required
                                 />
-                                <p className="text-xs text-muted-foreground">This amount will be deducted from inventory.</p>
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    Perhatian: Jumlah ini akan langsung memotong saldo stok aktif di gudang outlet.
+                                </p>
                             </div>
 
-                            {/* Description */}
+                            {/* Deskripsi / Kronologi */}
                             <div className="space-y-2">
-                                <Label>Description / Notes</Label>
+                                <Label className="flex items-center gap-1.5 text-slate-700 dark:text-[#EBE6DF]">
+                                    <FileText className="w-3.5 h-3.5 text-[#889D35]" />
+                                    Keterangan / Catatan Kronologi
+                                </Label>
                                 <Textarea
-                                    placeholder="Explain why this happened..."
+                                    placeholder="Jelaskan alasan rinci atau kronologi kejadian (misal: botol pecah saat bongkar muat, lewat masa kadaluarsa, dll)..."
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
+                                    className="min-h-[96px] dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
                                 />
                             </div>
 
                             <Button
                                 type="submit"
-                                className="w-full bg-red-600 hover:bg-red-700 text-white mt-4"
+                                className="w-full bg-[#889D35] hover:bg-[#72842B] text-white font-semibold mt-4 shadow-sm"
                                 disabled={isSubmitting}
                             >
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Submit Write-off
+                                {isSubmitting ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="mr-2 h-4 w-4" />
+                                )}
+                                Simpan Catatan Penyusutan
                             </Button>
-
                         </CardContent>
                     </Card>
                 </form>

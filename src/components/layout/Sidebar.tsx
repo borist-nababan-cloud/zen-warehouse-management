@@ -178,11 +178,13 @@ const stockTransferGroup: NavGroup = {
   icon: Boxes,
   roleIds: [5, 6, 7, 8, 10],
   children: [
+    { title: 'Request Kirim Barang', path: '/sto/requests', icon: ClipboardList, roleIds: [6, 10] },
     { title: 'Kirim Barang Ke Outlet (STO)', path: '/sto', icon: FileText, roleIds: [6, 10] },
     { title: 'Kotak Persetujuan STO', path: '/sto/approval', icon: Users, roleIds: [6, 10] },
     { title: 'Pengiriman STO (Issue)', path: '/sto/issue', icon: Truck, roleIds: [7] },
     { title: 'Penerimaan STO (Receipt)', path: '/sto/receipt', icon: Package, roleIds: [7] },
     { title: 'Faktur STO', path: '/sto/invoicing', icon: DollarSign, roleIds: [6, 10] },
+    { title: 'Laporan Request Barang', path: '/sto/report-requests', icon: FileText, roleIds: [5, 6, 7, 8, 10] },
     { title: 'Ringkasan Laporan STO', path: '/sto/report-summary', icon: Activity, roleIds: [6, 10] },
     { title: 'Laporan STO Dalam Transit', path: '/sto/report-transit', icon: Truck, roleIds: [6, 7, 10] },
     { title: 'Laporan Order STO', path: '/sto/report-order', icon: FileText, roleIds: [5, 6, 8, 10] },
@@ -268,6 +270,12 @@ const masterDataGroups: NavGroup[] = [
         path: '/master/issue-categories',
         icon: Tags,
         roleIds: [5, 6, 8, 10],
+      },
+      {
+        title: 'Kategori Penyusutan',
+        path: '/master/shrinkage-categories',
+        icon: AlertTriangle,
+        roleIds: [5, 8],
       },
       {
         title: 'Master Produk',

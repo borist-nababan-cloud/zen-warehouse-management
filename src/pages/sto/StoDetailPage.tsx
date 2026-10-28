@@ -56,7 +56,14 @@ export function StoDetailPage() {
                         </Button>
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-gray-900">STO Details</h1>
-                            <p className="text-muted-foreground">{sto.document_number}</p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-muted-foreground font-mono">{sto.document_number}</p>
+                                {sto.request_number && (
+                                    <Badge variant="outline" className="text-xs font-mono">
+                                        Ref Request: {sto.request_number}
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <Button onClick={() => window.open(`/sto/${sto.id}/print`, '_blank')}>

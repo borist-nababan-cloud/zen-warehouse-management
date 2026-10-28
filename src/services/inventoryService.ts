@@ -5,18 +5,88 @@ import { ApiResponse, InventoryShrinkageLog, StockOpnameHeader, MasterShrinkageC
 // SHRINKAGE
 // ==========================================
 
-export async function getShrinkageCategories(_outletId: string): Promise<ApiResponse<MasterShrinkageCategory[]>> {
+export async function getShrinkageCategories(_outletId?: string): Promise<ApiResponse<MasterShrinkageCategory[]>> {
     const { data, error } = await supabase
-        // ... (rest of the query appears to be correct but unused param needs _ prefix or remove)
         .from('master_shrinkage_categories')
         .select('*')
         .eq('is_active', true)
-        // Filter by outlet or holding? Usually master data is shared or outlet specific.
-        // Assuming shared or outlet_id param applies. The table has kode_outlet default '111'.
-        // For now fetch all active.
+        .order('name', { ascending: true })
     
     if (error) return { data: null, error: error.message, isSuccess: false }
     return { data: data as MasterShrinkageCategory[], error: null, isSuccess: true }
+}
+
+export async function getAllShrinkageCategories(): Promise<ApiResponse<MasterShrinkageCategory[]>> {
+    const { data, error } = await supabase
+        .from('master_shrinkage_categories')
+        .select('*')
+        .order('name', { ascending: true })
+
+    if (error) return { data: null, error: error.message, isSuccess: false }
+    return { data: data as MasterShrinkageCategory[], error: null, isSuccess: true }
+}
+
+export async function createShrinkageCategory(
+    payload: { name: string; description?: string; is_active?: boolean; kode_outlet?: string },
+    userId?: string
+): Promise<ApiResponse<MasterShrinkageCategory>> {
+    const { data, error } = await supabase
+        .from('master_shrinkage_categories')
+        .insert({
+            name: payload.name.trim(),
+            description: payload.description?.trim() || null,
+            is_active: payload.is_active ?? true,
+            kode_outlet: payload.kode_outlet || '111',
+            created_by: userId || null,
+            update_by: userId || null
+        })
+        .select()
+        .single()
+
+    if (error) return { data: null, error: error.message, isSuccess: false }
+    return { data: data as MasterShrinkageCategory, error: null, isSuccess: true }
+}
+
+export async function updateShrinkageCategory(
+    id: string,
+    payload: { name: string; description?: string; is_active?: boolean },
+    userId?: string
+): Promise<ApiResponse<MasterShrinkageCategory>> {
+    const { data, error } = await supabase
+        .from('master_shrinkage_categories')
+        .update({
+            name: payload.name.trim(),
+            description: payload.description?.trim() || null,
+            is_active: payload.is_active ?? true,
+            update_by: userId || null,
+            update_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+    if (error) return { data: null, error: error.message, isSuccess: false }
+    return { data: data as MasterShrinkageCategory, error: null, isSuccess: true }
+}
+
+export async function toggleShrinkageCategoryStatus(
+    id: string,
+    is_active: boolean,
+    userId?: string
+): Promise<ApiResponse<MasterShrinkageCategory>> {
+    const { data, error } = await supabase
+        .from('master_shrinkage_categories')
+        .update({
+            is_active,
+            update_by: userId || null,
+            update_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+    if (error) return { data: null, error: error.message, isSuccess: false }
+    return { data: data as MasterShrinkageCategory, error: null, isSuccess: true }
 }
 
 export async function createShrinkageLog(

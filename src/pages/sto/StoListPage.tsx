@@ -107,7 +107,12 @@ export default function StoListPage() {
                                     stoData?.data?.map((sto) => (
                                         <TableRow key={sto.id} className="hover:bg-slate-50">
                                             <TableCell className="font-mono font-medium">
-                                                {sto.document_number}
+                                                <div>{sto.document_number}</div>
+                                                {sto.request_number && (
+                                                    <div className="text-[11px] text-zen-moss dark:text-zen-matcha font-normal mt-0.5">
+                                                        Ref: {sto.request_number}
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2 text-muted-foreground">

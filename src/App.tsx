@@ -24,6 +24,7 @@ import { ProductMixDashboardPage } from './pages/posdashboard/ProductMixDashboar
 import { PeakHoursDashboardPage } from './pages/posdashboard/PeakHoursDashboardPage'
 import { OutletInfoPage } from './pages/master/OutletInfoPage'
 import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
+import { ShrinkageCategoriesPage } from './pages/master/ShrinkageCategoriesPage'
 import { SupplierPage } from '@/pages/master/SupplierPage'
 import { UserManagementPage } from '@/pages/UserManagementPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
@@ -63,6 +64,8 @@ import InvoicesReportPage from '@/pages/finance/InvoicesReportPage'
 import PurchaseInvoicePrint from '@/pages/finance/PurchaseInvoicePrint'
 
 import StoCreatePage from '@/pages/sto/StoCreatePage'
+import StoRequestListPage from '@/pages/sto/StoRequestListPage'
+import StoRequestCreatePage from '@/pages/sto/StoRequestCreatePage'
 import StoGoodsIssuePage from '@/pages/sto/StoGoodsIssuePage'
 import StoApprovalPage from '@/pages/sto/StoApprovalPage'
 import StoGoodsReceiptPage from '@/pages/sto/StoGoodsReceiptPage'
@@ -77,6 +80,7 @@ import { ReportStoOrderPage } from '@/pages/sto/ReportStoOrderPage'
 import { ReportStoOrderItemsPage } from '@/pages/sto/ReportStoOrderItemsPage'
 import { ReportStoReceiptPage } from '@/pages/sto/ReportStoReceiptPage'
 import { ReportStoReceiptItemsPage } from '@/pages/sto/ReportStoReceiptItemsPage'
+import { ReportStoRequestPage } from '@/pages/sto/ReportStoRequestPage'
 import StoSettlementPage from '@/pages/finance/StoSettlementPage'
 import StoArReportPage from '@/pages/finance/StoArReportPage'
 
@@ -220,6 +224,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 6, 8, 10]}>
                 <IssueCategoriesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Master Shrinkage Categories (Kategori Penyusutan) - Master Data (Roles 5, 8 only) */}
+          <Route
+            path="/master/shrinkage-categories"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8]}>
+                <ShrinkageCategoriesPage />
               </ProtectedRoute>
             }
           />
@@ -397,9 +411,33 @@ function App() {
               STO MODULE (Stock Transfer)
              ========================================= */}
           <Route
+            path="/sto/requests"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
+                <StoRequestListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/requests/create"
+            element={
+              <ProtectedRoute allowedRoles={[1, 6, 8, 10]}>
+                <StoRequestCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-requests"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
+                <ReportStoRequestPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/sto/create"
             element={
-              <ProtectedRoute allowedRoles={[1, 6, 8]}>
+              <ProtectedRoute allowedRoles={[1, 6, 8, 10]}>
                 <StoCreatePage />
               </ProtectedRoute>
             }

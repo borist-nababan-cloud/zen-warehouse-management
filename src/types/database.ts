@@ -334,6 +334,10 @@ export interface MasterShrinkageCategory {
   description: string | null
   kode_outlet: string
   is_active: boolean
+  created_at?: string
+  created_by?: string | null
+  update_at?: string
+  update_by?: string | null
 }
 
 export type StockOpnameStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED'
@@ -460,6 +464,78 @@ export interface ViewPoDetailsReceived {
 
 export type StoStatus = 'DRAFT' | 'ISSUED' | 'SHIPPED' | 'RECEIVED' | 'COMPLETED' | 'CANCELLED'
 export type StoRecipientStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED'
+export type StoRequestStatus = 'DRAFT' | 'SUBMITTED' | 'FULFILLED' | 'CANCELLED'
+
+export interface StoRequest {
+  id: string
+  document_number: string
+  request_date: string
+  requesting_outlet: string
+  target_outlet: string
+  status: StoRequestStatus
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  update_by?: string | null
+  update_at?: string
+  // Joins
+  requesting_master_outlet?: MasterOutlet | null
+  target_master_outlet?: MasterOutlet | null
+  sto_request_items?: StoRequestItem[]
+}
+
+export interface StoRequestItem {
+  id: string
+  request_id: string
+  barang_id: number
+  qty_requested: number
+  uom: string | null
+  notes: string | null
+  created_by?: string | null
+  created_at?: string
+  // Joins
+  master_barang?: MasterBarang | null
+}
+
+export interface StoRequestReportItem {
+  id: string
+  request_date: string
+  document_number: string
+  requesting_outlet: string
+  requesting_outlet_name: string | null
+  target_outlet: string
+  target_outlet_name: string | null
+  status: StoRequestStatus
+  notes: string | null
+  created_at: string
+  created_by_name: string | null
+  total_items: number
+  total_qty_requested: number
+  items_summary: string
+  linked_sto_id: string | null
+  linked_sto_number: string | null
+}
+
+export interface StoRequestItemReportItem {
+  id: string
+  request_id: string
+  request_date: string
+  document_number: string
+  requesting_outlet: string
+  requesting_outlet_name: string | null
+  target_outlet: string
+  target_outlet_name: string | null
+  status: StoRequestStatus
+  barang_id: number
+  sku: string | null
+  item_name: string | null
+  qty_requested: number
+  uom: string
+  item_notes: string | null
+  header_notes: string | null
+  created_by_name: string | null
+  linked_sto_number: string | null
+}
 
 export interface StoOrder {
   id: string
@@ -471,6 +547,8 @@ export interface StoOrder {
   shipping_cost: number
   total_items_price: number
   grand_total: number
+  sto_request_id?: string | null
+  request_number?: string | null
   created_at: string
   created_by: string
   // Joins
