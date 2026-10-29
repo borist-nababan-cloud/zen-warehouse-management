@@ -28,6 +28,7 @@ import { PackageCheck, ArrowLeft, AlertCircle } from 'lucide-react'
 import { createGoodsReceipt, getPoDetailsFromView } from '@/services/goodsReceiptService'
 import { getPurchaseOrders, getPurchaseOrderById } from '@/services/purchaseOrderService'
 import { PurchaseOrder, ViewPoDetailsReceived } from '@/types/database'
+import { TransactionImageInput, uploadTransactionImage } from '@/components/common/TransactionImageInput'
 
 interface GRItemRow extends ViewPoDetailsReceived {
     receivingQty: number // The input field
@@ -45,22 +46,24 @@ export function GoodsReceiptCreatePage() {
 
     const [documentNumber, setDocumentNumber] = useState('')
     const [deliveryNote, setDeliveryNote] = useState('')
+    const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null)
     const [items, setItems] = useState<GRItemRow[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const generateDocNumber = (outletCode: string) => {
+        const today = new Date()
+        const yyyy = today.getFullYear()
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+        setDocumentNumber(`GR-${outletCode}-${yyyy}${mm}-${random}`)
+    }
 
     // -- Load POs --
     useEffect(() => {
         if (user?.kode_outlet) {
             loadPOs(user.kode_outlet)
-
-            // Auto-generate Doc No
-            const today = new Date()
-            const yyyy = today.getFullYear()
-            const mm = String(today.getMonth() + 1).padStart(2, '0')
-            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-            setDocumentNumber(`GR-${user.kode_outlet}-${yyyy}${mm}-${random}`)
+            generateDocNumber(user.kode_outlet)
         }
-
     }, [user?.kode_outlet])
 
     async function loadPOs(outletCode: string) {
@@ -95,6 +98,7 @@ export function GoodsReceiptCreatePage() {
             }))
 
             setItems(poItems)
+            setReceiptImageFile(null)
             setStep(2)
         } else {
             toast.error('Failed to load PO Items calculation from server')
@@ -105,10 +109,6 @@ export function GoodsReceiptCreatePage() {
     const handleQtyChange = (poItemId: string, val: number) => {
         setItems(prev => prev.map(i => {
             if (i.po_item_id === poItemId) {
-                // Determine max allowed
-                // If val > i.qty_remaining, we can either clamp it or allow it but show error.
-                // Requirement: "If user types a number > qty_remaining, show red error text or disable Save"
-                // Let's allow typing but visuals will change.
                 return { ...i, receivingQty: val }
             }
             return i
@@ -144,43 +144,40 @@ export function GoodsReceiptCreatePage() {
 
         setIsSubmitting(true)
         try {
+            // 0. Optional Image Upload
+            let uploadedImageUrl: string | null = null
+            if (receiptImageFile) {
+                uploadedImageUrl = await uploadTransactionImage(
+                    receiptImageFile,
+                    'goods-receipts',
+                    user.kode_outlet
+                )
+            }
+
             // 1. Header
             const headerData = {
                 document_number: documentNumber,
                 po_id: selectedPo.id,
                 kode_outlet: user.kode_outlet,
                 supplier_delivery_note: deliveryNote || '-',
-                received_by: user.id
+                received_by: user.id,
+                image_url: uploadedImageUrl
             }
 
             // 2. Items
-            // We need 'barang_id' which is NOT in the View interface explicitly in the user prompt,
-            // but usually we need it for insertion.
-            // Wait, the prompt provided View columns: po_item_id, po_id, item_name, sku, uom, qty_ordered, qty_already_received, qty_remaining.
-            // It did NOT list 'barang_id'. 
-            // However, 'createGoodsReceipt' service needs 'barang_id'.
-            // I should have checked if 'barang_id' is in the view.
-            // Assumption: The view probably has it, or I must map it from the PO object I fetched earlier?
-            // Actually, I fetched 'selectedPo' using 'getPurchaseOrderById' which has nested items with barang_id.
-            // I can map it.
-            // BETTER: I will assume the view DOES have barang_id or I can merge. 
-            // Let's try to find the barang_id from the 'selectedPo.purchase_order_items'.
-
             const detailedItems = items
                 .filter(i => i.receivingQty > 0)
                 .map(i => {
-                    // Find original item to get extra props like barang_id, conversion_rate
                     const original = selectedPo.purchase_order_items?.find(p => p.id === i.po_item_id)
                     return {
                         po_item_id: i.po_item_id,
-                        barang_id: original?.barang_id || 0, // Fallback safe, but should exist
+                        barang_id: original?.barang_id || 0,
                         qty_received: i.receivingQty,
                         conversion_rate: original?.conversion_rate || 1
                     }
                 })
 
             // 3. Calculate PO Status Client-Side
-            // Logic: If ALL items will have 0 remaining after this receipt, then COMPLETED.
             const isAllComplete = items.every(i => {
                 const futureRemaining = i.qty_remaining - (i.receivingQty || 0)
                 return futureRemaining <= 0
@@ -195,15 +192,18 @@ export function GoodsReceiptCreatePage() {
                 setStep(1)
                 setSelectedPo(null)
                 setSelectedPoId('')
+                setDeliveryNote('')
+                setReceiptImageFile(null)
                 setItems([])
+                generateDocNumber(user.kode_outlet)
                 loadPOs(user.kode_outlet)
             } else {
                 toast.error(result.error || 'Failed to save GR')
             }
 
-        } catch (err) {
+        } catch (err: any) {
             console.error(err)
-            toast.error('Unexpected error')
+            toast.error(err?.message || 'Unexpected error')
         } finally {
             setIsSubmitting(false)
         }
@@ -296,6 +296,15 @@ export function GoodsReceiptCreatePage() {
                                         onChange={e => setDeliveryNote(e.target.value)}
                                         placeholder="e.g. SJ-12345"
                                         className="mt-1"
+                                    />
+                                </div>
+                                <div className="col-span-2 pt-2 border-t border-slate-100">
+                                    <TransactionImageInput
+                                        label="Foto Bukti Penerimaan / Surat Jalan"
+                                        helperText="Ambil foto Surat Jalan atau kondisi barang yang diterima menggunakan kamera atau unggah dari galeri perangkat."
+                                        file={receiptImageFile}
+                                        onChange={setReceiptImageFile}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                             </CardContent>

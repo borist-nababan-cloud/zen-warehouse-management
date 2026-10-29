@@ -55,8 +55,8 @@ export default function StoRequestCreatePage() {
     // Items List
     const [items, setItems] = useState<StoRequestItemRow[]>([])
 
-    // Data Fetching
-    const { data: outlets } = useMasterOutlet(true)
+    // Data Fetching (Load only from master_outlet where can_sto = true)
+    const { data: outlets, isLoading: isOutletsLoading } = useMasterOutlet(true)
     const { data: products } = useProductsByOutlet(user?.kode_outlet || '')
 
     const createRequestMutation = useMutation({
@@ -202,13 +202,13 @@ export default function StoRequestCreatePage() {
                                         <Label className="text-xs font-semibold text-zen-charcoal">
                                             Outlet Tujuan Permintaan (Penyedia) *
                                         </Label>
-                                        <Select value={targetOutlet} onValueChange={setTargetOutlet}>
+                                        <Select value={targetOutlet} onValueChange={setTargetOutlet} disabled={isOutletsLoading}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Pilih Outlet yang Dimintai Barang" />
+                                                <SelectValue placeholder={isOutletsLoading ? 'Memuat daftar outlet...' : 'Pilih Outlet yang Dimintai Barang'} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {outlets
-                                                    ?.filter(o => o.kode_outlet !== user?.kode_outlet)
+                                                    ?.filter(o => o.can_sto === true && o.kode_outlet !== user?.kode_outlet)
                                                     .map(outlet => (
                                                         <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                             [{outlet.kode_outlet}] {outlet.name_outlet}

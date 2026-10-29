@@ -15,7 +15,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Plus, FileText, Printer } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog'
+import { Plus, FileText, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -25,6 +32,7 @@ export function GoodsReceiptListPage() {
     const [receipts, setReceipts] = useState<GoodsReceipt[]>([])
     const [loading, setLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
 
     useEffect(() => {
         if (user?.kode_outlet) {
@@ -91,7 +99,7 @@ export function GoodsReceiptListPage() {
                                         <TableHead>Delivery Note</TableHead>
                                         <TableHead>Received By</TableHead>
                                         <TableHead>Item Count</TableHead>
-                                        <TableHead className="w-[100px]">Action</TableHead>
+                                        <TableHead className="w-[120px] text-center">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -145,19 +153,45 @@ export function GoodsReceiptListPage() {
                                                 <TableCell className="text-muted-foreground text-xs">
                                                     View Detail
                                                 </TableCell>
-                                                <TableCell>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            window.open(`/procurement/goods-receipt/${gr.id}/print`, '_blank')
-                                                        }}
-                                                    >
-                                                        <Printer className="h-4 w-4" />
-                                                        <span className="sr-only">Print</span>
-                                                    </Button>
+                                                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="Print GR"
+                                                            className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                                            onClick={() => {
+                                                                window.open(`/procurement/goods-receipt/${gr.id}/print`, '_blank')
+                                                            }}
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                            <span className="sr-only">Print</span>
+                                                        </Button>
+
+                                                        {gr.image_url ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Lihat Foto Penerimaan Barang"
+                                                                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                                onClick={() =>
+                                                                    setPreviewImage({
+                                                                        url: gr.image_url!,
+                                                                        title: `Bukti Penerimaan GR: ${gr.document_number}`,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <ImageIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <div
+                                                                className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
+                                                                title="Tidak ada foto bukti penerimaan"
+                                                            >
+                                                                -
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -168,6 +202,39 @@ export function GoodsReceiptListPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Goods Receipt Photo Preview Dialog */}
+            <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{previewImage?.title || 'Bukti Foto Penerimaan Barang'}</DialogTitle>
+                    </DialogHeader>
+                    {previewImage && (
+                        <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
+                            <img
+                                src={previewImage.url}
+                                alt={previewImage.title}
+                                className="max-h-[65vh] w-auto object-contain rounded"
+                            />
+                        </div>
+                    )}
+                    <DialogFooter>
+                        {previewImage && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(previewImage.url, '_blank')}
+                            >
+                                <ExternalLink className="h-4 w-4 mr-1.5" />
+                                Buka di Tab Baru
+                            </Button>
+                        )}
+                        <Button variant="secondary" size="sm" onClick={() => setPreviewImage(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }

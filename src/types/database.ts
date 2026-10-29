@@ -422,6 +422,7 @@ export interface GoodsReceipt {
   supplier_delivery_note: string  // External Ref No
   received_by: string             // UUID FK auth.uid()
   received_at?: string
+  image_url?: string | null       // Optional Goods Receipt photo
   // Joins
   purchase_orders?: PurchaseOrder | null
   master_outlet?: MasterOutlet | null
@@ -456,6 +457,8 @@ export interface ViewPoDetailsReceived {
   price_per_unit: number
   total_price_po: number
   total_price_received: number
+  latest_gr_id?: string | null
+  receipt_image_url?: string | null
 }
 
 // ============================================
@@ -574,6 +577,7 @@ export interface StoShipment {
   document_number: string
   shipped_at: string
   shipped_by: string
+  image_url?: string | null
   // Joins
   sto_shipment_items?: StoShipmentItem[]
 }
@@ -595,6 +599,7 @@ export interface StoReceipt {
   document_number: string
   received_at: string
   received_by: string
+  image_url?: string | null
   // Joins
   sto_receipt_items?: StoReceiptItem[]
 }
@@ -1023,12 +1028,18 @@ export interface StoOrderItem {
 }
 
 export interface StoReceiptList {
+  id?: string
+  sto_id?: string
   received_at: string
   document_number: string
   order_number: string
   from_outlet: string
+  from_outlet_name?: string
   to_outlet: string
+  to_outlet_name?: string
   grand_total: number
+  shipment_image_url?: string | null
+  receipt_image_url?: string | null
 }
 
 export interface StoReceiptItem {
@@ -1104,12 +1115,14 @@ export interface ViewReportPurchaseOrders {
   po_id: string
   po_date: string
   po_doc_number: string
+  document_number?: string
   supplier_name: string
   status: PurchaseOrderStatus
   expected_delivery_date: string | null
   grand_total: number
   linked_invoice_id: string | null
   kode_outlet: string
+  receipt_image_url?: string | null
 }
 
 // ============================================

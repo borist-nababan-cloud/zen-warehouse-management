@@ -28,7 +28,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Wallet, Download, Loader2, Search } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog'
+import { Wallet, Download, Loader2, Search, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -36,6 +43,7 @@ export function ReportStoReceiptPage() {
     const { user } = useAuthUser()
     const [data, setData] = useState<StoReceiptList[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [previewItem, setPreviewItem] = useState<StoReceiptList | null>(null)
 
     // Filters
     const [startDate, setStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
@@ -186,36 +194,175 @@ export function ReportStoReceiptPage() {
                                     <TableHead>From Outlet</TableHead>
                                     <TableHead>To Outlet</TableHead>
                                     <TableHead className="text-right">Order Value</TableHead>
+                                    <TableHead className="text-center w-[120px]">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Loading...</TableCell>
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Loading...</TableCell>
                                     </TableRow>
                                 ) : data.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No records found.</TableCell>
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No records found.</TableCell>
                                     </TableRow>
                                 ) : (
-                                    data.map((item, idx) => (
-                                        <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
-                                            <TableCell>{format(new Date(item.received_at), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell className="font-medium text-blue-600">{item.document_number}</TableCell>
-                                            <TableCell className="text-muted-foreground text-xs">{item.order_number}</TableCell>
-                                            <TableCell>{item.from_outlet}</TableCell>
-                                            <TableCell>{item.to_outlet}</TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                {formatCurrency(item.grand_total)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                    data.map((item, idx) => {
+                                        const hasAnyPhoto = Boolean(item.shipment_image_url || item.receipt_image_url)
+                                        return (
+                                            <TableRow key={item.id || idx} className="hover:bg-muted/50 transition-colors">
+                                                <TableCell>{format(new Date(item.received_at), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell className="font-medium text-blue-600">{item.document_number}</TableCell>
+                                                <TableCell className="text-muted-foreground text-xs">{item.order_number}</TableCell>
+                                                <TableCell>{item.from_outlet}</TableCell>
+                                                <TableCell>{item.to_outlet}</TableCell>
+                                                <TableCell className="text-right font-mono">
+                                                    {formatCurrency(item.grand_total)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        {/* Print STO */}
+                                                        {item.sto_id ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Print STO"
+                                                                className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                                                onClick={() => {
+                                                                    window.open(`/sto/${item.sto_id}/print`, '_blank')
+                                                                }}
+                                                            >
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <div className="h-8 w-8 flex items-center justify-center text-slate-300 select-none">-</div>
+                                                        )}
+
+                                                        {/* View Uploaded STO Photos (Sender & Receiver) beside Print icon */}
+                                                        {hasAnyPhoto ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Lihat Foto Bukti STO (Pengirim & Penerima)"
+                                                                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                                onClick={() => setPreviewItem(item)}
+                                                            >
+                                                                <ImageIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <div
+                                                                className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
+                                                                title="Tidak ada foto bukti STO"
+                                                            >
+                                                                -
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
                                 )}
                             </TableBody>
                         </Table>
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Dual STO Photo Preview Dialog (Sender vs Receiver) */}
+            <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>
+                            Bukti Foto STO: {previewItem?.order_number} (Receipt: {previewItem?.document_number})
+                        </DialogTitle>
+                    </DialogHeader>
+                    {previewItem && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                            {/* 1. Sender Photo */}
+                            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col justify-between space-y-3">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            1. Foto Pengiriman (Sender)
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            Outlet Pengirim: {previewItem.from_outlet_name || previewItem.from_outlet}
+                                        </p>
+                                    </div>
+                                    {previewItem.shipment_image_url && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => window.open(previewItem.shipment_image_url!, '_blank')}
+                                        >
+                                            <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                            Tab Baru
+                                        </Button>
+                                    )}
+                                </div>
+                                {previewItem.shipment_image_url ? (
+                                    <div className="flex items-center justify-center bg-white rounded border border-slate-200 p-2 h-64 overflow-hidden">
+                                        <img
+                                            src={previewItem.shipment_image_url}
+                                            alt="Foto Pengiriman STO"
+                                            className="max-h-full max-w-full object-contain rounded"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center bg-slate-100/70 rounded border border-dashed border-slate-300 h-64 text-slate-400 text-xs">
+                                        <ImageIcon className="h-8 w-8 mb-1 opacity-40" />
+                                        <span>Tidak ada foto dari pengirim</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 2. Receiver Photo */}
+                            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col justify-between space-y-3">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            2. Foto Penerimaan (Receiver)
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            Outlet Penerima: {previewItem.to_outlet_name || previewItem.to_outlet}
+                                        </p>
+                                    </div>
+                                    {previewItem.receipt_image_url && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => window.open(previewItem.receipt_image_url!, '_blank')}
+                                        >
+                                            <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                            Tab Baru
+                                        </Button>
+                                    )}
+                                </div>
+                                {previewItem.receipt_image_url ? (
+                                    <div className="flex items-center justify-center bg-white rounded border border-slate-200 p-2 h-64 overflow-hidden">
+                                        <img
+                                            src={previewItem.receipt_image_url}
+                                            alt="Foto Penerimaan STO"
+                                            className="max-h-full max-w-full object-contain rounded"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center bg-slate-100/70 rounded border border-dashed border-slate-300 h-64 text-slate-400 text-xs">
+                                        <ImageIcon className="h-8 w-8 mb-1 opacity-40" />
+                                        <span>Tidak ada foto dari penerima</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="secondary" size="sm" onClick={() => setPreviewItem(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { getReportGrSupplier } from '@/services/goodsReceiptService'
-import { ViewPoDetailsReceived } from '@/types/database'
+import { ViewPoDetailsReceived, MasterOutlet } from '@/types/database'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import {
     Card,
@@ -27,18 +27,24 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Loader2, Filter, Download } from 'lucide-react'
+import { Loader2, Filter, Download, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { masterOutletService } from '@/services/masterOutletService'
-import { MasterOutlet } from '@/types/database'
 
-// at top of component
 export function ReportGrSupplierPage() {
     const { user } = useAuthUser()
     const [data, setData] = useState<ViewPoDetailsReceived[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
 
     // Filters
     const [startDate, setStartDate] = useState('')
@@ -196,10 +202,6 @@ export function ReportGrSupplierPage() {
                                 />
                             </div>
 
-
-
-
-
                             {canSeeAllOutlets && (
                                 <div className="space-y-2">
                                     <Label>Outlet</Label>
@@ -249,12 +251,13 @@ export function ReportGrSupplierPage() {
                                         <TableHead className="text-right">Qty Received</TableHead>
                                         <TableHead className="text-right">Remaining</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead className="text-center w-[120px]">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={canSeeAllOutlets ? 9 : 8} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={canSeeAllOutlets ? 10 : 9} className="text-center py-8 text-muted-foreground">
                                                 No data found matching your filters.
                                             </TableCell>
                                         </TableRow>
@@ -296,6 +299,51 @@ export function ReportGrSupplierPage() {
                                                         </span>
                                                     )}
                                                 </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        {/* Print GR (or PO fallback) */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title={item.latest_gr_id ? "Print Goods Receipt" : "Print Purchase Order"}
+                                                            className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                                            onClick={() => {
+                                                                if (item.latest_gr_id) {
+                                                                    window.open(`/procurement/goods-receipt/${item.latest_gr_id}/print`, '_blank')
+                                                                } else {
+                                                                    window.open(`/procurement/purchase-orders/${item.po_id}/print`, '_blank')
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                        </Button>
+
+                                                        {/* View Uploaded Goods Receipt Photo (beside Print icon) */}
+                                                        {item.receipt_image_url ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Lihat Foto Penerimaan Barang"
+                                                                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                                onClick={() =>
+                                                                    setPreviewImage({
+                                                                        url: item.receipt_image_url!,
+                                                                        title: `Bukti Penerimaan PO: ${item.document_number} (${item.item_name})`,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <ImageIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <div
+                                                                className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
+                                                                title="Tidak ada foto bukti penerimaan"
+                                                            >
+                                                                -
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     )}
@@ -305,6 +353,39 @@ export function ReportGrSupplierPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Goods Receipt Photo Preview Dialog */}
+            <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{previewImage?.title || 'Bukti Foto Penerimaan Barang'}</DialogTitle>
+                    </DialogHeader>
+                    {previewImage && (
+                        <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
+                            <img
+                                src={previewImage.url}
+                                alt={previewImage.title}
+                                className="max-h-[65vh] w-auto object-contain rounded"
+                            />
+                        </div>
+                    )}
+                    <DialogFooter>
+                        {previewImage && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(previewImage.url, '_blank')}
+                            >
+                                <ExternalLink className="h-4 w-4 mr-1.5" />
+                                Buka di Tab Baru
+                            </Button>
+                        )}
+                        <Button variant="secondary" size="sm" onClick={() => setPreviewImage(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }

@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Truck, ArrowRight, AlertCircle } from 'lucide-react'
@@ -12,12 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-
 import { stoService } from '@/services/stoService'
 import { useAuthUser } from '@/hooks/useAuth'
 import { StoOrder } from '@/types/database'
-
-
+import { TransactionImageInput, uploadTransactionImage } from '@/components/common/TransactionImageInput'
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
 
@@ -26,6 +23,8 @@ export default function StoGoodsIssuePage() {
     const queryClient = useQueryClient()
     const [selectedSto, setSelectedSto] = useState<StoOrder | null>(null)
     const [shippingItems, setShippingItems] = useState<{ sto_item_id: string, barang_id: number, qty_shipped: number }[]>([])
+    const [shipmentImageFile, setShipmentImageFile] = useState<File | null>(null)
+    const [isUploadingImage, setIsUploadingImage] = useState(false)
     const [isDetailOpen, setIsDetailOpen] = useState(false)
 
     // 1. Fetch STOs (Sender Logic)
@@ -38,10 +37,6 @@ export default function StoGoodsIssuePage() {
         queryFn: () => stoService.getStoOrders(1, 100, {
             outlet_code: user?.kode_outlet || '',
             role: 'SENDER',
-            // We manually act on the client side filtering or API side. Service supports single status.
-            // Let's modify service or just fetch all for sender and filter here.
-            // Service `getStoOrders` filters by single status if provided.
-            // I'll fetch ALL for sender and filter in UI for now to see everything.
         }),
         enabled: !!user?.kode_outlet
     })
@@ -60,6 +55,7 @@ export default function StoGoodsIssuePage() {
                 barang_id: item.barang_id,
                 qty_shipped: item.qty_requested // Default to requested
             })) || [])
+            setShipmentImageFile(null)
             setIsDetailOpen(true)
         } catch (error) {
             toast.error('Failed to load details')
@@ -73,6 +69,7 @@ export default function StoGoodsIssuePage() {
             toast.success('STO Shipped Successfully!')
             setIsDetailOpen(false)
             setSelectedSto(null)
+            setShipmentImageFile(null)
             queryClient.invalidateQueries({ queryKey: ['sto_orders'] })
         },
         onError: (error: any) => {
@@ -80,7 +77,7 @@ export default function StoGoodsIssuePage() {
         }
     })
 
-    const handleSubmitShipment = () => {
+    const handleSubmitShipment = async () => {
         if (!selectedSto || !user) return
 
         // Validate
@@ -89,10 +86,29 @@ export default function StoGoodsIssuePage() {
             return
         }
 
+        let uploadedImageUrl: string | null = null
+        if (shipmentImageFile) {
+            try {
+                setIsUploadingImage(true)
+                uploadedImageUrl = await uploadTransactionImage(
+                    shipmentImageFile,
+                    'sto-shipments',
+                    user.kode_outlet || selectedSto.from_outlet
+                )
+            } catch (err: any) {
+                toast.error(err.message || 'Gagal mengunggah foto pengiriman')
+                setIsUploadingImage(false)
+                return
+            } finally {
+                setIsUploadingImage(false)
+            }
+        }
+
         shipMutation.mutate({
             sto_id: selectedSto.id,
             items: shippingItems,
-            shipped_by: user.id
+            shipped_by: user.id,
+            image_url: uploadedImageUrl
         })
     }
 
@@ -101,6 +117,8 @@ export default function StoGoodsIssuePage() {
             item.sto_item_id === stoItemId ? { ...item, qty_shipped: qty } : item
         ))
     }
+
+    const isProcessing = shipMutation.isPending || isUploadingImage
 
     return (
         <DashboardLayout>
@@ -202,12 +220,29 @@ export default function StoGoodsIssuePage() {
                                     })}
                                 </TableBody>
                             </Table>
+
+                            {/* Optional 1-Image Proof of Shipment (Camera or Device Storage) */}
+                            <div className="pt-2 border-t border-slate-100">
+                                <TransactionImageInput
+                                    label="Foto Bukti Pengiriman STO"
+                                    helperText="Ambil foto kondisi fisik barang / paket saat dikirim menggunakan kamera atau unggah dari galeri perangkat."
+                                    file={shipmentImageFile}
+                                    onChange={setShipmentImageFile}
+                                    disabled={isProcessing}
+                                />
+                            </div>
                         </div>
 
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Cancel</Button>
-                            <Button onClick={handleSubmitShipment} disabled={shipMutation.isPending}>
-                                {shipMutation.isPending ? 'Processing...' : 'Confirm Shipment'}
+                            <Button variant="outline" onClick={() => setIsDetailOpen(false)} disabled={isProcessing}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSubmitShipment} disabled={isProcessing}>
+                                {isUploadingImage
+                                    ? 'Mengunggah Foto...'
+                                    : shipMutation.isPending
+                                        ? 'Processing...'
+                                        : 'Confirm Shipment'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

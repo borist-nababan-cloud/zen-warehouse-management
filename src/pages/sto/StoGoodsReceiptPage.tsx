@@ -1,7 +1,6 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, PackageCheck, AlertCircle } from 'lucide-react'
+import { ClipboardCheck, PackageCheck, AlertCircle, Image as ImageIcon, Eye, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -15,10 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { stoService } from '@/services/stoService'
 import { useAuthUser } from '@/hooks/useAuth'
 import { StoOrder } from '@/types/database'
-
-
-
-
+import { TransactionImageInput, uploadTransactionImage } from '@/components/common/TransactionImageInput'
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
 
@@ -27,6 +23,10 @@ export default function StoGoodsReceiptPage() {
     const queryClient = useQueryClient()
     const [selectedSto, setSelectedSto] = useState<StoOrder | null>(null)
     const [receivingItems, setReceivingItems] = useState<{ sto_item_id: string, barang_id: number, qty_shipped: number, qty_received: number }[]>([])
+    const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null)
+    const [senderImageUrl, setSenderImageUrl] = useState<string | null>(null)
+    const [isSenderImagePreviewOpen, setIsSenderImagePreviewOpen] = useState(false)
+    const [isUploadingImage, setIsUploadingImage] = useState(false)
     const [isDetailOpen, setIsDetailOpen] = useState(false)
 
     // 1. Fetch STOs (Recipient)
@@ -47,24 +47,16 @@ export default function StoGoodsReceiptPage() {
             const fullSto = await stoService.getStoDetail(sto.id)
             setSelectedSto(fullSto)
 
-            // Map based on SHIPMENTS to get 'qty_shipped'
-            // We aggregate if multiple shipments, but for now assuming 1-1 map as per flow
-            // Simplification: We look at sto_shipments inside fullSto.
-            // If no shipments found (edge case), we fallback to sto_items (but this shouldn't happen if flow correct)
-
             const itemsToReceive: typeof receivingItems = []
-
-            // Iterate over shipments (added in service update)
-            // @ts-ignore - Supabase types might not perfectly reflect mapping yet without full codegen update, leveraging 'any' if needed or updated type
             const shipments = (fullSto as any).sto_shipments || []
 
+            // Find latest sender shipment image if any
+            let latestSenderPhoto: string | null = null
             shipments.forEach((shipment: any) => {
-                shipment.sto_shipment_items.forEach((shipItem: any) => {
-                    // Find if already in list (if multiple shipments send same item? Shouldn't happen in simple 1-batch flow)
-                    // Just push for now
-                    // Need to match with master_barang info from sto_items
-                    // const stoItem = fullSto.sto_items?.find(i => i.id === shipItem.sto_item_id)
-
+                if (shipment.image_url) {
+                    latestSenderPhoto = shipment.image_url
+                }
+                shipment.sto_shipment_items?.forEach((shipItem: any) => {
                     itemsToReceive.push({
                         sto_item_id: shipItem.sto_item_id,
                         barang_id: shipItem.barang_id,
@@ -74,6 +66,8 @@ export default function StoGoodsReceiptPage() {
                 })
             })
 
+            setSenderImageUrl(latestSenderPhoto)
+            setReceiptImageFile(null)
             setReceivingItems(itemsToReceive)
             setIsDetailOpen(true)
         } catch (error) {
@@ -89,6 +83,8 @@ export default function StoGoodsReceiptPage() {
             toast.success('Goods Received Successfully')
             setIsDetailOpen(false)
             setSelectedSto(null)
+            setReceiptImageFile(null)
+            setSenderImageUrl(null)
             queryClient.invalidateQueries({ queryKey: ['sto_orders'] })
         },
         onError: (error: any) => {
@@ -96,7 +92,7 @@ export default function StoGoodsReceiptPage() {
         }
     })
 
-    const handleSubmitReceipt = () => {
+    const handleSubmitReceipt = async () => {
         if (!selectedSto || !user) return
 
         // Validation
@@ -106,10 +102,29 @@ export default function StoGoodsReceiptPage() {
             return
         }
 
+        let uploadedImageUrl: string | null = null
+        if (receiptImageFile) {
+            try {
+                setIsUploadingImage(true)
+                uploadedImageUrl = await uploadTransactionImage(
+                    receiptImageFile,
+                    'sto-receipts',
+                    user.kode_outlet || selectedSto.to_outlet
+                )
+            } catch (err: any) {
+                toast.error(err.message || 'Gagal mengunggah foto penerimaan')
+                setIsUploadingImage(false)
+                return
+            } finally {
+                setIsUploadingImage(false)
+            }
+        }
+
         receiveMutation.mutate({
             sto_id: selectedSto.id,
             items: receivingItems,
-            received_by: user.id
+            received_by: user.id,
+            image_url: uploadedImageUrl
         })
     }
 
@@ -124,6 +139,8 @@ export default function StoGoodsReceiptPage() {
         const item = selectedSto?.sto_items?.find(i => i.id === stoItemId)
         return item?.master_barang
     }
+
+    const isProcessing = receiveMutation.isPending || isUploadingImage
 
     return (
         <DashboardLayout>
@@ -187,6 +204,38 @@ export default function StoGoodsReceiptPage() {
                                 </p>
                             </div>
 
+                            {/* Show Sender's Shipment Photo if available */}
+                            {senderImageUrl && (
+                                <div className="border border-blue-200 bg-blue-50/40 rounded-lg p-3 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={senderImageUrl}
+                                            alt="Foto Pengiriman dari Pengirim"
+                                            onClick={() => setIsSenderImagePreviewOpen(true)}
+                                            className="h-14 w-14 rounded object-cover border border-blue-200 cursor-pointer"
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                                                <ImageIcon className="h-4 w-4 text-blue-600" />
+                                                Foto Bukti Pengiriman (Dari Outlet Pengirim)
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                Klik tombol di samping untuk memeriksa foto kondisi barang saat dikirim oleh {selectedSto?.from_master_outlet?.name_outlet || selectedSto?.from_outlet}.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setIsSenderImagePreviewOpen(true)}
+                                    >
+                                        <Eye className="h-4 w-4 mr-1.5" />
+                                        Lihat Foto Pengirim
+                                    </Button>
+                                </div>
+                            )}
+
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -219,12 +268,58 @@ export default function StoGoodsReceiptPage() {
                                     })}
                                 </TableBody>
                             </Table>
+
+                            {/* Optional 1-Image Proof of Receipt (Camera or Device Storage) */}
+                            <div className="pt-2 border-t border-slate-100">
+                                <TransactionImageInput
+                                    label="Foto Bukti Penerimaan STO (Oleh Outlet Penerima)"
+                                    helperText="Ambil foto kondisi fisik barang / paket saat tiba di gerai menggunakan kamera atau unggah dari galeri perangkat."
+                                    file={receiptImageFile}
+                                    onChange={setReceiptImageFile}
+                                    disabled={isProcessing}
+                                />
+                            </div>
                         </div>
 
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Cancel</Button>
-                            <Button onClick={handleSubmitReceipt} disabled={receiveMutation.isPending}>
-                                {receiveMutation.isPending ? 'Processing...' : 'Confirm Receipt'}
+                            <Button variant="outline" onClick={() => setIsDetailOpen(false)} disabled={isProcessing}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSubmitReceipt} disabled={isProcessing}>
+                                {isUploadingImage
+                                    ? 'Mengunggah Foto...'
+                                    : receiveMutation.isPending
+                                        ? 'Processing...'
+                                        : 'Confirm Receipt'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Sender Photo Zoom Dialog */}
+                <Dialog open={isSenderImagePreviewOpen} onOpenChange={setIsSenderImagePreviewOpen}>
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Foto Pengiriman STO ({selectedSto?.document_number})</DialogTitle>
+                        </DialogHeader>
+                        {senderImageUrl && (
+                            <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
+                                <img
+                                    src={senderImageUrl}
+                                    alt="Foto Pengiriman STO"
+                                    className="max-h-[65vh] w-auto object-contain rounded"
+                                />
+                            </div>
+                        )}
+                        <DialogFooter>
+                            {senderImageUrl && (
+                                <Button variant="outline" size="sm" onClick={() => window.open(senderImageUrl, '_blank')}>
+                                    <ExternalLink className="h-4 w-4 mr-1.5" />
+                                    Buka di Tab Baru
+                                </Button>
+                            )}
+                            <Button variant="secondary" size="sm" onClick={() => setIsSenderImagePreviewOpen(false)}>
+                                Tutup
                             </Button>
                         </DialogFooter>
                     </DialogContent>

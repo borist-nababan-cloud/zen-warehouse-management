@@ -43,6 +43,7 @@ export interface ShipStoPayload {
     qty_shipped: number
   }[]
   shipped_by: string
+  image_url?: string | null
 }
 
 export interface ReceiveStoPayload {
@@ -53,6 +54,7 @@ export interface ReceiveStoPayload {
     qty_received: number
   }[]
   received_by: string
+  image_url?: string | null
 }
 
 export const stoService = {
@@ -334,7 +336,8 @@ export const stoService = {
       .insert({
         sto_id: payload.sto_id,
         document_number: doc_number,
-        shipped_by: payload.shipped_by
+        shipped_by: payload.shipped_by,
+        image_url: payload.image_url || null
       })
       .select()
       .single()
@@ -371,7 +374,8 @@ export const stoService = {
       .insert({
         sto_id: payload.sto_id,
         document_number: doc_number,
-        received_by: payload.received_by
+        received_by: payload.received_by,
+        image_url: payload.image_url || null
       })
       .select()
       .single()

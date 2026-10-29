@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { useAuthUser } from '@/hooks/useAuth'
@@ -30,7 +29,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Printer, FileText, Search, TrendingUp, Filter, Wallet, Store, Download } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog'
+import { Printer, FileText, Search, TrendingUp, Filter, Wallet, Store, Download, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 
@@ -39,6 +45,7 @@ export default function PoReportPage() {
     const [data, setData] = useState<ViewReportPurchaseOrders[]>([])
     const [originalData, setOriginalData] = useState<ViewReportPurchaseOrders[]>([])
     const [loading, setLoading] = useState(true)
+    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
 
     // Filter States
     const [startDate, setStartDate] = useState<string>('')
@@ -91,8 +98,8 @@ export default function PoReportPage() {
         if (searchTerm) {
             const lowerInfo = searchTerm.toLowerCase()
             filtered = filtered.filter(item =>
-                item.po_doc_number.toLowerCase().includes(lowerInfo) ||
-                item.supplier_name.toLowerCase().includes(lowerInfo)
+                (item.po_doc_number || item.document_number || '').toLowerCase().includes(lowerInfo) ||
+                (item.supplier_name || '').toLowerCase().includes(lowerInfo)
             )
         }
 
@@ -100,7 +107,6 @@ export default function PoReportPage() {
     }, [searchTerm, statusFilter, originalData])
 
     const fetchData = async () => {
-        // if (!user?.kode_outlet) return // removed to allow ALL check handling inside logic
         if (!selectedOutlet) return
 
         setLoading(true)
@@ -143,10 +149,11 @@ export default function PoReportPage() {
         const csvRows = [headers.join(',')]
 
         data.forEach(row => {
+            const docNo = row.po_doc_number || row.document_number || ''
             const values = [
                 formatDate(row.po_date),
                 `"${row.kode_outlet}"`,
-                `"${row.po_doc_number}"`,
+                `"${docNo}"`,
                 `"${row.supplier_name}"`,
                 row.status,
                 formatDate(row.expected_delivery_date),
@@ -314,85 +321,113 @@ export default function PoReportPage() {
                                 <TableHead>Status</TableHead>
                                 <TableHead>Expected Date</TableHead>
                                 <TableHead className="text-right">Grand Total</TableHead>
-                                <TableHead className="text-center w-[150px]">Actions</TableHead>
+                                <TableHead className="text-center w-[160px]">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">Loading...</TableCell>
+                                    <TableCell colSpan={8} className="h-24 text-center">Loading...</TableCell>
                                 </TableRow>
                             ) : data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center text-slate-500">
+                                    <TableCell colSpan={8} className="h-24 text-center text-slate-500">
                                         No purchase orders found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                data.map((row) => (
-                                    <TableRow key={row.po_id} className="hover:bg-slate-50/50">
-                                        <TableCell className="font-medium text-slate-600">
-                                            {formatDate(row.po_date)}
-                                        </TableCell>
-                                        {canSelectOutlet && selectedOutlet === 'ALL' && (
-                                            <TableCell className="text-xs text-muted-foreground">
-                                                {availableOutlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet}
+                                data.map((row) => {
+                                    const poDocNo = row.po_doc_number || row.document_number || '-'
+                                    return (
+                                        <TableRow key={row.po_id} className="hover:bg-slate-50/50">
+                                            <TableCell className="font-medium text-slate-600">
+                                                {formatDate(row.po_date)}
                                             </TableCell>
-                                        )}
-                                        <TableCell className="font-mono text-xs text-slate-500">
-                                            {row.po_doc_number}
-                                        </TableCell>
-                                        <TableCell className="font-medium text-slate-700">
-                                            {row.supplier_name}
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(row.status)}`}>
-                                                {row.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-slate-500 text-sm">
-                                            {formatDate(row.expected_delivery_date)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium text-slate-700">
-                                            {formatCurrency(row.grand_total)}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {/* Print PO */}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    title="Print PO"
-                                                    className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
-                                                    onClick={() => {
-                                                        const url = `/procurement/purchase-orders/${row.po_id}/print`
-                                                        window.open(url, '_blank')
-                                                    }}
-                                                >
-                                                    <Printer className="h-4 w-4" />
-                                                </Button>
-
-                                                {/* Print Invoice (if linked) */}
-                                                {row.linked_invoice_id ? (
+                                            {canSelectOutlet && selectedOutlet === 'ALL' && (
+                                                <TableCell className="text-xs text-muted-foreground">
+                                                    {availableOutlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet}
+                                                </TableCell>
+                                            )}
+                                            <TableCell className="font-mono text-xs text-slate-500">
+                                                {poDocNo}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-slate-700">
+                                                {row.supplier_name}
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(row.status)}`}>
+                                                    {row.status}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-slate-500 text-sm">
+                                                {formatDate(row.expected_delivery_date)}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-slate-700">
+                                                {formatCurrency(row.grand_total)}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    {/* Print PO */}
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        title="View Linked Invoice"
-                                                        className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                                        title="Print PO"
+                                                        className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
                                                         onClick={() => {
-                                                            const url = `/finance/invoices/print/${row.linked_invoice_id}`
+                                                            const url = `/procurement/purchase-orders/${row.po_id}/print`
                                                             window.open(url, '_blank')
                                                         }}
                                                     >
-                                                        <FileText className="h-4 w-4" />
+                                                        <Printer className="h-4 w-4" />
                                                     </Button>
-                                                ) : (
-                                                    <div className="h-8 w-8 flex items-center justify-center text-slate-300 select-none">-</div>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+
+                                                    {/* View Goods Receipt Photo (beside Print icon) */}
+                                                    {row.receipt_image_url ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="Lihat Foto Penerimaan Barang"
+                                                            className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                            onClick={() =>
+                                                                setPreviewImage({
+                                                                    url: row.receipt_image_url!,
+                                                                    title: `Bukti Penerimaan PO: ${poDocNo}`,
+                                                                })
+                                                            }
+                                                        >
+                                                            <ImageIcon className="h-4 w-4" />
+                                                        </Button>
+                                                    ) : (
+                                                        <div
+                                                            className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
+                                                            title="Tidak ada foto bukti penerimaan"
+                                                        >
+                                                            -
+                                                        </div>
+                                                    )}
+
+                                                    {/* Print Invoice (if linked) */}
+                                                    {row.linked_invoice_id ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="View Linked Invoice"
+                                                            className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                                            onClick={() => {
+                                                                const url = `/finance/invoices/print/${row.linked_invoice_id}`
+                                                                window.open(url, '_blank')
+                                                            }}
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                        </Button>
+                                                    ) : (
+                                                        <div className="h-8 w-8 flex items-center justify-center text-slate-300 select-none">-</div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             )}
                         </TableBody>
                     </Table>
@@ -402,6 +437,39 @@ export default function PoReportPage() {
                     Showing {data.length} records
                 </div>
             </div>
+
+            {/* Goods Receipt Photo Preview Dialog */}
+            <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{previewImage?.title || 'Bukti Foto Penerimaan'}</DialogTitle>
+                    </DialogHeader>
+                    {previewImage && (
+                        <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
+                            <img
+                                src={previewImage.url}
+                                alt={previewImage.title}
+                                className="max-h-[65vh] w-auto object-contain rounded"
+                            />
+                        </div>
+                    )}
+                    <DialogFooter>
+                        {previewImage && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(previewImage.url, '_blank')}
+                            >
+                                <ExternalLink className="h-4 w-4 mr-1.5" />
+                                Buka di Tab Baru
+                            </Button>
+                        )}
+                        <Button variant="secondary" size="sm" onClick={() => setPreviewImage(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }
