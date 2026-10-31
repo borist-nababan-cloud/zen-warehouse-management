@@ -5,6 +5,7 @@ import { getInvoicesReport } from '@/services/invoiceService'
 import { masterOutletService } from '@/services/masterOutletService'
 import { ViewReportPurchaseInvoices, MasterOutlet } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -53,9 +54,8 @@ export default function InvoicesReportPage() {
     const [selectedOutlet, setSelectedOutlet] = useState<string>('ALL')
     const [outlets, setOutlets] = useState<MasterOutlet[]>([])
 
-    // Roles who can see ALL outlets: 5 (Finance) and 8 (Superuser)
-    const canSeeAllOutlets = user?.user_role === 5 || user?.user_role === 8
-
+    // Roles who can see ALL outlets: 5, 8, 13, 14
+    const canSeeAllOutlets = [5, 8, 13, 14].includes(Number(user?.user_role))
 
     useEffect(() => {
         if (canSeeAllOutlets) {
@@ -70,12 +70,7 @@ export default function InvoicesReportPage() {
                 setSelectedOutlet(user.kode_outlet)
             }
         }
-    }, [user])
-
-    // ... (keep existing effects)
-
-    // ... (around line 226)
-
+    }, [user, canSeeAllOutlets])
 
     useEffect(() => {
         if (user) {
@@ -122,11 +117,11 @@ export default function InvoicesReportPage() {
                 setOriginalData(res.data)
                 setData(res.data)
             } else {
-                toast.error(res.error || 'Failed to load report')
+                toast.error(res.error || 'Gagal memuat laporan faktur pembelian')
             }
         } catch (error: any) {
             console.error('Error:', error)
-            toast.error('An unexpected error occurred')
+            toast.error('Terjadi kesalahan yang tidak terduga')
         } finally {
             setLoading(false)
         }
@@ -136,23 +131,33 @@ export default function InvoicesReportPage() {
         return data.reduce((sum, item) => sum + (item.total_amount || 0), 0)
     }
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'PAID': return 'Lunas (PAID)'
+            case 'UNPAID': return 'Belum Lunas (UNPAID)'
+            case 'PARTIAL': return 'Dibayar Sebagian (PARTIAL)'
+            case 'CANCELLED': return 'Dibatalkan (CANCELLED)'
+            default: return 'Semua Status'
+        }
+    }
+
     const exportToCSV = () => {
         if (data.length === 0) {
-            toast.error("No data to export")
+            toast.error("Tidak ada data untuk diekspor")
             return
         }
 
         // Define headers
         const headers = [
-            "Date",
-            "Invoice #",
-            "Supplier Invoice #",
-            "Supplier",
-            "PO Number",
+            "Tanggal",
+            "No. Faktur",
+            "No. Faktur Supplier",
+            "Pemasok (Supplier)",
+            "No. PO / STO",
             "Outlet",
-            "Due Date",
+            "Jatuh Tempo",
             "Status",
-            "Total Amount"
+            "Total Tagihan"
         ]
 
         // Map data to CSV rows
@@ -179,11 +184,56 @@ export default function InvoicesReportPage() {
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.setAttribute("href", url)
-        link.setAttribute("download", `Invoices_Report_${new Date().toISOString().split('T')[0]}.csv`)
+        link.setAttribute("download", `Laporan_Faktur_Pembelian_${new Date().toISOString().split('T')[0]}.csv`)
         link.style.visibility = "hidden"
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+    }
+
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        await printReportA4({
+            title: 'Laporan Faktur Pembelian',
+            subtitle: 'Pantau, lacak, dan cetak riwayat faktur pembelian Anda.',
+            canSelectOutlet: canSeeAllOutlets,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets: outlets,
+            startDate,
+            endDate,
+            statusLabel: statusFilter === 'all' ? 'Semua Status' : getStatusLabel(statusFilter),
+            extraFilters: searchTerm ? [{ label: 'Pencarian', value: searchTerm }] : [],
+            summaryItems: [
+                { label: 'Total Faktur', value: `${data.length} Dokumen` },
+                { label: 'Total Nilai Faktur', value: formatCurrency(getTotalAmount()) },
+            ],
+            columns: [
+                { header: 'Tanggal', width: '11%' },
+                { header: 'Outlet', width: '9%' },
+                { header: 'No. Faktur', width: '16%' },
+                { header: 'Ref. Supplier', width: '13%' },
+                { header: 'Pemasok (Supplier)', width: '18%' },
+                { header: 'No. PO / STO', width: '13%' },
+                { header: 'Status', align: 'center', width: '8%' },
+                { header: 'Total Tagihan', align: 'right', width: '12%' },
+            ],
+            rows: data.map((row) => [
+                formatDate(row.invoice_date),
+                row.kode_outlet || '-',
+                row.invoice_doc,
+                row.supplier_invoice_number || '-',
+                row.supplier_name,
+                row.po_doc || '-',
+                row.status,
+                formatCurrency(row.total_amount),
+            ]),
+            totalRow: ['', '', '', '', '', '', 'TOTAL', formatCurrency(getTotalAmount())],
+        })
     }
 
     // Status Badge Helpers
@@ -202,15 +252,31 @@ export default function InvoicesReportPage() {
             <div className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Purchase Invoices Report</h1>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Laporan Faktur Pembelian</h1>
                         <p className="text-slate-500">
-                            Monitor, track, and print your purchase invoices history.
+                            Pantau, lacak, dan cetak riwayat faktur pembelian Anda.
                         </p>
                     </div>
-                    <Button onClick={exportToCSV} variant="outline" className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50">
-                        <Download className="h-4 w-4" />
-                        Export CSV
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={loading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={exportToCSV}
+                            disabled={loading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                            <Download className="h-4 w-4" />
+                            Ekspor CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filters */}
@@ -218,13 +284,13 @@ export default function InvoicesReportPage() {
                     <CardHeader className="pb-4">
                         <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                             <Filter className="h-4 w-4 text-indigo-500" />
-                            Filters & Search
+                            Filter & Pencarian
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
-                                <Label htmlFor="start-date">Start Date</Label>
+                                <Label htmlFor="start-date">Tanggal Mulai</Label>
                                 <Input
                                     id="start-date"
                                     type="date"
@@ -234,7 +300,7 @@ export default function InvoicesReportPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="end-date">End Date</Label>
+                                <Label htmlFor="end-date">Tanggal Akhir</Label>
                                 <Input
                                     id="end-date"
                                     type="date"
@@ -250,10 +316,10 @@ export default function InvoicesReportPage() {
                                     <Label>Outlet</Label>
                                     <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
                                         <SelectTrigger className="border-slate-300">
-                                            <SelectValue placeholder="All Outlets" />
+                                            <SelectValue placeholder="Semua Outlet" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ALL">All Outlets</SelectItem>
+                                            <SelectItem value="ALL">Semua Outlet (ALL OUTLET)</SelectItem>
                                             {outlets.map((outlet) => (
                                                 <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                     {outlet.name_outlet} ({outlet.kode_outlet})
@@ -268,26 +334,26 @@ export default function InvoicesReportPage() {
                                 <Label htmlFor="status-filter">Status</Label>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger id="status-filter" className="border-slate-300">
-                                        <SelectValue placeholder="All Status" />
+                                        <SelectValue placeholder="Semua Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="PAID">Paid</SelectItem>
-                                        <SelectItem value="UNPAID">Unpaid</SelectItem>
-                                        <SelectItem value="PARTIAL">Partial</SelectItem>
-                                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                        <SelectItem value="all">Semua Status</SelectItem>
+                                        <SelectItem value="PAID">Lunas (PAID)</SelectItem>
+                                        <SelectItem value="UNPAID">Belum Lunas (UNPAID)</SelectItem>
+                                        <SelectItem value="PARTIAL">Dibayar Sebagian (PARTIAL)</SelectItem>
+                                        <SelectItem value="CANCELLED">Dibatalkan (CANCELLED)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
 
                         <div className="mt-4">
-                            <Label htmlFor="search" className="mb-2 block">Search</Label>
+                            <Label htmlFor="search" className="mb-2 block">Pencarian</Label>
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                                 <Input
                                     id="search"
-                                    placeholder="Search invoice, supplier, or PO..."
+                                    placeholder="Cari nomor faktur, pemasok, atau nomor PO..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-9 border-slate-300 focus:border-indigo-500 w-full md:w-1/2"
@@ -306,7 +372,7 @@ export default function InvoicesReportPage() {
                                     <FileText className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-indigo-600">Total Invoices</p>
+                                    <p className="text-sm font-medium text-indigo-600">Total Faktur</p>
                                     <h3 className="text-2xl font-bold text-indigo-900">{data.length}</h3>
                                 </div>
                             </div>
@@ -319,7 +385,7 @@ export default function InvoicesReportPage() {
                                     <CreditCard className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-emerald-600">Total Value</p>
+                                    <p className="text-sm font-medium text-emerald-600">Total Nilai Faktur</p>
                                     <h3 className="text-2xl font-bold text-emerald-900">{formatCurrency(getTotalAmount())}</h3>
                                 </div>
                             </div>
@@ -332,14 +398,14 @@ export default function InvoicesReportPage() {
                     <Table>
                         <TableHeader className="bg-slate-50/80">
                             <TableRow>
-                                <TableHead>Date</TableHead>
+                                <TableHead>Tanggal</TableHead>
                                 <TableHead>Outlet</TableHead>
-                                <TableHead>Invoice #</TableHead>
-                                <TableHead>Supplier</TableHead>
-                                <TableHead>PO Number</TableHead>
+                                <TableHead>No. Faktur</TableHead>
+                                <TableHead>Pemasok (Supplier)</TableHead>
+                                <TableHead>No. PO / STO</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Total Amount</TableHead>
-                                <TableHead className="text-center w-[180px]">Actions</TableHead>
+                                <TableHead className="text-right">Total Tagihan</TableHead>
+                                <TableHead className="text-center w-[180px]">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -348,14 +414,14 @@ export default function InvoicesReportPage() {
                                     <TableCell colSpan={8} className="h-24 text-center">
                                         <div className="flex items-center justify-center gap-2">
                                             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-                                            <span className="text-slate-500">Loading data...</span>
+                                            <span className="text-slate-500">Memuat data laporan...</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ) : data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={8} className="h-24 text-center text-slate-500">
-                                        No invoices found matching your criteria.
+                                        Tidak ada faktur pembelian yang sesuai dengan kriteria filter.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -402,12 +468,12 @@ export default function InvoicesReportPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    disabled={!!row.sto_id} // Disabled for STO as per user request
-                                                    title={row.sto_id ? "Print Not Available" : "Print Invoice"}
+                                                    disabled={!!row.sto_id}
+                                                    title={row.sto_id ? "Cetak tidak tersedia untuk STO" : "Cetak Faktur"}
                                                     className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     onClick={() => {
                                                         if (row.sto_id) {
-                                                            return // Do nothing
+                                                            return
                                                         } else {
                                                             const url = `/finance/invoices/print/${row.invoice_id}`
                                                             window.open(url, '_blank')
@@ -421,7 +487,7 @@ export default function InvoicesReportPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    title={row.sto_id ? "View STO" : "View/Print PO"}
+                                                    title={row.sto_id ? "Lihat Laporan STO" : "Lihat / Cetak PO"}
                                                     className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50"
                                                     disabled={!row.purchase_order_id && !row.sto_id}
                                                     onClick={() => {
@@ -445,8 +511,8 @@ export default function InvoicesReportPage() {
                 </div>
 
                 <div className="text-center text-xs text-slate-400 mt-4">
-                    Showing {data.length} records.
-                    {canSeeAllOutlets && " Admin View Enabled."}
+                    Menampilkan {data.length} data.
+                    {canSeeAllOutlets && " Mode Tampilan Admin Aktif."}
                 </div>
             </div>
         </DashboardLayout>

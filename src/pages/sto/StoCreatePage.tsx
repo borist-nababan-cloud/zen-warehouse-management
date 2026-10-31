@@ -255,11 +255,13 @@ export default function StoCreatePage() {
                                                 <SelectValue placeholder="Pilih Outlet Tujuan" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {outlets?.filter(o => o.kode_outlet !== user?.kode_outlet).map(outlet => (
-                                                    <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
-                                                        {outlet.name_outlet}
-                                                    </SelectItem>
-                                                ))}
+                                                {outlets
+                                                    ?.filter(o => o.can_sto === true && o.kode_outlet !== user?.kode_outlet)
+                                                    .map(outlet => (
+                                                        <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                            {outlet.name_outlet}
+                                                        </SelectItem>
+                                                    ))}
                                             </SelectContent>
                                         </Select>
                                     </div>

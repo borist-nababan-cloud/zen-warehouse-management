@@ -1,4 +1,3 @@
-
 import { useAuthUser } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { reportService } from '@/services/reportService'
@@ -49,8 +48,6 @@ export const SupplierPerformanceReportPage = () => {
         enabled: !!selectedOutlet,
     })
 
-    // Filter/Sor logic can be added here if needed, 
-    // but reportService already sorts by fulfillment_rate ASC by default.
     const data = apiResponse?.data || []
 
     if (isLoading) {
@@ -58,7 +55,7 @@ export const SupplierPerformanceReportPage = () => {
             <DashboardLayout>
                 <div className="flex h-[400px] items-center justify-center space-x-2">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Analyzing supplier performance...</span>
+                    <span className="text-muted-foreground">Menganalisis kinerja pemasok...</span>
                 </div>
             </DashboardLayout>
         )
@@ -69,7 +66,7 @@ export const SupplierPerformanceReportPage = () => {
             <DashboardLayout>
                 <div className="flex h-[400px] flex-col items-center justify-center space-y-4 text-destructive">
                     <AlertCircle className="h-10 w-10" />
-                    <p className="font-medium">Failed to load performance data</p>
+                    <p className="font-medium">Gagal memuat data kinerja pemasok</p>
                     <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
                 </div>
             </DashboardLayout>
@@ -80,9 +77,9 @@ export const SupplierPerformanceReportPage = () => {
         <DashboardLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Supplier Performance Report</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">Laporan Kinerja Pemasok</h1>
                     <p className="text-muted-foreground">
-                        Evaluate supplier reliability based on order fulfillment rates and spend.
+                        Evaluasi keandalan pemasok berdasarkan tingkat pemenuhan pesanan dan total nilai belanja.
                     </p>
                 </div>
 
@@ -95,11 +92,11 @@ export const SupplierPerformanceReportPage = () => {
                                 <SelectTrigger className="w-full bg-white">
                                     <div className="flex items-center gap-2">
                                         <Store className="h-4 w-4 text-muted-foreground" />
-                                        <SelectValue placeholder="Select Outlet" />
+                                        <SelectValue placeholder="Pilih Outlet" />
                                     </div>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                    <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                     {availableOutlets.map((outlet) => (
                                         <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                             {outlet.name_outlet}

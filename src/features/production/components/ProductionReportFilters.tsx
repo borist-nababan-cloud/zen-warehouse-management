@@ -23,7 +23,7 @@ export const ProductionReportFilters: React.FC<ProductionReportFiltersProps> = (
         <div className="flex flex-col gap-4 md:flex-row md:items-end p-4 bg-white rounded-lg border shadow-sm">
             <div className="grid grid-cols-2 gap-4 flex-1">
                 <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date</Label>
+                    <Label htmlFor="startDate">Tanggal Mulai</Label>
                     <Input
                         id="startDate"
                         type="date"
@@ -33,7 +33,7 @@ export const ProductionReportFilters: React.FC<ProductionReportFiltersProps> = (
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date</Label>
+                    <Label htmlFor="endDate">Tanggal Akhir</Label>
                     <Input
                         id="endDate"
                         type="date"
@@ -45,12 +45,12 @@ export const ProductionReportFilters: React.FC<ProductionReportFiltersProps> = (
             </div>
 
             <div className="flex-1 space-y-2">
-                <Label htmlFor="search">Search Product</Label>
+                <Label htmlFor="search">Cari Produk / Dokumen</Label>
                 <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         id="search"
-                        placeholder="Search finished goods..."
+                        placeholder="Cari nama produk jadi atau nomor dokumen..."
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         className="pl-8 w-full"

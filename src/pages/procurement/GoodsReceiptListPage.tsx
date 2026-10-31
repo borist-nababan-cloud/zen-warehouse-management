@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Plus, FileText, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
+import { id as idLocale } from 'date-fns/locale'
 import { toast } from 'sonner'
 
 export function GoodsReceiptListPage() {
@@ -47,7 +48,7 @@ export function GoodsReceiptListPage() {
             setReceipts(res.data)
         } else if (res.error) {
             console.error('[GoodsReceiptList] Fetch Error:', res.error)
-            toast.error(`Failed to load: ${res.error}`)
+            toast.error(`Gagal memuat data: ${res.error}`)
         }
         setLoading(false)
     }
@@ -63,25 +64,25 @@ export function GoodsReceiptListPage() {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Goods Receipts</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Penerimaan Supplier (GR)</h1>
                         <p className="text-muted-foreground mt-1">
-                            Manage and view received goods history.
+                            Kelola dan pantau riwayat penerimaan barang dari pemasok (Supplier).
                         </p>
                     </div>
                     {(user?.user_role === 2 || user?.user_role === 7 || user?.user_role === 8) && (
                         <Button onClick={() => navigate('/procurement/goods-receipts/create')}>
                             <Plus className="mr-2 h-4 w-4" />
-                            Receive Goods
+                            Terima Barang
                         </Button>
                     )}
                 </div>
 
                 <Card>
                     <CardHeader className="pb-3">
-                        <CardTitle>History</CardTitle>
+                        <CardTitle>Riwayat Penerimaan Barang</CardTitle>
                         <div className="pt-2">
                             <Input
-                                placeholder="Search by GR Number, PO Number, or Delivery Note..."
+                                placeholder="Cari berdasarkan No. GR, No. PO, atau No. Surat Jalan..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="max-w-sm"
@@ -93,35 +94,35 @@ export function GoodsReceiptListPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>GR Number</TableHead>
-                                        <TableHead>Received Date</TableHead>
-                                        <TableHead>PO Number</TableHead>
-                                        <TableHead>Delivery Note</TableHead>
-                                        <TableHead>Received By</TableHead>
-                                        <TableHead>Item Count</TableHead>
-                                        <TableHead className="w-[120px] text-center">Action</TableHead>
+                                        <TableHead>No. Dokumen GR</TableHead>
+                                        <TableHead>Tanggal Terima</TableHead>
+                                        <TableHead>No. Pesanan (PO)</TableHead>
+                                        <TableHead>No. Surat Jalan</TableHead>
+                                        <TableHead>Diterima Oleh</TableHead>
+                                        <TableHead>Rincian</TableHead>
+                                        <TableHead className="w-[120px] text-center">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center">
-                                                Loading...
+                                                Memuat data penerimaan barang...
                                             </TableCell>
                                         </TableRow>
                                     ) : filteredReceipts.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-2">
-                                                    <span>No receipts found.</span>
+                                                    <span>Belum ada data penerimaan barang.</span>
                                                     <div className="text-xs text-muted-foreground bg-muted p-2 rounded max-w-md text-left font-mono">
-                                                        <p className="font-bold">Debug Info:</p>
+                                                        <p className="font-bold">Info Diagnostik:</p>
                                                         <p>Outlet: {user?.kode_outlet || 'N/A'}</p>
-                                                        <p>Role: {user?.user_role || 'N/A'}</p>
-                                                        <p>User ID: {user?.id || 'N/A'}</p>
-                                                        {loading ? <p>Loading...</p> : <p>Data Count: {receipts.length}</p>}
+                                                        <p>Peran (Role): {user?.user_role || 'N/A'}</p>
+                                                        <p>ID Pengguna: {user?.id || 'N/A'}</p>
+                                                        {loading ? <p>Memuat...</p> : <p>Jumlah Data: {receipts.length}</p>}
                                                         <p className="mt-1 text-red-500 font-bold whitespace-pre-wrap">
-                                                            Last Error: {receipts.length === 0 && !loading && 'No items returned from DB (Check RLS)'}
+                                                            Catatan: {receipts.length === 0 && !loading && 'Tidak ada data di database (Periksa filter / RLS)'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -140,7 +141,7 @@ export function GoodsReceiptListPage() {
                                                     {gr.document_number}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {gr.received_at ? format(new Date(gr.received_at), 'dd MMM yyyy, HH:mm') : '-'}
+                                                    {gr.received_at ? format(new Date(gr.received_at), 'dd MMM yyyy, HH:mm', { locale: idLocale }) : '-'}
                                                 </TableCell>
                                                 <TableCell>
                                                     <span className="flex items-center text-xs text-muted-foreground bg-muted w-fit px-2 py-1 rounded">
@@ -151,21 +152,21 @@ export function GoodsReceiptListPage() {
                                                 <TableCell>{gr.supplier_delivery_note || '-'}</TableCell>
                                                 <TableCell>{gr.received_by_email || gr.received_by || '-'}</TableCell>
                                                 <TableCell className="text-muted-foreground text-xs">
-                                                    View Detail
+                                                    Lihat Detail
                                                 </TableCell>
                                                 <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-1.5">
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            title="Print GR"
+                                                            title="Cetak Bukti Penerimaan (GR)"
                                                             className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
                                                             onClick={() => {
                                                                 window.open(`/procurement/goods-receipt/${gr.id}/print`, '_blank')
                                                             }}
                                                         >
                                                             <Printer className="h-4 w-4" />
-                                                            <span className="sr-only">Print</span>
+                                                            <span className="sr-only">Cetak</span>
                                                         </Button>
 
                                                         {gr.image_url ? (

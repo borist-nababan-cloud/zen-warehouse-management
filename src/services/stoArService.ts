@@ -33,7 +33,7 @@ export const stoArService = {
       .select('*')
     
     // Validasi Outlet (Security Wrapper usually handles this, but good to be explicit)
-    if (filters?.outlet_code) {
+    if (filters?.outlet_code && filters.outlet_code !== 'ALL') {
       query = query.eq('creditor_outlet', filters.outlet_code)
     }
 

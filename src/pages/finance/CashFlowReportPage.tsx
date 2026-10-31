@@ -1,28 +1,53 @@
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuthUser } from '@/hooks/useAuth'
 import { useCashFlowReport } from '@/hooks/useFinance'
+import { masterOutletService } from '@/services/masterOutletService'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
-import { CashFlowItem } from '@/types/database'
+import { Download, Printer, TrendingUp, TrendingDown, DollarSign, Store } from 'lucide-react'
+import { CashFlowItem, MasterOutlet } from '@/types/database'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFinancialAccounts } from '@/hooks/useBankCash'
 import { FinancialAccount } from '@/services/financeService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
+import { printReportA4 } from '@/utils/reportPrintUtils'
+import { toast } from 'sonner'
 
 export default function CashFlowReportPage() {
     const { user } = useAuthUser()
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
     const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
     const [selectedAccount, setSelectedAccount] = useState<string>('ALL')
+    const [selectedOutlet, setSelectedOutlet] = useState<string>('')
+    const [availableOutlets, setAvailableOutlets] = useState<MasterOutlet[]>([])
 
-    const { data: accountsData } = useFinancialAccounts(user?.kode_outlet)
+    const canSelectOutlet = [5, 8, 13, 14].includes(Number(user?.user_role))
+
+    useEffect(() => {
+        if (!canSelectOutlet && user?.kode_outlet) {
+            setSelectedOutlet(user.kode_outlet)
+        } else if (canSelectOutlet) {
+            setSelectedOutlet('ALL')
+        }
+    }, [user, canSelectOutlet])
+
+    useEffect(() => {
+        if (canSelectOutlet) {
+            masterOutletService
+                .getAllWhOutlet()
+                .then(setAvailableOutlets)
+                .catch((err) => console.error(err))
+        }
+    }, [canSelectOutlet])
+
+    const activeOutletFilter = selectedOutlet || user?.kode_outlet || undefined
+
+    const { data: accountsData } = useFinancialAccounts(activeOutletFilter)
     const accounts = accountsData?.data || []
 
-    const { data: reportData, isLoading } = useCashFlowReport(user?.kode_outlet ?? undefined, startDate, endDate)
+    const { data: reportData, isLoading } = useCashFlowReport(activeOutletFilter, startDate, endDate)
     const fullData = reportData?.data || []
 
     // Client-side Filtering
@@ -42,14 +67,17 @@ export default function CashFlowReportPage() {
     }
 
     const handleExport = () => {
-        if (!filteredData.length) return
+        if (!filteredData.length) {
+            toast.error('Tidak ada data untuk diekspor')
+            return
+        }
 
-        const headers = ['Date', 'Account', 'Transaction Type', 'Description', 'Money In', 'Money Out', 'Balance After']
+        const headers = ['Tanggal / Waktu', 'Rekening / Kas', 'Tipe Transaksi', 'Deskripsi', 'Kas Masuk', 'Kas Keluar', 'Saldo Akhir']
         const rows = filteredData.map((item: CashFlowItem) => [
             format(new Date(item.created_at), 'yyyy-MM-dd HH:mm'),
-            item.account_name,
+            `"${item.account_name}"`,
             item.transaction_type,
-            `"${item.description}"`, // Quote descriptions to handle commas
+            `"${item.description || ''}"`,
             item.money_in,
             item.money_out,
             item.balance_after
@@ -64,56 +92,149 @@ export default function CashFlowReportPage() {
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.setAttribute('download', `cash_flow_report_${startDate}_to_${endDate}.csv`)
+        link.setAttribute('download', `Laporan_Arus_Kas_${startDate}_sd_${endDate}.csv`)
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
     }
 
-    if (isLoading) return <DashboardLayout><div className="p-8">Loading report...</div></DashboardLayout>
+    const handlePrintReport = async () => {
+        if (!filteredData.length) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        await printReportA4({
+            title: 'Laporan Arus Kas',
+            subtitle: 'Catatan mutasi kas masuk, kas keluar, dan saldo akhir rekening/kas.',
+            canSelectOutlet,
+            selectedOutlet: selectedOutlet || user?.kode_outlet || 'ALL',
+            userOutletCode: user?.kode_outlet,
+            availableOutlets,
+            startDate,
+            endDate,
+            statusLabel: selectedAccount === 'ALL' ? 'Semua Rekening / Kas' : `Rekening: ${selectedAccount}`,
+            summaryItems: [
+                { label: 'Total Kas Masuk', value: formatCurrency(totalInflow) },
+                { label: 'Total Kas Keluar', value: formatCurrency(totalOutflow) },
+                { label: 'Perubahan Bersih (Net)', value: formatCurrency(netChange) },
+            ],
+            columns: [
+                { header: 'Tanggal / Waktu', width: '15%' },
+                { header: 'Rekening / Kas', width: '16%' },
+                { header: 'Tipe', align: 'center', width: '11%' },
+                { header: 'Deskripsi / Keterangan', width: '25%' },
+                { header: 'Kas Masuk', align: 'right', width: '11%' },
+                { header: 'Kas Keluar', align: 'right', width: '11%' },
+                { header: 'Saldo Akhir', align: 'right', width: '11%' },
+            ],
+            rows: filteredData.map((item: CashFlowItem) => [
+                format(new Date(item.created_at), 'dd/MMM/yyyy HH:mm'),
+                item.account_name,
+                item.transaction_type,
+                item.description || '-',
+                item.money_in > 0 ? formatCurrency(item.money_in) : '-',
+                item.money_out > 0 ? formatCurrency(item.money_out) : '-',
+                formatCurrency(item.balance_after),
+            ]),
+            totalRow: [
+                '',
+                '',
+                '',
+                'TOTAL MUTASI',
+                formatCurrency(totalInflow),
+                formatCurrency(totalOutflow),
+                formatCurrency(netChange),
+            ],
+        })
+    }
+
+    if (isLoading) return <DashboardLayout><div className="p-8">Memuat data laporan arus kas...</div></DashboardLayout>
 
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-800">Cash Flow Report</h1>
-                    <Button onClick={handleExport} disabled={filteredData.length === 0} className="bg-slate-800 hover:bg-slate-700">
-                        <Download className="mr-2 h-4 w-4" /> Export CSV
-                    </Button>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-800">Laporan Arus Kas</h1>
+                        <p className="text-slate-500 text-sm">Pantau mutasi kas masuk, kas keluar, dan saldo rekening/kas.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={filteredData.length === 0}
+                            variant="outline"
+                            className="border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="mr-2 h-4 w-4" /> Cetak
+                        </Button>
+                        <Button onClick={handleExport} disabled={filteredData.length === 0} className="bg-slate-800 hover:bg-slate-700">
+                            <Download className="mr-2 h-4 w-4" /> Ekspor CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filters */}
                 <Card className="bg-slate-50 border-slate-200">
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium uppercase tracking-wider text-slate-500">Filters</CardTitle>
+                        <CardTitle className="text-sm font-medium uppercase tracking-wider text-slate-500">Filter Laporan</CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-wrap gap-4">
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-slate-500">Start Date</label>
+                            <label className="text-xs font-semibold text-slate-500">Tanggal Mulai</label>
                             <input
                                 type="date"
-                                className="border rounded p-2 text-sm"
+                                className="border rounded p-2 text-sm bg-white"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                             />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-slate-500">End Date</label>
+                            <label className="text-xs font-semibold text-slate-500">Tanggal Akhir</label>
                             <input
                                 type="date"
-                                className="border rounded p-2 text-sm"
+                                className="border rounded p-2 text-sm bg-white"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                             />
                         </div>
+
+                        {canSelectOutlet && (
+                            <div className="flex flex-col gap-2 min-w-[220px]">
+                                <label className="text-xs font-semibold text-slate-500">Outlet</label>
+                                <Select
+                                    value={selectedOutlet}
+                                    onValueChange={(val) => {
+                                        setSelectedOutlet(val)
+                                        setSelectedAccount('ALL')
+                                    }}
+                                >
+                                    <SelectTrigger className="bg-white">
+                                        <div className="flex items-center gap-2">
+                                            <Store className="h-4 w-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Pilih Outlet" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Semua Outlet (ALL OUTLET)</SelectItem>
+                                        {availableOutlets.map((outlet) => (
+                                            <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
+                                                {outlet.name_outlet} ({outlet.kode_outlet})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
                         <div className="flex flex-col gap-2 min-w-[200px]">
-                            <label className="text-xs font-semibold text-slate-500">Account</label>
+                            <label className="text-xs font-semibold text-slate-500">Rekening / Kas</label>
                             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
                                 <SelectTrigger className="bg-white">
-                                    <SelectValue placeholder="All Accounts" />
+                                    <SelectValue placeholder="Semua Rekening" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">All Accounts</SelectItem>
+                                    <SelectItem value="ALL">Semua Rekening / Kas</SelectItem>
                                     {accounts.map((acc: FinancialAccount) => (
                                         <SelectItem key={acc.id} value={acc.account_name}>{acc.account_name}</SelectItem>
                                     ))}
@@ -127,34 +248,34 @@ export default function CashFlowReportPage() {
                 <div className="grid gap-4 md:grid-cols-3">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-500">Total Inflow</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500">Total Kas Masuk</CardTitle>
                             <TrendingUp className="h-4 w-4 text-emerald-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600 font-mono">{formatCurrency(totalInflow)}</div>
-                            <p className="text-xs text-slate-500 mt-1">Total Money In</p>
+                            <p className="text-xs text-slate-500 mt-1">Total Penerimaan Dana</p>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-500">Total Outflow</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500">Total Kas Keluar</CardTitle>
                             <TrendingDown className="h-4 w-4 text-rose-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-rose-600 font-mono">{formatCurrency(totalOutflow)}</div>
-                            <p className="text-xs text-slate-500 mt-1">Total Money Out</p>
+                            <p className="text-xs text-slate-500 mt-1">Total Pengeluaran Dana</p>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-500">Net Change</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500">Perubahan Bersih (Net)</CardTitle>
                             <DollarSign className="h-4 w-4 text-slate-500" />
                         </CardHeader>
                         <CardContent>
                             <div className={`text-2xl font-bold font-mono ${netChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                 {formatCurrency(netChange)}
                             </div>
-                            <p className="text-xs text-slate-500 mt-1">Inflow - Outflow</p>
+                            <p className="text-xs text-slate-500 mt-1">Kas Masuk - Kas Keluar</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -162,26 +283,26 @@ export default function CashFlowReportPage() {
                 {/* Data Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Transaction History</CardTitle>
+                        <CardTitle>Riwayat Transaksi</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date / Time</TableHead>
-                                    <TableHead>Account</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="text-right text-emerald-600 font-bold">Money In</TableHead>
-                                    <TableHead className="text-right text-rose-600 font-bold">Money Out</TableHead>
-                                    <TableHead className="text-right">Balance After</TableHead>
+                                    <TableHead>Tanggal / Waktu</TableHead>
+                                    <TableHead>Rekening / Kas</TableHead>
+                                    <TableHead>Tipe</TableHead>
+                                    <TableHead>Deskripsi / Keterangan</TableHead>
+                                    <TableHead className="text-right text-emerald-600 font-bold">Kas Masuk</TableHead>
+                                    <TableHead className="text-right text-rose-600 font-bold">Kas Keluar</TableHead>
+                                    <TableHead className="text-right">Saldo Akhir</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredData.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center h-24 text-slate-500">
-                                            No transactions found for the selected period.
+                                            Tidak ada transaksi yang ditemukan untuk periode terpilih.
                                         </TableCell>
                                     </TableRow>
                                 ) : (

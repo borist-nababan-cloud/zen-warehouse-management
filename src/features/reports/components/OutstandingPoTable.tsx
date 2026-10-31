@@ -19,7 +19,7 @@ export const OutstandingPoTable: React.FC<OutstandingPoTableProps> = ({ data }) 
     if (data.length === 0) {
         return (
             <div className="text-center p-8 border rounded-lg bg-orange-50 text-orange-600">
-                No outstanding items found. All clear!
+                Tidak ada barang PO tertunda. Semua pesanan telah diterima!
             </div>
         )
     }
@@ -29,14 +29,14 @@ export const OutstandingPoTable: React.FC<OutstandingPoTableProps> = ({ data }) 
             <Table>
                 <TableHeader className="bg-orange-50/50">
                     <TableRow>
-                        <TableHead className="w-[120px]">Date</TableHead>
-                        <TableHead>PO Number</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Item Name</TableHead>
-                        <TableHead className="text-center">Ordered</TableHead>
-                        <TableHead className="text-center">Received</TableHead>
-                        <TableHead className="text-center font-bold text-orange-600">Remaining</TableHead>
-                        <TableHead className="text-right">Pending Value</TableHead>
+                        <TableHead className="w-[120px]">Tanggal</TableHead>
+                        <TableHead>No. PO</TableHead>
+                        <TableHead>Pemasok (Supplier)</TableHead>
+                        <TableHead>Nama Barang</TableHead>
+                        <TableHead className="text-center">Dipesan</TableHead>
+                        <TableHead className="text-center">Diterima</TableHead>
+                        <TableHead className="text-center font-bold text-orange-600">Sisa Tertunda</TableHead>
+                        <TableHead className="text-right">Estimasi Nilai Tertunda</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>

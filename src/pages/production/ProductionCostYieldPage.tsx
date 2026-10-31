@@ -96,11 +96,11 @@ export const ProductionCostYieldPage = () => {
 
     const handleExportCsv = () => {
         if (filteredData.length === 0) {
-            toast.error('No data to export')
+            toast.error('Tidak ada data untuk diekspor')
             return
         }
 
-        const headers = ['Date', 'Outlet', 'Doc Number', 'Product Name', 'Yield (Qty)', 'Unit Cost', 'Total Cost', 'Ingredients Count', 'Creator']
+        const headers = ['Tanggal', 'Outlet', 'No. Dokumen', 'Nama Produk Jadi', 'Hasil Produksi (Qty)', 'Biaya per Unit (HPP)', 'Total Biaya Produksi', 'Jumlah Bahan Baku', 'Dibuat Oleh']
         const csvRows = [headers.join(',')]
 
         filteredData.forEach(row => {
@@ -125,7 +125,7 @@ export const ProductionCostYieldPage = () => {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `Production_Cost_Yield_${dateRange.start}_${dateRange.end}.csv`
+        a.download = `Laporan_Biaya_Hasil_Produksi_${dateRange.start}_${dateRange.end}.csv`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -137,7 +137,7 @@ export const ProductionCostYieldPage = () => {
             <DashboardLayout>
                 <div className="flex h-[400px] items-center justify-center space-x-2">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Loading production usage data...</span>
+                    <span className="text-muted-foreground">Memuat data laporan produksi...</span>
                 </div>
             </DashboardLayout>
         )
@@ -148,7 +148,7 @@ export const ProductionCostYieldPage = () => {
             <DashboardLayout>
                 <div className="flex h-[400px] flex-col items-center justify-center space-y-4 text-destructive">
                     <AlertCircle className="h-10 w-10" />
-                    <p className="font-medium">Failed to load report data</p>
+                    <p className="font-medium">Gagal memuat data laporan</p>
                     <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
                 </div>
             </DashboardLayout>
@@ -159,9 +159,9 @@ export const ProductionCostYieldPage = () => {
         <DashboardLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Production Cost & Yield Report</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">Laporan Biaya & Hasil Produksi</h1>
                     <p className="text-muted-foreground">
-                        Analyze production efficiency, output yield, and unit costs.
+                        Analisis efisiensi produksi, hasil kuantitas (yield), dan harga pokok produksi (HPP) per unit.
                     </p>
                 </div>
 
@@ -175,11 +175,11 @@ export const ProductionCostYieldPage = () => {
                                     <SelectTrigger className="w-full bg-white">
                                         <div className="flex items-center gap-2">
                                             <Store className="h-4 w-4 text-muted-foreground" />
-                                            <SelectValue placeholder="Select Outlet" />
+                                            <SelectValue placeholder="Pilih Outlet" />
                                         </div>
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                         {availableOutlets.map((outlet) => (
                                             <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                 {outlet.name_outlet}
@@ -193,7 +193,7 @@ export const ProductionCostYieldPage = () => {
 
                     <Button variant="outline" onClick={handleExportCsv} className="gap-2">
                         <Download className="h-4 w-4" />
-                        Export CSV
+                        Ekspor CSV
                     </Button>
                 </div>
 

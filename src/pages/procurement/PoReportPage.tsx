@@ -117,11 +117,11 @@ export default function PoReportPage() {
                 setOriginalData(res.data)
                 setData(res.data)
             } else {
-                toast.error(res.error || 'Failed to load PO report')
+                toast.error(res.error || 'Gagal memuat laporan pesanan pembelian')
             }
         } catch (error) {
             console.error('Error:', error)
-            toast.error('An unexpected error occurred')
+            toast.error('Terjadi kesalahan saat memuat data laporan')
         } finally {
             setLoading(false)
         }
@@ -141,11 +141,11 @@ export default function PoReportPage() {
 
     const handleExportCsv = () => {
         if (data.length === 0) {
-            toast.error('No data to export')
+            toast.error('Tidak ada data untuk diekspor')
             return
         }
 
-        const headers = ['Date', 'Outlet', 'PO Doc', 'Supplier', 'Status', 'Expected Date', 'Grand Total']
+        const headers = ['Tanggal', 'Outlet', 'No. PO', 'Pemasok (Supplier)', 'Status', 'Estimasi Kirim', 'Total Keseluruhan']
         const csvRows = [headers.join(',')]
 
         data.forEach(row => {
@@ -167,7 +167,7 @@ export default function PoReportPage() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `PO_Report_${startDate}_${endDate}.csv`
+        a.download = `Laporan_PO_${startDate}_${endDate}.csv`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -180,9 +180,9 @@ export default function PoReportPage() {
         <DashboardLayout>
             <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Purchase Orders Report</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Laporan Pesanan Pembelian (PO)</h1>
                     <p className="text-slate-500">
-                        Historical record of all Purchase Orders and their status.
+                        Catatan historis seluruh Pesanan Pembelian (PO) beserta statusnya.
                     </p>
                 </div>
 
@@ -191,17 +191,17 @@ export default function PoReportPage() {
                     <CardHeader className="pb-4">
                         <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                             <Filter className="h-4 w-4 text-emerald-500" />
-                            Filters & Search
+                            Filter & Pencarian
                         </CardTitle>
                         <Button variant="outline" size="sm" className="ml-auto" onClick={handleExportCsv}>
                             <Download className="mr-2 h-4 w-4" />
-                            Export CSV
+                            Ekspor CSV
                         </Button>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="start-date">Start Date</Label>
+                                <Label htmlFor="start-date">Tanggal Mulai</Label>
                                 <Input
                                     id="start-date"
                                     type="date"
@@ -211,7 +211,7 @@ export default function PoReportPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="end-date">End Date</Label>
+                                <Label htmlFor="end-date">Tanggal Akhir</Label>
                                 <Input
                                     id="end-date"
                                     type="date"
@@ -229,11 +229,11 @@ export default function PoReportPage() {
                                         <SelectTrigger className="w-full bg-white border-slate-300">
                                             <div className="flex items-center gap-2">
                                                 <Store className="h-4 w-4 text-muted-foreground" />
-                                                <SelectValue placeholder="Select Outlet" />
+                                                <SelectValue placeholder="Pilih Outlet" />
                                             </div>
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                            <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                             {availableOutlets.map((outlet) => (
                                                 <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                     {outlet.name_outlet}
@@ -245,12 +245,12 @@ export default function PoReportPage() {
                             )}
 
                             <div className="space-y-2">
-                                <Label htmlFor="search">Search</Label>
+                                <Label htmlFor="search">Pencarian</Label>
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                                     <Input
                                         id="search"
-                                        placeholder="Search PO # or Supplier..."
+                                        placeholder="Cari No. PO atau Nama Pemasok..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="pl-9 border-slate-300 focus:border-emerald-500"
@@ -261,15 +261,15 @@ export default function PoReportPage() {
                                 <Label htmlFor="status-filter">Status</Label>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger id="status-filter" className="border-slate-300">
-                                        <SelectValue placeholder="All Status" />
+                                        <SelectValue placeholder="Semua Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="ISSUED">Issued</SelectItem>
-                                        <SelectItem value="PARTIAL">Partial</SelectItem>
-                                        <SelectItem value="COMPLETED">Completed</SelectItem>
-                                        <SelectItem value="PAID">Paid</SelectItem>
-                                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                        <SelectItem value="all">Semua Status</SelectItem>
+                                        <SelectItem value="ISSUED">Diterbitkan (ISSUED)</SelectItem>
+                                        <SelectItem value="PARTIAL">Diterima Sebagian (PARTIAL)</SelectItem>
+                                        <SelectItem value="COMPLETED">Selesai (COMPLETED)</SelectItem>
+                                        <SelectItem value="PAID">Lunas (PAID)</SelectItem>
+                                        <SelectItem value="CANCELLED">Dibatalkan (CANCELLED)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -286,7 +286,7 @@ export default function PoReportPage() {
                                     <TrendingUp className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-emerald-600">Total Orders</p>
+                                    <p className="text-sm font-medium text-emerald-600">Total Pesanan</p>
                                     <h3 className="text-2xl font-bold text-emerald-900">{data.length}</h3>
                                 </div>
                             </div>
@@ -299,7 +299,7 @@ export default function PoReportPage() {
                                     <Wallet className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-blue-600">Total Value</p>
+                                    <p className="text-sm font-medium text-blue-600">Total Nilai Pesanan</p>
                                     <h3 className="text-2xl font-bold text-blue-900">{formatCurrency(totalValue)}</h3>
                                 </div>
                             </div>
@@ -312,27 +312,27 @@ export default function PoReportPage() {
                     <Table>
                         <TableHeader className="bg-slate-50/80">
                             <TableRow>
-                                <TableHead>Date</TableHead>
+                                <TableHead>Tanggal</TableHead>
                                 {canSelectOutlet && selectedOutlet === 'ALL' && (
                                     <TableHead>Outlet</TableHead>
                                 )}
-                                <TableHead>PO Doc</TableHead>
-                                <TableHead>Supplier</TableHead>
+                                <TableHead>No. PO</TableHead>
+                                <TableHead>Pemasok (Supplier)</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Expected Date</TableHead>
-                                <TableHead className="text-right">Grand Total</TableHead>
-                                <TableHead className="text-center w-[160px]">Actions</TableHead>
+                                <TableHead>Estimasi Kirim</TableHead>
+                                <TableHead className="text-right">Total Keseluruhan</TableHead>
+                                <TableHead className="text-center w-[160px]">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center">Loading...</TableCell>
+                                    <TableCell colSpan={8} className="h-24 text-center">Memuat data laporan...</TableCell>
                                 </TableRow>
                             ) : data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={8} className="h-24 text-center text-slate-500">
-                                        No purchase orders found.
+                                        Tidak ada data pesanan pembelian yang ditemukan.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -371,7 +371,7 @@ export default function PoReportPage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        title="Print PO"
+                                                        title="Cetak PO"
                                                         className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
                                                         onClick={() => {
                                                             const url = `/procurement/purchase-orders/${row.po_id}/print`
@@ -411,7 +411,7 @@ export default function PoReportPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            title="View Linked Invoice"
+                                                            title="Lihat Faktur Terkait"
                                                             className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
                                                             onClick={() => {
                                                                 const url = `/finance/invoices/print/${row.linked_invoice_id}`
@@ -434,7 +434,7 @@ export default function PoReportPage() {
                 </div>
 
                 <div className="text-center text-xs text-slate-400 mt-4">
-                    Showing {data.length} records
+                    Menampilkan {data.length} data
                 </div>
             </div>
 

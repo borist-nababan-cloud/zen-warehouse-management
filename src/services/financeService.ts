@@ -50,12 +50,17 @@ export interface PaydownParams {
 
 export async function getFinancialAccounts(outletCode: string): Promise<ApiResponse<FinancialAccount[]>> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('master_financial_accounts')
       .select('*')
-      .eq('kode_outlet', outletCode)
       .eq('is_active', true)
       .order('account_type', { ascending: true }) // CASH first, then BANK
+
+    if (outletCode && outletCode !== 'ALL') {
+      query = query.eq('kode_outlet', outletCode)
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -382,11 +387,14 @@ export async function getCashFlowReport(
       let query = supabase
         .from('view_report_cash_flow')
         .select('*')
-        .eq('kode_outlet', outletCode)
         .order('created_at', { ascending: false })
+
+      if (outletCode && outletCode !== 'ALL') {
+        query = query.eq('kode_outlet', outletCode)
+      }
   
       if (startDate && endDate) {
-        query = query.gte('created_at', startDate).lte('created_at', endDate)
+        query = query.gte('created_at', startDate).lte('created_at', `${endDate}T23:59:59.999Z`)
       }
   
       const { data, error } = await query

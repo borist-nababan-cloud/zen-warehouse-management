@@ -86,7 +86,7 @@ export const OutstandingPoReportPage = () => {
             <DashboardLayout>
                 <div className="flex h-[400px] items-center justify-center space-x-2">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Loading outstanding items...</span>
+                    <span className="text-muted-foreground">Memuat data barang PO tertunda...</span>
                 </div>
             </DashboardLayout>
         )
@@ -97,7 +97,7 @@ export const OutstandingPoReportPage = () => {
             <DashboardLayout>
                 <div className="flex h-[400px] flex-col items-center justify-center space-y-4 text-destructive">
                     <AlertCircle className="h-10 w-10" />
-                    <p className="font-medium">Failed to load report data</p>
+                    <p className="font-medium">Gagal memuat data laporan</p>
                     <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
                 </div>
             </DashboardLayout>
@@ -108,9 +108,9 @@ export const OutstandingPoReportPage = () => {
         <DashboardLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Outstanding PO Report</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">Laporan PO Tertunda</h1>
                     <p className="text-muted-foreground">
-                        Monitor items ordered but not yet received (Backorders).
+                        Pantau barang yang telah dipesan namun belum diterima sepenuhnya (Backorder).
                     </p>
                 </div>
 
@@ -124,11 +124,11 @@ export const OutstandingPoReportPage = () => {
                                     <SelectTrigger className="w-full bg-white">
                                         <div className="flex items-center gap-2">
                                             <Store className="h-4 w-4 text-muted-foreground" />
-                                            <SelectValue placeholder="Select Outlet" />
+                                            <SelectValue placeholder="Pilih Outlet" />
                                         </div>
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="ALL">ALL OUTLETS</SelectItem>
+                                        <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                         {availableOutlets.map((outlet) => (
                                             <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                 {outlet.name_outlet}
@@ -139,7 +139,7 @@ export const OutstandingPoReportPage = () => {
                             </div>
                         )}
                         <div className="space-y-2">
-                            <Label>Start Date</Label>
+                            <Label>Tanggal Mulai</Label>
                             <Input
                                 type="date"
                                 value={dateRange.start}
@@ -147,7 +147,7 @@ export const OutstandingPoReportPage = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>End Date</Label>
+                            <Label>Tanggal Akhir</Label>
                             <Input
                                 type="date"
                                 value={dateRange.end}
@@ -162,7 +162,7 @@ export const OutstandingPoReportPage = () => {
                     <Card className="bg-white border-l-4 border-l-orange-500 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Total Items Pending
+                                Total Barang Tertunda
                             </CardTitle>
                             <PackageX className="h-4 w-4 text-orange-500" />
                         </CardHeader>
@@ -176,7 +176,7 @@ export const OutstandingPoReportPage = () => {
                     <Card className="bg-white border-l-4 border-l-red-500 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Pending Value
+                                Nilai Barang Tertunda
                             </CardTitle>
                             <DollarSign className="h-4 w-4 text-red-500" />
                         </CardHeader>
@@ -190,7 +190,7 @@ export const OutstandingPoReportPage = () => {
                     <Card className="bg-white border-l-4 border-l-blue-500 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Total POs Affected
+                                Total Dokumen PO Terdampak
                             </CardTitle>
                             <FileText className="h-4 w-4 text-blue-500" />
                         </CardHeader>

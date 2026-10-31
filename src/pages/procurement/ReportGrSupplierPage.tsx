@@ -93,11 +93,11 @@ export function ReportGrSupplierPage() {
             if (result.isSuccess && result.data) {
                 setData(result.data)
             } else {
-                toast.error(result.error || "Failed to fetch report data")
+                toast.error(result.error || "Gagal memuat data laporan")
             }
         } catch (error) {
             console.error(error)
-            toast.error("An error occurred while fetching data")
+            toast.error("Terjadi kesalahan saat memuat data laporan")
         } finally {
             setIsLoading(false)
         }
@@ -106,29 +106,29 @@ export function ReportGrSupplierPage() {
     // Export CSV Helper
     const handleExportCSV = () => {
         if (!data || data.length === 0) {
-            toast.error("No data to export")
+            toast.error("Tidak ada data untuk diekspor")
             return
         }
 
         // 1. Define Headers
         const headers = [
-            "PO Number",
-            "Date",
+            "No. PO",
+            "Tanggal",
             "Outlet",
-            "Item Name",
+            "Nama Barang",
             "SKU",
-            "Qty Ordered",
-            "Qty Received",
-            "Remaining",
-            "UOM",
+            "Jml Dipesan",
+            "Jml Diterima",
+            "Sisa Pesanan",
+            "Satuan",
             "Status"
         ]
 
         // 2. Format Data Rows
         const rows = data.map(item => {
-            const status = item.qty_remaining <= 0 ? 'Fulfilled'
-                : item.qty_already_received > 0 ? 'Partial'
-                    : 'Ordered'
+            const status = item.qty_remaining <= 0 ? 'Terpenuhi'
+                : item.qty_already_received > 0 ? 'Sebagian'
+                    : 'Dipesan'
 
             return [
                 item.document_number,
@@ -150,7 +150,7 @@ export function ReportGrSupplierPage() {
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.setAttribute('href', url)
-        link.setAttribute('download', `GR_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`)
+        link.setAttribute('download', `Laporan_Penerimaan_Supplier_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`)
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -168,9 +168,9 @@ export function ReportGrSupplierPage() {
             <div className="space-y-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Report GR Supplier</h1>
+                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Laporan Penerimaan Supplier (GR)</h1>
                         <p className="text-muted-foreground">
-                            Monitor Goods Receipt history against Purchase Orders.
+                            Pantau riwayat penerimaan barang masuk terhadap Pesanan Pembelian (PO).
                         </p>
                     </div>
                 </div>
@@ -180,13 +180,13 @@ export function ReportGrSupplierPage() {
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base flex items-center gap-2">
                             <Filter className="h-4 w-4" />
-                            Filter Options
+                            Opsi Filter
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
-                                <Label>Start Date</Label>
+                                <Label>Tanggal Mulai</Label>
                                 <Input
                                     type="date"
                                     value={startDate}
@@ -194,7 +194,7 @@ export function ReportGrSupplierPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>End Date</Label>
+                                <Label>Tanggal Akhir</Label>
                                 <Input
                                     type="date"
                                     value={endDate}
@@ -207,10 +207,10 @@ export function ReportGrSupplierPage() {
                                     <Label>Outlet</Label>
                                     <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="All Outlets" />
+                                            <SelectValue placeholder="Semua Outlet" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ALL">All Outlets</SelectItem>
+                                            <SelectItem value="ALL">Semua Outlet</SelectItem>
                                             {outlets.map((outlet) => (
                                                 <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
                                                     {outlet.name_outlet} ({outlet.kode_outlet})
@@ -224,11 +224,11 @@ export function ReportGrSupplierPage() {
                             <div className="flex gap-2">
                                 <Button onClick={handleSearch} disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1">
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    Apply Filter
+                                    Terapkan Filter
                                 </Button>
-                                <Button variant="outline" onClick={handleExportCSV} disabled={data.length === 0} title="Export to CSV">
+                                <Button variant="outline" onClick={handleExportCSV} disabled={data.length === 0} title="Ekspor ke CSV">
                                     <Download className="mr-2 h-4 w-4" />
-                                    Export CSV
+                                    Ekspor CSV
                                 </Button>
                             </div>
                         </div>
@@ -242,23 +242,23 @@ export function ReportGrSupplierPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50">
-                                        <TableHead>PO Number</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>No. PO</TableHead>
+                                        <TableHead>Tanggal</TableHead>
                                         {canSeeAllOutlets && <TableHead>Outlet</TableHead>}
-                                        <TableHead>Item Name</TableHead>
+                                        <TableHead>Nama Barang</TableHead>
                                         <TableHead>SKU</TableHead>
-                                        <TableHead className="text-right">Qty Ordered</TableHead>
-                                        <TableHead className="text-right">Qty Received</TableHead>
-                                        <TableHead className="text-right">Remaining</TableHead>
+                                        <TableHead className="text-right">Jml Dipesan</TableHead>
+                                        <TableHead className="text-right">Jml Diterima</TableHead>
+                                        <TableHead className="text-right">Sisa</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead className="text-center w-[120px]">Actions</TableHead>
+                                        <TableHead className="text-center w-[120px]">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {data.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={canSeeAllOutlets ? 10 : 9} className="text-center py-8 text-muted-foreground">
-                                                No data found matching your filters.
+                                                Tidak ada data penerimaan barang yang sesuai dengan filter.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -287,15 +287,15 @@ export function ReportGrSupplierPage() {
                                                 <TableCell>
                                                     {item.qty_remaining <= 0 ? (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                            Fulfilled
+                                                            Terpenuhi
                                                         </span>
                                                     ) : item.qty_already_received > 0 ? (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                            Partial
+                                                            Sebagian
                                                         </span>
                                                     ) : (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                            Ordered
+                                                            Dipesan
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -305,7 +305,7 @@ export function ReportGrSupplierPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            title={item.latest_gr_id ? "Print Goods Receipt" : "Print Purchase Order"}
+                                                            title={item.latest_gr_id ? "Cetak Bukti Penerimaan (GR)" : "Cetak Pesanan Pembelian (PO)"}
                                                             className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
                                                             onClick={() => {
                                                                 if (item.latest_gr_id) {

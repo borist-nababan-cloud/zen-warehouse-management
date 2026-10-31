@@ -82,7 +82,7 @@ export function GoodsReceiptCreatePage() {
         // 1. Fetch Header Info
         const poResult = await getPurchaseOrderById(selectedPoId)
         if (!poResult.data) {
-            toast.error('Failed to load PO details')
+            toast.error('Gagal memuat rincian PO')
             return
         }
         setSelectedPo(poResult.data)
@@ -101,7 +101,7 @@ export function GoodsReceiptCreatePage() {
             setReceiptImageFile(null)
             setStep(2)
         } else {
-            toast.error('Failed to load PO Items calculation from server')
+            toast.error('Gagal memuat perhitungan item PO dari server')
         }
     }
 
@@ -124,7 +124,7 @@ export function GoodsReceiptCreatePage() {
 
     const handleSubmit = async () => {
         if (!user?.kode_outlet || !user?.id) {
-            toast.error('User context invalid')
+            toast.error('Konteks pengguna tidak valid')
             return
         }
         if (!selectedPo) return
@@ -132,13 +132,13 @@ export function GoodsReceiptCreatePage() {
         // Validate
         const hasInvalidQty = items.some(i => i.receivingQty > i.qty_remaining)
         if (hasInvalidQty) {
-            toast.error('Some items exceed the remaining quantity. Please fix errors.')
+            toast.error('Beberapa barang melebihi sisa jumlah pesanan. Harap perbaiki jumlah yang melewati batas.')
             return
         }
 
         const receivingSomething = items.some(i => i.receivingQty > 0)
         if (!receivingSomething) {
-            toast.error('You must receive at least one item quantity > 0')
+            toast.error('Anda harus menerima minimal satu barang dengan jumlah lebih dari 0')
             return
         }
 
@@ -188,7 +188,7 @@ export function GoodsReceiptCreatePage() {
             const result = await createGoodsReceipt(headerData, detailedItems, newStatus)
 
             if (result.isSuccess) {
-                toast.success('Goods Receipt Saved Successfully')
+                toast.success('Penerimaan Barang (GR) berhasil disimpan')
                 setStep(1)
                 setSelectedPo(null)
                 setSelectedPoId('')
@@ -198,12 +198,12 @@ export function GoodsReceiptCreatePage() {
                 generateDocNumber(user.kode_outlet)
                 loadPOs(user.kode_outlet)
             } else {
-                toast.error(result.error || 'Failed to save GR')
+                toast.error(result.error || 'Gagal menyimpan Penerimaan Barang')
             }
 
         } catch (err: any) {
             console.error(err)
-            toast.error(err?.message || 'Unexpected error')
+            toast.error(err?.message || 'Terjadi kesalahan yang tidak terduga')
         } finally {
             setIsSubmitting(false)
         }
@@ -218,9 +218,9 @@ export function GoodsReceiptCreatePage() {
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Goods Receipt</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">Penerimaan Barang Supplier (GR)</h1>
                             <p className="text-muted-foreground mt-1">
-                                Receive goods from Suppliers (Server-Calculated).
+                                Terima barang masuk dari pemasok berdasarkan Pesanan Pembelian (PO).
                             </p>
                         </div>
                     </div>
@@ -229,22 +229,24 @@ export function GoodsReceiptCreatePage() {
                 {step === 1 && (
                     <Card className="border-pastel-blue/20 shadow-sm max-w-xl mx-auto mt-10">
                         <CardHeader className="bg-pastel-blue/10">
-                            <CardTitle>Select Purchase Order</CardTitle>
+                            <CardTitle>Pilih Pesanan Pembelian (PO)</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6 space-y-4">
                             <div className="space-y-2">
-                                <Label>Pending POs</Label>
+                                <Label>Daftar PO Menunggu Penerimaan</Label>
                                 <Select value={selectedPoId} onValueChange={setSelectedPoId}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a PO to Receive..." />
+                                        <SelectValue placeholder="Pilih dokumen PO yang akan diterima..." />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {pos.length === 0 ? (
-                                            <div className="p-2 text-sm text-center text-muted-foreground">No Pending POs found</div>
+                                            <div className="p-2 text-sm text-center text-muted-foreground">
+                                                Tidak ada PO aktif yang menunggu penerimaan
+                                            </div>
                                         ) : (
                                             pos.map(po => (
                                                 <SelectItem key={po.id} value={po.id}>
-                                                    {po.document_number} — {po.master_supplier?.name || 'Unknown Supplier'} ({po.status})
+                                                    {po.document_number} — {po.master_supplier?.name || 'Pemasok Tidak Diketahui'} ({po.status})
                                                 </SelectItem>
                                             ))
                                         )}
@@ -257,7 +259,7 @@ export function GoodsReceiptCreatePage() {
                                 disabled={!selectedPoId}
                                 onClick={handleLoadPO}
                             >
-                                Continue to Receive
+                                Lanjutkan ke Penerimaan
                             </Button>
                         </CardContent>
                     </Card>
@@ -270,19 +272,19 @@ export function GoodsReceiptCreatePage() {
                         <Card className="border-pastel-blue/20 shadow-sm">
                             <CardHeader className="bg-pastel-blue/10 pb-3">
                                 <div className="flex justify-between items-center">
-                                    <CardTitle className="text-lg">Receiving: {selectedPo.document_number}</CardTitle>
+                                    <CardTitle className="text-lg">Penerimaan PO: {selectedPo.document_number}</CardTitle>
                                     <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
-                                        Change PO
+                                        Ganti PO
                                     </Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6 grid grid-cols-2 gap-6">
                                 <div>
-                                    <Label>Supplier</Label>
-                                    <div className="font-medium">{selectedPo.master_supplier?.name}</div>
+                                    <Label>Pemasok (Supplier)</Label>
+                                    <div className="font-medium">{selectedPo.master_supplier?.name || '-'}</div>
                                 </div>
                                 <div>
-                                    <Label>GR Document No</Label>
+                                    <Label>No. Dokumen Penerimaan (GR)</Label>
                                     <Input
                                         value={documentNumber}
                                         onChange={e => setDocumentNumber(e.target.value)}
@@ -290,11 +292,11 @@ export function GoodsReceiptCreatePage() {
                                     />
                                 </div>
                                 <div className="col-span-2">
-                                    <Label>Delivery Note / Ref No (Surat Jalan)</Label>
+                                    <Label>No. Surat Jalan / Referensi Pemasok</Label>
                                     <Input
                                         value={deliveryNote}
                                         onChange={e => setDeliveryNote(e.target.value)}
-                                        placeholder="e.g. SJ-12345"
+                                        placeholder="Contoh: SJ-12345"
                                         className="mt-1"
                                     />
                                 </div>
@@ -313,21 +315,21 @@ export function GoodsReceiptCreatePage() {
                         {/* Items Table - SERVER COMPUTED */}
                         <Card className="border-pastel-blue/20 shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-4">
-                                <CardTitle className="text-lg">Items to Receive</CardTitle>
+                                <CardTitle className="text-lg">Daftar Barang yang Diterima</CardTitle>
                                 <Button size="sm" variant="outline" onClick={handleReceiveAll}>
-                                    Receive Remaining
+                                    Terima Semua Sisa
                                 </Button>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead className="w-24 text-center">Unit</TableHead>
-                                            <TableHead className="w-32 text-center">Ordered</TableHead>
-                                            <TableHead className="w-32 text-center bg-gray-50">Already Received</TableHead>
-                                            <TableHead className="w-32 text-center bg-green-50 font-bold text-green-700">Remaining</TableHead>
-                                            <TableHead className="w-40 text-center bg-blue-50/50">Receive Now</TableHead>
+                                            <TableHead>Produk / Barang</TableHead>
+                                            <TableHead className="w-24 text-center">Satuan</TableHead>
+                                            <TableHead className="w-32 text-center">Dipesan</TableHead>
+                                            <TableHead className="w-32 text-center bg-gray-50">Sudah Diterima</TableHead>
+                                            <TableHead className="w-32 text-center bg-green-50 font-bold text-green-700">Sisa Pesanan</TableHead>
+                                            <TableHead className="w-40 text-center bg-blue-50/50">Diterima Sekarang</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -343,7 +345,7 @@ export function GoodsReceiptCreatePage() {
                                                         {isOver && (
                                                             <div className="text-xs text-red-600 font-bold flex items-center gap-1 mt-1">
                                                                 <AlertCircle className="w-3 h-3" />
-                                                                Max: {item.qty_remaining}
+                                                                Maks: {item.qty_remaining}
                                                             </div>
                                                         )}
                                                     </TableCell>
@@ -386,7 +388,7 @@ export function GoodsReceiptCreatePage() {
                                 disabled={isSubmitting || items.some(i => i.receivingQty > i.qty_remaining)}
                             >
                                 <PackageCheck className="w-5 h-5 mr-2" />
-                                {isSubmitting ? 'Saving...' : 'Confirm Receipt'}
+                                {isSubmitting ? 'Menyimpan...' : 'Konfirmasi Penerimaan'}
                             </Button>
                         </div>
 

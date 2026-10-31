@@ -20,7 +20,7 @@ export const SupplierPerformanceTable: React.FC<SupplierPerformanceTableProps> =
     if (data.length === 0) {
         return (
             <div className="text-center p-8 border rounded-lg bg-slate-50 text-slate-500">
-                No supplier performance data available.
+                Belum ada data kinerja pemasok yang tersedia.
             </div>
         )
     }
@@ -33,9 +33,9 @@ export const SupplierPerformanceTable: React.FC<SupplierPerformanceTableProps> =
     }
 
     const getScoreLabel = (value: number) => {
-        if (value > 95) return "Excellent"
-        if (value >= 80) return "Fair"
-        return "Poor"
+        if (value > 95) return "Sangat Baik"
+        if (value >= 80) return "Cukup"
+        return "Kurang"
     }
 
     return (
@@ -43,12 +43,12 @@ export const SupplierPerformanceTable: React.FC<SupplierPerformanceTableProps> =
             <Table>
                 <TableHeader className="bg-slate-100">
                     <TableRow>
-                        <TableHead>Supplier Name</TableHead>
-                        <TableHead className="text-center">Total POs</TableHead>
-                        <TableHead className="text-center">Ordered</TableHead>
-                        <TableHead className="text-center">Received</TableHead>
-                        <TableHead className="w-[300px]">Fulfillment Rate</TableHead>
-                        <TableHead className="text-right">Total Spend</TableHead>
+                        <TableHead>Nama Pemasok</TableHead>
+                        <TableHead className="text-center">Total PO</TableHead>
+                        <TableHead className="text-center">Jml Dipesan</TableHead>
+                        <TableHead className="text-center">Jml Diterima</TableHead>
+                        <TableHead className="w-[300px]">Tingkat Pemenuhan</TableHead>
+                        <TableHead className="text-right">Total Belanja</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -200,18 +200,18 @@ export default function StoRequestCreatePage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-xs font-semibold text-zen-charcoal">
-                                            Outlet Tujuan Permintaan (Penyedia) *
+                                            Outlet Penerima (Tujuan) *
                                         </Label>
                                         <Select value={targetOutlet} onValueChange={setTargetOutlet} disabled={isOutletsLoading}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder={isOutletsLoading ? 'Memuat daftar outlet...' : 'Pilih Outlet yang Dimintai Barang'} />
+                                                <SelectValue placeholder={isOutletsLoading ? 'Memuat daftar outlet...' : 'Pilih Outlet Tujuan'} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {outlets
                                                     ?.filter(o => o.can_sto === true && o.kode_outlet !== user?.kode_outlet)
                                                     .map(outlet => (
                                                         <SelectItem key={outlet.kode_outlet} value={outlet.kode_outlet}>
-                                                            [{outlet.kode_outlet}] {outlet.name_outlet}
+                                                            {outlet.name_outlet}
                                                         </SelectItem>
                                                     ))}
                                             </SelectContent>

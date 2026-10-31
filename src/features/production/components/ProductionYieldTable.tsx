@@ -21,7 +21,7 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
     if (data.length === 0) {
         return (
             <div className="text-center p-8 border rounded-lg bg-slate-50 text-slate-500">
-                No production data found for the selected period.
+                Tidak ada data produksi yang ditemukan untuk periode yang dipilih.
             </div>
         )
     }
@@ -31,17 +31,17 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
             <Table>
                 <TableHeader className="bg-slate-100">
                     <TableRow>
-                        <TableHead className="w-[120px]">Date</TableHead>
+                        <TableHead className="w-[120px]">Tanggal</TableHead>
                         {showOutlet && <TableHead>Outlet</TableHead>}
-                        <TableHead>Doc Number</TableHead>
-                        <TableHead>Product Name</TableHead>
-                        <TableHead className="text-center">Yield (Qty)</TableHead>
+                        <TableHead>No. Dokumen</TableHead>
+                        <TableHead>Nama Produk Jadi</TableHead>
+                        <TableHead className="text-center">Hasil (Qty)</TableHead>
                         <TableHead className="text-right font-bold text-indigo-700">
-                            Unit Cost (HPP)
+                            Biaya / Unit (HPP)
                         </TableHead>
-                        <TableHead className="text-right">Total Cost</TableHead>
-                        <TableHead className="text-center">Ingredients</TableHead>
-                        <TableHead>Creator</TableHead>
+                        <TableHead className="text-right">Total Biaya</TableHead>
+                        <TableHead className="text-center">Bahan Baku</TableHead>
+                        <TableHead>Dibuat Oleh</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -73,7 +73,7 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
                                 {formatCurrency(row.total_production_cost)}
                             </TableCell>
                             <TableCell className="text-center text-slate-500 text-sm">
-                                {row.ingredient_count} items
+                                {row.ingredient_count} bahan
                             </TableCell>
                             <TableCell className="text-slate-500 text-sm">
                                 {row.created_by_name}
