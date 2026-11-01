@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -241,7 +242,8 @@ export function MasterFacilitiesPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -580,7 +582,8 @@ export function MasterFacilitiesPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
 export default MasterFacilitiesPage
