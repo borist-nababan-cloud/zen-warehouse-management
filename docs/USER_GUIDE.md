@@ -92,6 +92,10 @@ Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, 
 3. **Pembaruan Informasi Cabang**:
    - Admin cabang dapat memperbarui: Alamat Lengkap, Kota, Provinsi, Nomor Telepon, Nomor WhatsApp, dan Email Outlet.
    - **Integrasi Peta & Lokasi**: Klik tombol **Gunakan Lokasi Saat Ini** untuk mengisi titik koordinat GPS perangkat secara otomatis, melihat pratinjau peta Google Maps interaktif, atau membuka navigasi langsung via tautan Google Maps.
+4. **Pemetaan Ketersediaan Menu Layanan Cabang (`Layanan Tersedia di Outlet Ini` & `web_outlet_services`):**
+   - Pada bagian bawah halaman Info Outlet, admin cabang dapat memilih dan mencentang layanan perawatan spa mana saja yang aktif disediakan oleh cabang bersangkutan (mengambil acuan dari *Master Menu Layanan Global*).
+   - Pengunjung website statis yang melihat menu layanan dapat membuka dropdown ketersediaan cabang untuk memastikan apakah layanan tersebut ada di cabang kota mereka.
+   - **Kebijakan Tanpa Harga Cabang (Zero-Price Standard):** Pada pengaturan cabang ini, **tidak terdapat kolom pengisian/pengubahan harga**, dan website statis juga **tidak menampilkan harga layanan** demi menghindari salah persepsi dari pengunjung mengingat adanya variasi tarif dan promo antar-cabang di kota yang berbeda.
 
 ---
 
@@ -106,7 +110,102 @@ Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, 
 
 ---
 
-## 3. Pengadaan Barang (Procurement)
+### F. Master Fasilitas (`Master Data > Master Fasilitas`)
+> [!NOTE]
+> Dapat diakses oleh **Role 5 (Finance)**, **Role 8 (Superuser)**, **Role 13 (Owner)**, dan **Role 18 (Web Admin)**.
+1. Digunakan untuk mengelola daftar fasilitas unggulan cabang yang ditampilkan kepada pengunjung di website statis publik (misal: *Ruang Perawatan VIP Couple*, *Foot Reflexology Lounge*, *Kamar Mandi Shower Pribadi*, *Bathtub Rendam Herbal*, *Area Parkir Luas*, *Free Wi-Fi & Teh Jahe*, dll.).
+2. **Form Tambah / Ubah Fasilitas**:
+   - Masukkan **Kode Fasilitas** dan **Nama Fasilitas**.
+   - Pilih **Kategori Fasilitas** (misal: *Ruangan*, *Kenyamanan*, *Fasilitas Umum*).
+   - Masukkan **Deskripsi Singkat** dan **Urutan Tampilan (`sort_order`)**.
+   - Tentukan nama ikon (*Icon Name* dari pustaka Lucide Icons).
+3. **Unggah Foto Fasilitas (Supabase Storage `web-facilities`):**
+   - Dilengkapi slot unggah gambar fasilitas (**Foto Fasilitas 1** dan **Foto Fasilitas 2**).
+   - Foto otomatis diunggah langsung ke *bucket* Supabase Storage `web-facilities` (maks. 5 MB) dengan penamaan otomatis berformat rapi.
+   - Tersedia tombol pratinjau (*live preview*), ganti foto, dan hapus foto.
+4. **Saklar Alih Aktif / Nonaktif (`is_active`):**
+   - Admin web dapat mengaktifkan atau menonaktifkan fasilitas tertentu dari tampilan website publik kapan saja secara instan tanpa menghapus rekaman data.
+
+---
+
+## 3. Modul Web Data (Website Management)
+
+Modul ini dikhususkan bagi **Admin Web / Tim Marketing & Manajemen** untuk mengelola seluruh konten interaktif dan dinamis yang tampil pada website resmi Zen Family Spa & Reflexology (`frontend\website`).
+
+> [!NOTE]
+> Modul pada menu **Web Data** dialokasikan khusus untuk **Role 18 (Web Admin)**, **Role 8 (Superuser)**, **Role 5 (Finance)**, dan **Role 13 (Owner)**.
+
+---
+
+### A. Galeri Foto (`Web Data > Galeri Foto`)
+Digunakan untuk mengelola foto-foto suasana, ruangan spa, produk aromaterapi, dan terapis yang tampil pada seksi Galeri di website publik:
+1. **Daftar Galeri & Pratinjau**:
+   - Menampilkan tabel seluruh foto galeri lengkap dengan thumbnail gambar, judul, kategori, cabang terkait, status aktif, dan nomor urutan.
+   - Klik thumbnail foto untuk memperbesar tampilan (*Zoom Lightbox*).
+2. **Tambah / Ubah Foto Galeri**:
+   - Klik tombol **+ Tambah Foto Galeri**.
+   - Masukkan **Judul Foto** dan **Deskripsi Singkat** (opsional).
+   - Pilih **Kategori Foto**: *Suasana Spa*, *Ruang Perawatan*, *Produk & Aromaterapi*, atau *Terapis & Layanan*.
+   - Pilih **Cabang Terkait** (opsional, kosongkan jika merupakan foto umum/global).
+   - Tentukan **Nomor Urut Tampilan (`sort_order`)** untuk mengatur urutan kemunculan di website.
+   - **Unggah Gambar**: Klik tombol pilih berkas untuk mengunggah foto langsung ke Supabase Storage *bucket* `web-galleries` (format JPG/PNG/WebP, maks. 5 MB).
+3. **Saklar Alih Aktif / Nonaktif (`active`)**:
+   - Admin dapat menonaktifkan foto galeri tertentu kapan saja hanya dengan mengklik tombol saklar (*switch toggle*) pada tabel.
+   - Foto yang dinonaktifkan akan **seketika menghilang dari website publik** tanpa menghapus file asli dari database.
+
+---
+
+### B. Menu Layanan Global (`Web Data > Menu Layanan`)
+Digunakan untuk mengelola katalog menu perawatan spa dan relaksasi yang ditawarkan kepada pengunjung website:
+1. **Standarisasi 3 Kategori Layanan**:
+   Sesuai arahan operasional manajemen, kategori layanan dikelompokkan secara baku ke dalam 3 kategori utama:
+   * **Body Massage**: Layanan pijat tubuh menyeluruh (misal: *The Royal Touch*, *Balinese Massage*, *Hot Stone Therapy*, *Secluded Relaxation*).
+   * **Foot Reflexology**: Layanan refleksi kaki dan punggung (misal: *Foot Relaxing*, *Back & Shoulder Massage*).
+   * **Addition**: Layanan tambahan / add-on perawatan (misal: *Body Scrub Boreh*, *Totok Wajah*, *Aromatherapy Oil Upgrade*).
+2. **Tambah / Ubah Menu Layanan**:
+   - Masukkan **Kode Layanan** (unik) dan **Nama Layanan**.
+   - Pilih **Kategori Layanan** (Body Massage, Foot Reflexology, atau Addition).
+   - Masukkan **Durasi Perawatan** (dalam menit, contoh: 60, 90, 120 menit).
+   - Isi kolom **Deskripsi Layanan** dan **Manfaat Perawatan (*Benefits*)**.
+   - Tentukan **Urutan Tampilan (`sort_order`)** pada halaman web.
+   - **Unggah Foto Layanan**: Unggah 1 foto representatif perawatan langsung ke Supabase Storage *bucket* `web-services` (maks. 5 MB).
+3. **Saklar Alih Aktif / Nonaktif (`active`)**:
+   - Layanan yang saklarnya dimatikan tidak akan muncul pada daftar menu website statis.
+4. **Kebijakan Bebas Harga (Zero-Price Standard)**:
+   - Formulir menu layanan sengaja tidak memuat kolom harga.
+   - Pada kartu layanan di website statis, harga tidak ditampilkan dan tombol *"Pilih Layanan Ini"* ditiadakan. Sebagai gantinya, pengunjung dapat melihat accordion daftar cabang mana saja yang menyediakan layanan tersebut.
+
+---
+
+### C. User Testimoni & Moderasi Ulasan (`Web Data > User Testimoni`)
+Fitur moderasi terpusat untuk memeriksa, menyetujui, atau menonaktifkan ulasan (*review*) yang dikirimkan oleh pelanggan/member resmi dari website statis:
+1. **Ketentuan Pengirim Ulasan**:
+   - Hanya pengunjung yang telah mendaftar/masuk sebagai **Member Resmi Zen** menggunakan akun Google mereka yang dapat menulis ulasan.
+   - Member diwajibkan memilih cabang yang dikunjungi, memberikan penilaian kepuasan, menulis komentar, dan dapat melampirkan foto kunjungan nyata langsung dari kamera ponsel atau galeri perangkat.
+2. **Filter & Pencarian Ulasan**:
+   - Tab **Semua**: Menampilkan seluruh ulasan yang masuk ke sistem.
+   - Tab **Menunggu Moderasi**: Menyaring ulasan baru yang berstatus `published = false` (memerlukan peninjauan admin sebelum tayang ke publik).
+   - Tab **Sudah Tayang**: Menyaring ulasan yang saat ini sedang aktif tampil di website statis (`published = true`).
+   - Kotak **Pencarian**: Mencari ulasan berdasarkan nama pelanggan, nama cabang, atau kata kunci dalam teks komentar.
+3. **Pemeriksaan Konten Ulasan**:
+   - **Identitas Member**: Menampilkan foto profil Google pelanggan, nama lengkap, dan email member.
+   - **Cabang Dikunjungi**: Nama cabang dan kota yang diulas.
+   - **Tingkat Kepuasan 5-Smile**: Sistem menggunakan 5 indikator emotikon Smile ekspresif (bukan bintang konvensional):
+     - 😠 **1: Sangat Kecewa**
+     - 🙁 **2: Kurang Puas**
+     - 😐 **3: Cukup / Netral**
+     - 🙂 **4: Puas**
+     - 😄 **5: Sangat Puas**
+   - **Pratinjau Foto Kunjungan**: Jika pelanggan melampirkan foto suasana gerai atau perawatan, thumbnail foto akan muncul. Klik thumbnail untuk membuka pratinjau foto resolusi penuh (*Photo Preview Modal*).
+4. **Saklar Alih Publikasi (`published`)**:
+   - Seluruh ulasan yang baru dikirim oleh member otomatis berstatus **Menunggu Moderasi** (`published = false`).
+   - Admin cukup menggeser saklar toggle **Tayang di Web** ke posisi **Aktif (Hijau)** untuk langsung menerbitkan ulasan ke website statis.
+   - Jika ditemukan komentar yang melanggar norma atau spam, admin cukup mematikan saklar tanpa perlu menghapus rekaman dari database audit.
+   - **Aturan Tayang Website**: Website statis secara otomatis hanya menampilkan **6 ulasan terbaru yang berstatus `published = true`**.
+
+---
+
+## 4. Pengadaan Barang (Procurement)
 
 ### A. Membuat Pesanan Pembelian / Purchase Order (PO)
 1. Buka menu **Penerimaan Barang (GR) > Pesanan Pembelian (PO)**.
@@ -135,7 +234,7 @@ Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, 
 
 ---
 
-## 4. Inventaris & Pengelolaan Stok
+## 5. Inventaris & Pengelolaan Stok
 
 ### A. Stock Opname (Penyesuaian Fisik Stok)
 1. Buka menu **Inventaris & Stok > Stock Opname**.
@@ -174,7 +273,7 @@ Gunakan formulir ini jika barang yang sebelumnya diambil untuk operasional dikem
 
 ---
 
-## 5. Transfer Stok (STO) Antar-Outlet
+## 6. Transfer Stok (STO) Antar-Outlet
 
 Modul ini memfasilitasi permintaan dan pengiriman logistik antar-cabang atau distribusi dari gudang pusat (*holding*) ke cabang-cabang Zen Family Spa.
 
@@ -234,7 +333,7 @@ Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purc
 
 ---
 
-## 6. Proses Produksi (Production Run)
+## 7. Proses Produksi (Production Run)
 
 Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: campuran massage oil aroma khusus, racikan scrub badan, dan lulur herbal) berdasarkan standar formula/resep:
 1. Buka menu **Produksi > Proses Produksi**.
@@ -251,7 +350,7 @@ Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: cam
 
 ---
 
-## 7. Keuangan & Kas/Bank (Finance)
+## 8. Keuangan & Kas/Bank (Finance)
 
 ### A. Transaksi Kas Masuk & Kas Keluar
 1. Buka menu **Keuangan > Kas & Bank**.
@@ -280,7 +379,7 @@ Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: cam
 
 ---
 
-## 8. Laporan & Rekapitulasi (Reports)
+## 9. Laporan & Rekapitulasi (Reports)
 
 Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, metrik ringkasan kartu, serta tombol **Ekspor CSV** untuk pengolahan lebih lanjut di Microsoft Excel:
 
@@ -298,7 +397,7 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 
 ---
 
-## 9. Tanya Jawab & Kendala Umum (Troubleshooting)
+## 10. Tanya Jawab & Kendala Umum (Troubleshooting)
 
 **1. Muncul pesan "Sesi telah berakhir" atau "Failed to load session"**
 - Muat ulang (*refresh*) halaman peramban web Anda (tekan **F5** atau **Ctrl + F5**). Jika masih berlanjut, lakukan Logout dan masuk kembali.
@@ -312,9 +411,15 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 **4. Kategori pemakaian tidak bisa dihapus**
 - Sesuai standar audit perusahaan, data kategori pemakaian dilindungi kebijakan *No-Delete*. Anda dapat menonaktifkannya dengan menggeser tombol alih status ke **Nonaktif** agar tidak muncul pada formulir pemakaian baru.
 
+**5. Ulasan tamu yang baru dikirim member belum muncul di website**
+- Setiap ulasan baru otomatis berstatus `Menunggu Moderasi` (`published = false`) demi menjaga kualitas dan etika konten. Buka menu **Web Data > User Testimoni**, periksa ulasan tersebut, lalu geser saklar **Tayang di Web** ke posisi aktif agar tampil di website statis.
+
+**6. Layanan spa tertentu tidak muncul di cabang saya pada website**
+- Buka menu **Master Data > Info Outlet** menggunakan akun Admin Cabang. Pada bagian **Layanan Tersedia di Outlet Ini**, centang layanan yang disediakan cabang Anda lalu klik Simpan. Layanan tersebut akan otomatis terdaftar sebagai cabang yang menyediakan layanan di website.
+
 ---
 
-## 10. Layanan Bantuan & Dukungan IT
+## 11. Layanan Bantuan & Dukungan IT
 
 Apabila Anda mengalami kendala teknis atau membutuhkan bantuan terkait hak akses akun, silakan hubungi tim IT Administrator:
 * **Email Dukungan IT**: `it-support@zenfamilyspa.id` / `borist@nababancloud.net`
