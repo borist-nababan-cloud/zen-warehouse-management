@@ -50,7 +50,8 @@ import {
   Moon,
   Sun,
   Globe,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -322,6 +323,12 @@ const webDataGroup: NavGroup = {
       title: 'Master Fasilitas',
       path: '/web/facilities',
       icon: Sparkles,
+      roleIds: [5, 8, 18, 13]
+    },
+    {
+      title: 'Galeri Foto',
+      path: '/web/gallery',
+      icon: Camera,
       roleIds: [5, 8, 18, 13]
     }
   ]

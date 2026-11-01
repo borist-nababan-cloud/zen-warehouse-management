@@ -86,6 +86,7 @@ import StoArReportPage from '@/pages/finance/StoArReportPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
+import { GalleryPage } from '@/pages/web/GalleryPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -858,6 +859,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
                 <MasterFacilitiesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/web/gallery"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
+                <GalleryPage />
               </ProtectedRoute>
             }
           />
