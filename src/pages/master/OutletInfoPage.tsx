@@ -25,7 +25,9 @@ import {
     CheckCircle2,
     XCircle,
     Info,
-    Sparkles
+    Sparkles,
+    BookOpen,
+    Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -59,6 +61,21 @@ export function OutletInfoPage() {
         custom_notes: string
     }
     const [outletFacilities, setOutletFacilities] = useState<OutletFacilityItem[]>([])
+
+    // Services Mapping State
+    interface OutletServiceItem {
+        service_id: string
+        service_code: string
+        name: string
+        category: string
+        duration_minutes: number
+        description?: string | null
+        benefits?: string | null
+        image_url?: string | null
+        is_available: boolean
+        custom_notes: string
+    }
+    const [outletServices, setOutletServices] = useState<OutletServiceItem[]>([])
 
     useEffect(() => {
         if (user?.kode_outlet) {
@@ -131,6 +148,37 @@ export function OutletInfoPage() {
                 }
             })
             setOutletFacilities(merged)
+
+            // Load all active web services and this outlet's mappings
+            const { data: allServices } = await supabase
+                .from('web_services')
+                .select('*')
+                .eq('active', true)
+                .order('sort_order', { ascending: true })
+
+            const { data: currentOutletServices } = await supabase
+                .from('web_outlet_services')
+                .select('*')
+                .eq('kode_outlet', outletCode)
+
+            const srvMap = new Map<string, any>((currentOutletServices || []).map((item: any) => [item.service_id, item]))
+
+            const mergedServices: OutletServiceItem[] = (allServices || []).map((s: any) => {
+                const existing = srvMap.get(s.id)
+                return {
+                    service_id: s.id,
+                    service_code: s.service_code,
+                    name: s.name,
+                    category: s.category,
+                    duration_minutes: s.duration_minutes || 60,
+                    description: s.description,
+                    benefits: s.benefits,
+                    image_url: s.image_url,
+                    is_available: existing ? existing.is_available : false,
+                    custom_notes: existing ? (existing.custom_notes || '') : ''
+                }
+            })
+            setOutletServices(mergedServices)
         } catch (error) {
             console.error('Failed to load outlet:', error)
             toast.error('Gagal memuat data outlet.')
@@ -226,6 +274,24 @@ export function OutletInfoPage() {
                     if (facError) {
                         console.error('Failed to update web_outlet_facilities:', facError)
                         toast.error('Gagal memperbarui fasilitas cabang: ' + facError.message)
+                    }
+                }
+
+                // Upsert outlet services mappings
+                if (outletServices.length > 0) {
+                    const upsertServicesData = outletServices.map((s) => ({
+                        kode_outlet: user.kode_outlet,
+                        service_id: s.service_id,
+                        is_available: s.is_available,
+                        custom_notes: s.custom_notes.trim() || null
+                    }))
+                    const { error: srvError } = await supabase
+                        .from('web_outlet_services')
+                        .upsert(upsertServicesData, { onConflict: 'kode_outlet,service_id' })
+
+                    if (srvError) {
+                        console.error('Failed to update web_outlet_services:', srvError)
+                        toast.error('Gagal memperbarui menu layanan cabang: ' + srvError.message)
                     }
                 }
             }
@@ -620,6 +686,103 @@ export function OutletInfoPage() {
                                                     onChange={(e) => {
                                                         const val = e.target.value
                                                         setOutletFacilities(prev =>
+                                                            prev.map((item, i) =>
+                                                                i === idx ? { ...item, custom_notes: val } : item
+                                                            )
+                                                        )
+                                                    }}
+                                                    className="h-8 text-xs bg-background"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Menu Layanan Tersedia di Cabang Ini (Koneksi Web Static) */}
+                    <Card className="border-border/60 shadow-sm bg-card">
+                        <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+                            <div className="flex items-center gap-2.5">
+                                <BookOpen className="h-5 w-5 text-primary" />
+                                <div>
+                                    <CardTitle className="text-base font-semibold text-foreground">
+                                        Menu Layanan Tersedia di Cabang Ini (Koneksi Web Static)
+                                    </CardTitle>
+                                    <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                                        Pilih menu perawatan yang tersedia di cabang ini. Sesuai ketentuan, tarif tidak ditampilkan di sini untuk mencegah kesalahpahaman pengunjung situs karena variasi tarif antar kota.
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            {outletServices.length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">
+                                    Memuat katalog master menu layanan...
+                                </p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {outletServices.map((srv, idx) => (
+                                        <div
+                                            key={srv.service_id}
+                                            className={`p-4 rounded-xl border transition-all ${
+                                                srv.is_available
+                                                    ? 'bg-primary/5 border-primary/40 shadow-sm'
+                                                    : 'bg-muted/10 border-border/60 opacity-75'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3 mb-2.5">
+                                                <div className="flex items-center gap-2.5">
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`srv_${srv.service_id}`}
+                                                        checked={srv.is_available}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked
+                                                            setOutletServices(prev =>
+                                                                prev.map((item, i) =>
+                                                                    i === idx ? { ...item, is_available: checked } : item
+                                                                )
+                                                            )
+                                                        }}
+                                                        className="w-4 h-4 text-primary rounded cursor-pointer mt-0.5"
+                                                    />
+                                                    <div>
+                                                        <label
+                                                            htmlFor={`srv_${srv.service_id}`}
+                                                            className="text-sm font-semibold text-foreground cursor-pointer flex items-center gap-1.5"
+                                                        >
+                                                            {srv.name}
+                                                        </label>
+                                                        <span className="text-[10px] text-muted-foreground font-mono">
+                                                            {srv.service_code}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                    <Badge variant="outline" className="text-[10px] font-normal">
+                                                        {srv.category}
+                                                    </Badge>
+                                                    <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                                        <Clock className="w-3 h-3 text-primary" />
+                                                        {srv.duration_minutes}m
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Custom notes input */}
+                                            <div className="space-y-1 pl-6">
+                                                <Label htmlFor={`note_srv_${srv.service_id}`} className="text-[11px] text-muted-foreground">
+                                                    Catatan Khusus Cabang (Opsional):
+                                                </Label>
+                                                <Input
+                                                    id={`note_srv_${srv.service_id}`}
+                                                    placeholder="Contoh: Tersedia di ruang VIP / Perlu reservasi awal"
+                                                    value={srv.custom_notes}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value
+                                                        setOutletServices(prev =>
                                                             prev.map((item, i) =>
                                                                 i === idx ? { ...item, custom_notes: val } : item
                                                             )

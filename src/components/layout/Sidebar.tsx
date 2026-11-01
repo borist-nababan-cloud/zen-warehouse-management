@@ -330,6 +330,12 @@ const webDataGroup: NavGroup = {
       path: '/web/gallery',
       icon: Camera,
       roleIds: [5, 8, 18, 13]
+    },
+    {
+      title: 'Menu Layanan',
+      path: '/web/services',
+      icon: BookOpen,
+      roleIds: [5, 8, 18, 13]
     }
   ]
 }
