@@ -85,6 +85,7 @@ import StoSettlementPage from '@/pages/finance/StoSettlementPage'
 import StoArReportPage from '@/pages/finance/StoArReportPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
+import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -845,6 +846,18 @@ function App() {
             element={
               <ProtectedRoute>
                 <ChangePasswordPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================================
+              WEB DATA MODULE (Web Facilities Master)
+             ========================================= */}
+          <Route
+            path="/web/facilities"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
+                <MasterFacilitiesPage />
               </ProtectedRoute>
             }
           />

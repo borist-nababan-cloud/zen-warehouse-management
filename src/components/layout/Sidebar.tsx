@@ -48,7 +48,9 @@ import {
   Undo2,
   Store,
   Moon,
-  Sun
+  Sun,
+  Globe,
+  Sparkles
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -310,6 +312,21 @@ const posDashboardGroups: NavGroup[] = [ // This is redundant now as it's includ
   // Let's check `allNavItems` definition.
 ]
 
+const webDataGroup: NavGroup = {
+  title: 'Web Data',
+  icon: Globe,
+  roleIds: [5, 8, 18, 13],
+  defaultOpen: false,
+  children: [
+    {
+      title: 'Master Fasilitas',
+      path: '/web/facilities',
+      icon: Sparkles,
+      roleIds: [5, 8, 18, 13]
+    }
+  ]
+}
+
 // Combine flat items and groups
 const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
@@ -322,6 +339,7 @@ const allNavItems: (NavItem | NavGroup)[] = [
   laundryGroup,
   ...posDashboardGroups,
   ...masterDataGroups,
+  webDataGroup,
 ]
 
 // ============================================

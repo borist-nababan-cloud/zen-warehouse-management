@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
 import { masterOutletService } from '@/services/masterOutletService'
+import { supabase } from '@/lib/supabase'
 import { MasterOutlet, OutletLocation } from '@/types/database'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,8 @@ import {
     ArrowLeftRight,
     CheckCircle2,
     XCircle,
-    Info
+    Info,
+    Sparkles
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -43,6 +45,20 @@ export function OutletInfoPage() {
     const [email, setEmail] = useState('')
     const [lat, setLat] = useState<string>('')
     const [lng, setLng] = useState<string>('')
+
+    // Facilities Mapping State
+    interface OutletFacilityItem {
+        facility_id: string
+        facility_code: string
+        name: string
+        category: string
+        icon_name?: string | null
+        image_url_1?: string | null
+        image_url_2?: string | null
+        is_available: boolean
+        custom_notes: string
+    }
+    const [outletFacilities, setOutletFacilities] = useState<OutletFacilityItem[]>([])
 
     useEffect(() => {
         if (user?.kode_outlet) {
@@ -85,6 +101,36 @@ export function OutletInfoPage() {
             } else {
                 toast.error('Data outlet tidak ditemukan.')
             }
+
+            // Load all active web facilities and this outlet's mappings
+            const { data: allFacs } = await supabase
+                .from('web_facilities')
+                .select('*')
+                .eq('is_active', true)
+                .order('sort_order', { ascending: true })
+
+            const { data: currentOutletFacs } = await supabase
+                .from('web_outlet_facilities')
+                .select('*')
+                .eq('kode_outlet', outletCode)
+
+            const facMap = new Map<string, any>((currentOutletFacs || []).map((item: any) => [item.facility_id, item]))
+
+            const merged: OutletFacilityItem[] = (allFacs || []).map((f: any) => {
+                const existing = facMap.get(f.id)
+                return {
+                    facility_id: f.id,
+                    facility_code: f.facility_code,
+                    name: f.name,
+                    category: f.category,
+                    icon_name: f.icon_name,
+                    image_url_1: f.image_url_1,
+                    image_url_2: f.image_url_2,
+                    is_available: existing ? existing.is_available : false,
+                    custom_notes: existing ? (existing.custom_notes || '') : ''
+                }
+            })
+            setOutletFacilities(merged)
         } catch (error) {
             console.error('Failed to load outlet:', error)
             toast.error('Gagal memuat data outlet.')
@@ -163,6 +209,24 @@ export function OutletInfoPage() {
                 toast.success('Informasi outlet berhasil diperbarui!')
                 if (result.data) {
                     setOutlet(result.data)
+                }
+
+                // Upsert outlet facilities mappings
+                if (outletFacilities.length > 0) {
+                    const upsertData = outletFacilities.map((f) => ({
+                        kode_outlet: user.kode_outlet,
+                        facility_id: f.facility_id,
+                        is_available: f.is_available,
+                        custom_notes: f.custom_notes.trim() || null
+                    }))
+                    const { error: facError } = await supabase
+                        .from('web_outlet_facilities')
+                        .upsert(upsertData, { onConflict: 'kode_outlet,facility_id' })
+
+                    if (facError) {
+                        console.error('Failed to update web_outlet_facilities:', facError)
+                        toast.error('Gagal memperbarui fasilitas cabang: ' + facError.message)
+                    }
                 }
             }
         } catch (error) {
@@ -482,6 +546,92 @@ export function OutletInfoPage() {
                                     </div>
                                 )}
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Fasilitas Tersedia di Cabang Ini (Koneksi Web Static) */}
+                    <Card className="border-border/60 shadow-sm bg-card">
+                        <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+                            <div className="flex items-center gap-2.5">
+                                <Sparkles className="h-5 w-5 text-primary" />
+                                <div>
+                                    <CardTitle className="text-base font-semibold text-foreground">
+                                        Fasilitas Tersedia di Cabang Ini (Koneksi Web Static)
+                                    </CardTitle>
+                                    <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                                        Pilih fasilitas apa saja yang aktif di cabang Anda beserta catatan spesifik. Data ini langsung tampil di website resmi Zen Family Spa.
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            {outletFacilities.length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">
+                                    Memuat katalog master fasilitas...
+                                </p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {outletFacilities.map((fac, idx) => (
+                                        <div
+                                            key={fac.facility_id}
+                                            className={`p-4 rounded-xl border transition-all ${
+                                                fac.is_available
+                                                    ? 'bg-primary/5 border-primary/40 shadow-sm'
+                                                    : 'bg-muted/10 border-border/60 opacity-75'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3 mb-2.5">
+                                                <div className="flex items-center gap-2.5">
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`fac_${fac.facility_id}`}
+                                                        checked={fac.is_available}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked
+                                                            setOutletFacilities(prev =>
+                                                                prev.map((item, i) =>
+                                                                    i === idx ? { ...item, is_available: checked } : item
+                                                                )
+                                                            )
+                                                        }}
+                                                        className="w-4 h-4 text-primary rounded cursor-pointer mt-0.5"
+                                                    />
+                                                    <label
+                                                        htmlFor={`fac_${fac.facility_id}`}
+                                                        className="text-sm font-semibold text-foreground cursor-pointer flex items-center gap-1.5"
+                                                    >
+                                                        {fac.name}
+                                                    </label>
+                                                </div>
+                                                <Badge variant="outline" className="text-[10px] shrink-0 font-normal">
+                                                    {fac.category}
+                                                </Badge>
+                                            </div>
+
+                                            {/* Custom notes input */}
+                                            <div className="space-y-1 pl-6">
+                                                <Label htmlFor={`note_${fac.facility_id}`} className="text-[11px] text-muted-foreground">
+                                                    Catatan Khusus Cabang (Opsional):
+                                                </Label>
+                                                <Input
+                                                    id={`note_${fac.facility_id}`}
+                                                    placeholder="Contoh: Tersedia 3 unit kamar VIP"
+                                                    value={fac.custom_notes}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value
+                                                        setOutletFacilities(prev =>
+                                                            prev.map((item, i) =>
+                                                                i === idx ? { ...item, custom_notes: val } : item
+                                                            )
+                                                        )
+                                                    }}
+                                                    className="h-8 text-xs bg-background"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
