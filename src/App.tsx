@@ -88,6 +88,7 @@ import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
 import { GalleryPage } from '@/pages/web/GalleryPage'
 import { ServicesMenuPage } from '@/pages/web/ServicesMenuPage'
+import { UserTestimonialsPage } from '@/pages/web/UserTestimonialsPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -876,6 +877,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
                 <ServicesMenuPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/web/testimonials"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
+                <UserTestimonialsPage />
               </ProtectedRoute>
             }
           />

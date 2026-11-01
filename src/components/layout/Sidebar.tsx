@@ -51,7 +51,8 @@ import {
   Sun,
   Globe,
   Sparkles,
-  Camera
+  Camera,
+  MessageSquareQuote
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -335,6 +336,12 @@ const webDataGroup: NavGroup = {
       title: 'Menu Layanan',
       path: '/web/services',
       icon: BookOpen,
+      roleIds: [5, 8, 18, 13]
+    },
+    {
+      title: 'User Testimoni',
+      path: '/web/testimonials',
+      icon: MessageSquareQuote,
       roleIds: [5, 8, 18, 13]
     }
   ]
