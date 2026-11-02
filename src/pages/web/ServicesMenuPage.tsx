@@ -23,10 +23,14 @@ export interface WebService {
   id: string
   service_code: string
   name: string
+  name_en?: string | null
   category: 'Body Massage' | 'Foot Reflexology' | 'Addition'
+  category_en?: string | null
   duration_minutes: number
   description?: string | null
+  description_en?: string | null
   benefits?: string | null
+  benefits_en?: string[] | null
   image_url?: string | null
   active: boolean
   sort_order: number
@@ -224,10 +228,14 @@ export function ServicesMenuPage() {
   const [formData, setFormData] = useState({
     service_code: '',
     name: '',
+    name_en: '',
     category: 'Body Massage' as 'Body Massage' | 'Foot Reflexology' | 'Addition',
+    category_en: '',
     duration_minutes: 60,
     description: '',
+    description_en: '',
     benefits: '',
+    benefits_en: '',
     image_url: '',
     active: true,
     sort_order: 10
@@ -281,10 +289,14 @@ export function ServicesMenuPage() {
     setFormData({
       service_code: `SRV-${Date.now().toString().slice(-4)}`,
       name: '',
+      name_en: '',
       category: 'Body Massage',
+      category_en: '',
       duration_minutes: 60,
       description: '',
+      description_en: '',
       benefits: '',
+      benefits_en: '',
       image_url: '',
       active: true,
       sort_order: maxSort + 10
@@ -300,13 +312,21 @@ export function ServicesMenuPage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
 
+    const benefitsEnStr = Array.isArray(item.benefits_en)
+      ? item.benefits_en.join(', ')
+      : (typeof item.benefits_en === 'string' ? item.benefits_en : '')
+
     setFormData({
       service_code: item.service_code,
       name: item.name,
+      name_en: item.name_en || '',
       category: item.category,
+      category_en: item.category_en || '',
       duration_minutes: item.duration_minutes || 60,
       description: item.description || '',
+      description_en: item.description_en || '',
       benefits: item.benefits || '',
+      benefits_en: benefitsEnStr,
       image_url: item.image_url || '',
       active: item.active,
       sort_order: item.sort_order || 10
@@ -373,13 +393,21 @@ export function ServicesMenuPage() {
         toast.dismiss('upload-progress')
       }
 
+      const benefitsEnArray = formData.benefits_en.trim()
+        ? formData.benefits_en.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean)
+        : null
+
       const payload = {
         service_code: formData.service_code.trim(),
         name: formData.name.trim(),
+        name_en: formData.name_en.trim() || null,
         category: formData.category,
+        category_en: formData.category_en.trim() || null,
         duration_minutes: Number(formData.duration_minutes) || 60,
         description: formData.description.trim() || null,
+        description_en: formData.description_en.trim() || null,
         benefits: formData.benefits.trim() || null,
+        benefits_en: benefitsEnArray && benefitsEnArray.length > 0 ? benefitsEnArray : null,
         image_url: finalImageUrl || null,
         active: formData.active,
         sort_order: Number(formData.sort_order) || 10,
@@ -662,6 +690,11 @@ export function ServicesMenuPage() {
                         <div className="font-semibold text-sm text-[#3C3C32] dark:text-[#EBE6DF]">
                           {item.name}
                         </div>
+                        {item.name_en && (
+                          <div className="text-[11px] font-medium text-[#889D35]">
+                            EN: {item.name_en}
+                          </div>
+                        )}
                         <div className="font-mono text-[11px] text-muted-foreground">
                           {item.service_code}
                         </div>
@@ -677,6 +710,11 @@ export function ServicesMenuPage() {
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-[#889D35]/15 text-[#6E8027] dark:text-[#A3B84E]">
                           {item.category}
                         </span>
+                        {item.category_en && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            EN: {item.category_en}
+                          </div>
+                        )}
                       </td>
 
                       {/* Duration */}
@@ -885,6 +923,70 @@ export function ServicesMenuPage() {
                     className="h-9 text-xs border-[#D2C0A7] bg-white dark:bg-[#25251F]"
                     disabled={isSaving}
                   />
+                </div>
+
+                {/* English Version Section (Optional) */}
+                <div className="p-3.5 rounded-xl border border-[#D2C0A7]/80 bg-[#F8F5F1]/80 dark:bg-[#191914]/80 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#889D35] uppercase tracking-wider flex items-center gap-1.5">
+                      🌐 Versi Bahasa Inggris (English — Opsional)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[#3C3C32] dark:text-[#EBE6DF]">
+                        Nama Layanan (EN)
+                      </label>
+                      <Input
+                        value={formData.name_en}
+                        onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                        placeholder="e.g. Royal Zen Body Massage"
+                        className="h-9 text-xs border-[#D2C0A7] bg-white dark:bg-[#25251F]"
+                        disabled={isSaving}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[#3C3C32] dark:text-[#EBE6DF]">
+                        Kategori (EN)
+                      </label>
+                      <Input
+                        value={formData.category_en}
+                        onChange={(e) => setFormData({ ...formData, category_en: e.target.value })}
+                        placeholder="e.g. Body Massage / Foot Reflexology"
+                        className="h-9 text-xs border-[#D2C0A7] bg-white dark:bg-[#25251F]"
+                        disabled={isSaving}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#3C3C32] dark:text-[#EBE6DF]">
+                      Deskripsi Perawatan (EN)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.description_en}
+                      onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
+                      placeholder="e.g. Traditional full-body deep relaxation therapy combining rhythmic palm pressure..."
+                      className="w-full p-2.5 rounded-md border border-[#D2C0A7] bg-white dark:bg-[#25251F] text-xs text-[#3C3C32] dark:text-[#EBE6DF] focus:outline-hidden focus:ring-1 focus:ring-[#889D35]"
+                      disabled={isSaving}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#3C3C32] dark:text-[#EBE6DF]">
+                      Manfaat Utama (EN — pisahkan dengan koma)
+                    </label>
+                    <Input
+                      value={formData.benefits_en}
+                      onChange={(e) => setFormData({ ...formData, benefits_en: e.target.value })}
+                      placeholder="e.g. Relieves muscle tension, Promotes blood circulation, Deep relaxation"
+                      className="h-9 text-xs border-[#D2C0A7] bg-white dark:bg-[#25251F]"
+                      disabled={isSaving}
+                    />
+                  </div>
                 </div>
 
                 {/* Image Upload Component */}

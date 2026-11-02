@@ -25,7 +25,7 @@
  */
 
 
-export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18
+export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19
 
 /**
  * Legacy Role Names (for backward compatibility)
@@ -48,6 +48,7 @@ export type UserRole =
   | 'role_16'
   | 'member'
   | 'web_admin'
+  | 'reception'
 
 /**
  * Map RoleId to UserRole string
@@ -71,6 +72,7 @@ export const ROLE_ID_TO_NAME: Record<RoleId, string> = {
   16: 'role_16',
   17: 'member',
   18: 'web_admin',
+  19: 'reception',
 }
 
 /**
@@ -96,6 +98,7 @@ export const ROLE_NAME_TO_ID: Record<string, RoleId> = {
   role_16: 16,
   member: 17,
   web_admin: 18,
+  reception: 19,
 }
 
 // ============================================
@@ -791,6 +794,7 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   16: 'Role 16',
   17: 'Member (Pelanggan)',
   18: 'Web Admin',
+  19: 'Resepsionis Cabang',
 }
 
 /**
@@ -819,6 +823,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   16: [],                                                                     // Pending ROLE_MENU_PERMISSION
   17: [],                                                                     // MEMBER - blocked from login
   18: [],                                                                     // WEB_ADMIN - pending ROLE_MENU_PERMISSION
+  19: ['crm'],                                                                // Resepsionis Cabang
 }
 
 /**

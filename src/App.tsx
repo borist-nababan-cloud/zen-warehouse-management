@@ -89,6 +89,8 @@ import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
 import { GalleryPage } from '@/pages/web/GalleryPage'
 import { ServicesMenuPage } from '@/pages/web/ServicesMenuPage'
 import { UserTestimonialsPage } from '@/pages/web/UserTestimonialsPage'
+import { CrmInboxOutletPage } from '@/pages/crm/CrmInboxOutletPage'
+import { CrmInboxHoldingPage } from '@/pages/crm/CrmInboxHoldingPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -885,6 +887,24 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
                 <UserTestimonialsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* CRM Routes */}
+          <Route
+            path="/crm/inbox-outlet"
+            element={
+              <ProtectedRoute allowedRoles={[6, 19, 8, 18]}>
+                <CrmInboxOutletPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/crm/inbox-holding"
+            element={
+              <ProtectedRoute allowedRoles={[10, 8, 18]}>
+                <CrmInboxHoldingPage />
               </ProtectedRoute>
             }
           />

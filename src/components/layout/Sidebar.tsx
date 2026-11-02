@@ -52,7 +52,10 @@ import {
   Globe,
   Sparkles,
   Camera,
-  MessageSquareQuote
+  MessageSquareQuote,
+  MessageSquare,
+  MessageCircle,
+  Headphones
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -347,6 +350,27 @@ const webDataGroup: NavGroup = {
   ]
 }
 
+const crmGroup: NavGroup = {
+  title: 'CRM',
+  icon: MessageSquare,
+  roleIds: [6, 19, 10, 8, 18],
+  defaultOpen: false,
+  children: [
+    {
+      title: 'Inbox Outlet',
+      path: '/crm/inbox-outlet',
+      icon: MessageCircle,
+      roleIds: [6, 19, 8, 18]
+    },
+    {
+      title: 'Inbox',
+      path: '/crm/inbox-holding',
+      icon: Headphones,
+      roleIds: [10, 8, 18]
+    }
+  ]
+}
+
 // Combine flat items and groups
 const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
@@ -359,6 +383,7 @@ const allNavItems: (NavItem | NavGroup)[] = [
   laundryGroup,
   ...posDashboardGroups,
   ...masterDataGroups,
+  crmGroup,
   webDataGroup,
 ]
 

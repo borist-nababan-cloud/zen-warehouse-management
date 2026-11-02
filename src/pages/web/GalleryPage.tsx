@@ -21,8 +21,11 @@ import { toast } from 'sonner'
 export interface WebGallery {
   id: string
   title: string
+  title_en?: string | null
   description?: string | null
+  description_en?: string | null
   category: string
+  category_en?: string | null
   image_url: string
   kode_outlet?: string | null
   active: boolean
@@ -239,8 +242,11 @@ export function GalleryPage() {
   // Form Fields
   const [formData, setFormData] = useState({
     title: '',
+    title_en: '',
     category: 'Suasana & Interior',
+    category_en: '',
     description: '',
+    description_en: '',
     image_url: '',
     active: true,
     sort_order: 10
@@ -283,8 +289,11 @@ export function GalleryPage() {
     setEditingId(null)
     setFormData({
       title: '',
+      title_en: '',
       category: 'Suasana & Interior',
+      category_en: '',
       description: '',
+      description_en: '',
       image_url: '',
       active: true,
       sort_order: (galleries.length + 1) * 10
@@ -299,8 +308,11 @@ export function GalleryPage() {
     setEditingId(item.id)
     setFormData({
       title: item.title,
+      title_en: item.title_en || '',
       category: item.category,
+      category_en: item.category_en || '',
       description: item.description || '',
+      description_en: item.description_en || '',
       image_url: item.image_url,
       active: item.active,
       sort_order: item.sort_order
@@ -374,8 +386,11 @@ export function GalleryPage() {
 
       const payload = {
         title: formData.title.trim(),
+        title_en: formData.title_en.trim() || null,
         category: formData.category,
+        category_en: formData.category_en.trim() || null,
         description: formData.description.trim() || null,
+        description_en: formData.description_en.trim() || null,
         image_url: finalImageUrl,
         active: formData.active,
         sort_order: Number(formData.sort_order) || 10,
@@ -610,9 +625,14 @@ export function GalleryPage() {
                 {/* Content */}
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-serif font-bold text-base text-[#3C3C32] dark:text-[#EBE6DF] mb-1">
+                    <h3 className="font-serif font-bold text-base text-[#3C3C32] dark:text-[#EBE6DF] mb-0.5">
                       {item.title}
                     </h3>
+                    {item.title_en && (
+                      <div className="text-xs font-medium text-[#889D35] mb-1">
+                        EN: {item.title_en}
+                      </div>
+                    )}
                     {item.description ? (
                       <p className="text-xs text-gray-500 dark:text-[#A6A095] line-clamp-2">
                         {item.description}
@@ -743,6 +763,52 @@ export function GalleryPage() {
                     placeholder="Contoh: Pencahayaan temaram dan aromaterapi serai yang menenangkan batin..."
                     className="w-full p-2.5 text-sm rounded-md border border-[#E5DACB] dark:border-[#38382E] bg-white dark:bg-[#191914]"
                   />
+                </div>
+
+                {/* English Version Section (Optional) */}
+                <div className="p-3.5 rounded-xl border border-[#D2C0A7]/80 bg-[#F8F5F1]/80 dark:bg-[#191914]/80 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#889D35] uppercase tracking-wider flex items-center gap-1.5">
+                      🌐 Versi Bahasa Inggris (English — Opsional)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-[#3C3C32] dark:text-[#EBE6DF]">
+                        Judul Foto (EN)
+                      </label>
+                      <Input
+                        value={formData.title_en}
+                        onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
+                        placeholder="e.g. Private Treatment Suite"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-[#3C3C32] dark:text-[#EBE6DF]">
+                        Kategori (EN)
+                      </label>
+                      <Input
+                        value={formData.category_en}
+                        onChange={(e) => setFormData({ ...formData, category_en: e.target.value })}
+                        placeholder="e.g. Ambience & Interior"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-[#3C3C32] dark:text-[#EBE6DF]">
+                      Deskripsi / Caption (EN)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.description_en}
+                      onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
+                      placeholder="e.g. Dim warm lighting and calming lemongrass aromatherapy for inner peace..."
+                      className="w-full p-2.5 text-sm rounded-md border border-[#E5DACB] dark:border-[#38382E] bg-white dark:bg-[#191914]"
+                    />
+                  </div>
                 </div>
 
                 {/* Active switch */}

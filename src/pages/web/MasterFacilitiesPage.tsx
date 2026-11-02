@@ -30,8 +30,11 @@ export interface WebFacility {
   id: string
   facility_code: string
   name: string
+  name_en?: string | null
   category: string
+  category_en?: string | null
   description?: string | null
+  description_en?: string | null
   icon_name?: string | null
   image_url_1?: string | null
   image_url_2?: string | null
@@ -266,8 +269,11 @@ export function MasterFacilitiesPage() {
   const [formData, setFormData] = useState({
     facility_code: '',
     name: '',
+    name_en: '',
     category: 'Ruang Perawatan',
+    category_en: '',
     description: '',
+    description_en: '',
     icon_name: 'Sparkles',
     image_url_1: '',
     image_url_2: '',
@@ -319,8 +325,11 @@ export function MasterFacilitiesPage() {
     setFormData({
       facility_code: `FAC-${Date.now().toString().slice(-4)}`,
       name: '',
+      name_en: '',
       category: 'Ruang Perawatan',
+      category_en: '',
       description: '',
+      description_en: '',
       icon_name: 'Sparkles',
       image_url_1: '',
       image_url_2: '',
@@ -341,8 +350,11 @@ export function MasterFacilitiesPage() {
     setFormData({
       facility_code: item.facility_code,
       name: item.name,
+      name_en: item.name_en || '',
       category: item.category,
+      category_en: item.category_en || '',
       description: item.description || '',
+      description_en: item.description_en || '',
       icon_name: item.icon_name || 'Sparkles',
       image_url_1: item.image_url_1 || '',
       image_url_2: item.image_url_2 || '',
@@ -436,8 +448,11 @@ export function MasterFacilitiesPage() {
       const payload = {
         facility_code: formData.facility_code.trim().toUpperCase(),
         name: formData.name.trim(),
+        name_en: formData.name_en.trim() || null,
         category: formData.category,
+        category_en: formData.category_en.trim() || null,
         description: formData.description.trim() || null,
+        description_en: formData.description_en.trim() || null,
         icon_name: formData.icon_name,
         image_url_1: finalUrl1,
         image_url_2: finalUrl2,
@@ -651,6 +666,11 @@ export function MasterFacilitiesPage() {
                           <div className="font-semibold text-sm text-[#3C3C32] dark:text-[#EBE6DF]">
                             {f.name}
                           </div>
+                          {f.name_en && (
+                            <div className="text-[11px] text-[#889D35] font-medium italic">
+                              EN: {f.name_en}
+                            </div>
+                          )}
                           <div className="text-[11px] text-gray-500 flex items-center gap-1.5 mt-0.5">
                             <span className="px-1.5 py-0.2 rounded bg-gray-100 dark:bg-[#2A2A22] text-gray-600 dark:text-[#A6A095]">
                               {f.category}
@@ -840,6 +860,52 @@ export function MasterFacilitiesPage() {
                   placeholder="Jelaskan kenyamanan fasilitas ini bagi tamu..."
                   className="w-full p-2.5 text-sm rounded-md border border-[#E5DACB] dark:border-[#38382E] bg-white dark:bg-[#191914]"
                 />
+              </div>
+
+              {/* English Version Section (Optional) */}
+              <div className="p-3.5 rounded-xl border border-[#D2C0A7]/80 bg-[#F8F5F1]/80 dark:bg-[#191914]/80 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#889D35] uppercase tracking-wider flex items-center gap-1.5">
+                    🌐 Versi Bahasa Inggris (English — Opsional)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-[#3C3C32] dark:text-[#EBE6DF]">
+                      Nama Fasilitas (EN)
+                    </label>
+                    <Input
+                      value={formData.name_en}
+                      onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                      placeholder="e.g. Herbal Jacuzzi & Bathtub"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-[#3C3C32] dark:text-[#EBE6DF]">
+                      Kategori (EN)
+                    </label>
+                    <Input
+                      value={formData.category_en}
+                      onChange={(e) => setFormData({ ...formData, category_en: e.target.value })}
+                      placeholder="e.g. Treatment Suite / Comfort & Hygiene"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-[#3C3C32] dark:text-[#EBE6DF]">
+                    Deskripsi Fasilitas (EN)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formData.description_en}
+                    onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
+                    placeholder="e.g. Private soaking tub infused with aromatherapy mineral salts and natural botanicals..."
+                    className="w-full p-2.5 text-sm rounded-md border border-[#E5DACB] dark:border-[#38382E] bg-white dark:bg-[#191914]"
+                  />
+                </div>
               </div>
 
               {/* 2 Supabase Storage Image Upload Slots */}
