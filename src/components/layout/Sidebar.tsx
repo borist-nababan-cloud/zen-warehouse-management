@@ -51,6 +51,7 @@ import {
   Sun,
   Globe,
   Sparkles,
+  Megaphone,
   Camera,
   MessageSquareQuote,
   MessageSquare,
@@ -339,6 +340,12 @@ const webDataGroup: NavGroup = {
       title: 'Menu Layanan',
       path: '/web/services',
       icon: BookOpen,
+      roleIds: [5, 8, 18, 13]
+    },
+    {
+      title: 'Berita & Promo',
+      path: '/web/news-promo',
+      icon: Megaphone,
       roleIds: [5, 8, 18, 13]
     },
     {

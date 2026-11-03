@@ -89,6 +89,7 @@ import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
 import { GalleryPage } from '@/pages/web/GalleryPage'
 import { ServicesMenuPage } from '@/pages/web/ServicesMenuPage'
 import { UserTestimonialsPage } from '@/pages/web/UserTestimonialsPage'
+import { NewsPromoPage } from '@/pages/web/NewsPromoPage'
 import { CrmInboxOutletPage } from '@/pages/crm/CrmInboxOutletPage'
 import { CrmInboxHoldingPage } from '@/pages/crm/CrmInboxHoldingPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
@@ -879,6 +880,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
                 <ServicesMenuPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/web/news-promo"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 18, 13]}>
+                <NewsPromoPage />
               </ProtectedRoute>
             }
           />
