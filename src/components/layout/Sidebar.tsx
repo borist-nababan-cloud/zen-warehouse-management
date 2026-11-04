@@ -56,7 +56,12 @@ import {
   MessageSquareQuote,
   MessageSquare,
   MessageCircle,
-  Headphones
+  Headphones,
+  CalendarRange,
+  Target,
+  UserCheck,
+  ListChecks,
+  FolderTree
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -106,21 +111,22 @@ interface NavGroup {
  * 9  - UNASSIGNED (no access)
  */
 const navItems: NavItem[] = [
-  // POS Dashboard temporarily disabled - will be modified/updated later
-  /*
   {
     title: 'POS Dashboard',
     path: '#',
     icon: Activity,
-    roleIds: [5, 6, 8, 10],
+    roleIds: [5, 8, 13],
     children: [
-      { title: 'Keuangan', path: '/dashboard/financial', icon: DollarSign, roleIds: [5, 6, 8, 10] },
-      { title: 'Operasional', path: '/dashboard/operational', icon: Activity, roleIds: [5, 6, 8, 10] },
-      { title: 'Bauran Produk', path: '/dashboard/product-mix', icon: Boxes, roleIds: [5, 6, 8, 10] },
-      { title: 'Jam Sibuk', path: '/dashboard/peak-hours', icon: Clock, roleIds: [5, 6, 8, 10] },
+      { title: 'Live Report', path: '/pos-dashboard/live', icon: Activity, roleIds: [5, 8, 13] },
+      { title: 'Periodic Report', path: '/pos-dashboard/periodic', icon: CalendarRange, roleIds: [5, 8, 13] },
+      { title: 'Master Target', path: '/pos-dashboard/master-target', icon: Target, roleIds: [5, 8, 13] },
+      // Submenu lama tetap dinonaktifkan / disembunyikan sesuai arahan:
+      // { title: 'Keuangan', path: '/dashboard/financial', icon: DollarSign, roleIds: [5, 6, 8, 10] },
+      // { title: 'Operasional', path: '/dashboard/operational', icon: Activity, roleIds: [5, 6, 8, 10] },
+      // { title: 'Bauran Produk', path: '/dashboard/product-mix', icon: Boxes, roleIds: [5, 6, 8, 10] },
+      // { title: 'Jam Sibuk', path: '/dashboard/peak-hours', icon: Clock, roleIds: [5, 6, 8, 10] },
     ]
   },
-  */
   {
     title: 'Dasbor Utama',
     path: '/dashboard',
@@ -360,14 +366,14 @@ const webDataGroup: NavGroup = {
 const crmGroup: NavGroup = {
   title: 'CRM',
   icon: MessageSquare,
-  roleIds: [6, 19, 10, 8, 18],
+  roleIds: [5, 6, 8, 10, 13, 18, 19],
   defaultOpen: false,
   children: [
     {
       title: 'Inbox Outlet',
       path: '/crm/inbox-outlet',
       icon: MessageCircle,
-      roleIds: [6, 19, 8, 18]
+      roleIds: [5, 6, 8, 13, 19]
     },
     {
       title: 'Inbox',
@@ -376,6 +382,40 @@ const crmGroup: NavGroup = {
       roleIds: [10, 8, 18]
     }
   ]
+}
+
+
+const hrdGroup: NavGroup = {
+  title: 'HRD',
+  icon: UserCheck,
+  roleIds: [5, 6, 8, 13, 14, 16, 19],
+  defaultOpen: false,
+  children: [
+    {
+      title: 'Kategori Evaluasi TR',
+      path: '/hrd/tr-kategori',
+      icon: FolderTree,
+      roleIds: [8, 16],
+    },
+    {
+      title: 'Variabel Evaluasi TR',
+      path: '/hrd/tr-variabel',
+      icon: ListChecks,
+      roleIds: [8, 16],
+    },
+    {
+      title: 'Buat Evaluasi TR',
+      path: '/hrd/tr-buat-evaluasi',
+      icon: UserCheck,
+      roleIds: [8, 16],
+    },
+    {
+      title: 'Laporan Evaluasi TR',
+      path: '/hrd/tr-laporan',
+      icon: FileText,
+      roleIds: [5, 6, 8, 13, 14, 19],
+    },
+  ],
 }
 
 // Combine flat items and groups
@@ -392,6 +432,7 @@ const allNavItems: (NavItem | NavGroup)[] = [
   ...masterDataGroups,
   crmGroup,
   webDataGroup,
+  hrdGroup,
 ]
 
 // ============================================

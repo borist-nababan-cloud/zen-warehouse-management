@@ -37,10 +37,11 @@ database-docs/
 my-cred/
 scripts/
 
-# Docs: Ignore all internal docs except official Coolify guide, User Guide, and README
+# Docs: Ignore all internal docs except official Coolify guide, User Guide, Menu Access Matrix, and README
 docs/*
 !docs/DEPLOY_COOLIFY.md
 !docs/USER_GUIDE.md
+!docs/MENU_ACCESS_MATRIX.md
 frontendplan.md
 
 # Database dumps and scripts

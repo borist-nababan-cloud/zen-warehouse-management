@@ -23,29 +23,29 @@ export function CrmInboxOutletPage() {
   const [outlets, setOutlets] = useState<{ kode_outlet: string; nama_outlet: string }[]>([])
   const [selectedOutlet, setSelectedOutlet] = useState<string>('')
 
-  // Determine user outlet permissions
-  const isSuperOrWebAdmin = user?.user_role === 8 || user?.user_role === 18
+  // Determine user outlet permissions (Roles 5, 8, 13 have multi-outlet access)
+  const isMultiOutletRole = user?.user_role === 8 || user?.user_role === 5 || user?.user_role === 13
   const currentOutlet = useMemo(() => {
-    if (isSuperOrWebAdmin) {
-      return selectedOutlet || (user?.kode_outlet || '')
+    if (isMultiOutletRole) {
+      return selectedOutlet
     }
     return user?.kode_outlet || ''
-  }, [user, isSuperOrWebAdmin, selectedOutlet])
+  }, [user, isMultiOutletRole, selectedOutlet])
 
-  // Fetch outlet master if admin
+  // Fetch outlet master if multi-outlet role
   useEffect(() => {
-    if (!isSuperOrWebAdmin) return
+    if (!isMultiOutletRole) return
     const fetchOutlets = async () => {
       const { data } = await supabase
-        .from('mstr_outlet')
-        .select('kode_outlet, nama_outlet')
-        .order('nama_outlet')
+        .from('master_outlet')
+        .select('kode_outlet, name_outlet')
+        .order('name_outlet')
       if (data) {
-        setOutlets(data)
+        setOutlets(data.map((o) => ({ kode_outlet: o.kode_outlet, nama_outlet: o.name_outlet })))
       }
     }
     fetchOutlets()
-  }, [isSuperOrWebAdmin])
+  }, [isMultiOutletRole])
 
   // Fetch chat rooms for this outlet
   const fetchRooms = useCallback(async () => {
@@ -161,7 +161,7 @@ export function CrmInboxOutletPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isSuperOrWebAdmin && outlets.length > 0 && (
+            {isMultiOutletRole && outlets.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-zinc-400" />
                 <select

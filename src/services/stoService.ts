@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
-import { 
-  StoOrder, 
-  StoStatus, 
+import {
+  StoOrder,
+  StoStatus,
   StoRecipientStatus,
   StoRequest,
   StoRequestStatus
@@ -174,12 +174,12 @@ export const stoService = {
   async createSto(payload: CreateStoPayload) {
     // A. Insert Header
     const total_items_price = payload.items.reduce((sum, item) => sum + (item.qty_requested * item.price_unit), 0)
-    
+
     // Generate Doc Number (Simple client-side gen for now, ideally DB trigger)
     const year = new Date().getFullYear().toString().slice(-2)
     const month = (new Date().getMonth() + 1).toString().padStart(2, '0')
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-    const doc_number = `STO-${year}${month}-${random}` 
+    const doc_number = `STO-${year}${month}-${random}`
 
     const { data: header, error: headerError } = await supabase
       .from('sto_orders')
@@ -330,7 +330,7 @@ export const stoService = {
   async createShipment(payload: ShipStoPayload) {
     // A. Create Shipment Header
     const doc_number = `SHP-${new Date().getTime().toString().slice(-6)}`
-    
+
     const { data: shipment, error: headerError } = await supabase
       .from('sto_shipments')
       .insert({
@@ -355,7 +355,7 @@ export const stoService = {
     const { error: itemsError } = await supabase
       .from('sto_shipment_items')
       .insert(itemsData)
-    
+
     if (itemsError) throw itemsError
 
     // C. Update STO Status
@@ -409,7 +409,35 @@ export const stoService = {
     const sto = await this.getStoDetail(stoId)
     if (!sto) throw new Error("STO not found")
 
-    const totalAmount = (sto.total_items_price || 0) + (sto.shipping_cost || 0)
+    // Calculate actual total based on received items (if available) or shipped items
+    let itemsTotal = 0
+    if (sto.sto_receipts && sto.sto_receipts.length > 0) {
+      const itemPriceMap = new Map<string, number>()
+      sto.sto_items?.forEach((item: any) => {
+        itemPriceMap.set(item.id, Number(item.price_unit) || 0)
+      })
+      sto.sto_receipts.forEach((receipt: any) => {
+        receipt.sto_receipt_items?.forEach((recItem: any) => {
+          const price = itemPriceMap.get(recItem.sto_item_id) || 0
+          itemsTotal += (Number(recItem.qty_received) || 0) * price
+        })
+      })
+    } else if (sto.sto_shipments && sto.sto_shipments.length > 0) {
+      const itemPriceMap = new Map<string, number>()
+      sto.sto_items?.forEach((item: any) => {
+        itemPriceMap.set(item.id, Number(item.price_unit) || 0)
+      })
+      sto.sto_shipments.forEach((shipment: any) => {
+        shipment.sto_shipment_items?.forEach((shipItem: any) => {
+          const price = itemPriceMap.get(shipItem.sto_item_id) || 0
+          itemsTotal += (Number(shipItem.qty_shipped) || 0) * price
+        })
+      })
+    } else {
+      itemsTotal = sto.total_items_price || 0
+    }
+
+    const totalAmount = itemsTotal + (sto.shipping_cost || 0)
     const doc_number = `INV-${sto.document_number}`
 
     const { data: invoice, error } = await supabase
@@ -442,8 +470,8 @@ export const stoService = {
       })
 
     if (ledgerError) {
-        console.error("Failed to insert into finance_ap_ledger:", ledgerError)
-        // We do not throw to avoid breaking the UI flow, but this needs attention if it appears in logs
+      console.error("Failed to insert into finance_ap_ledger:", ledgerError)
+      // We do not throw to avoid breaking the UI flow, but this needs attention if it appears in logs
     }
 
     // Update Status to INVOICED ? (Optional, currently schema uses COMPLETED)

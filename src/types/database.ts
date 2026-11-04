@@ -561,6 +561,9 @@ export interface StoOrder {
   from_master_outlet?: MasterOutlet | null
   to_master_outlet?: MasterOutlet | null
   sto_items?: StoItem[]
+  sto_shipments?: any[]
+  sto_receipts?: any[]
+  sto_invoices?: any[]
 }
 
 export interface StoItem {

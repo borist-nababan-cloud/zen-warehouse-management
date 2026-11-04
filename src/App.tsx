@@ -22,6 +22,9 @@ import { SupplierPaydownPage } from './pages/finance/SupplierPaydownPage'
 import { OperationalDashboardPage } from './pages/posdashboard/OperationalDashboardPage'
 import { ProductMixDashboardPage } from './pages/posdashboard/ProductMixDashboardPage'
 import { PeakHoursDashboardPage } from './pages/posdashboard/PeakHoursDashboardPage'
+import { PosLiveDashboardPage } from './pages/posdashboard/PosLiveDashboardPage'
+import { PosPeriodicDashboardPage } from './pages/posdashboard/PosPeriodicDashboardPage'
+import { MasterTargetPage } from './pages/posdashboard/MasterTargetPage'
 import { OutletInfoPage } from './pages/master/OutletInfoPage'
 import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
 import { ShrinkageCategoriesPage } from './pages/master/ShrinkageCategoriesPage'
@@ -92,6 +95,10 @@ import { UserTestimonialsPage } from '@/pages/web/UserTestimonialsPage'
 import { NewsPromoPage } from '@/pages/web/NewsPromoPage'
 import { CrmInboxOutletPage } from '@/pages/crm/CrmInboxOutletPage'
 import { CrmInboxHoldingPage } from '@/pages/crm/CrmInboxHoldingPage'
+import { TrCategoryPage } from '@/pages/hrd/TrCategoryPage'
+import { TrVariablePage } from '@/pages/hrd/TrVariablePage'
+import { TrCreateEvaluationPage } from '@/pages/hrd/TrCreateEvaluationPage'
+import { TrReportListPage } from '@/pages/hrd/TrReportListPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -201,6 +208,36 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
                 <PeakHoursDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* POS Dashboard - Live Report */}
+          <Route
+            path="/pos-dashboard/live"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 13]}>
+                <PosLiveDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* POS Dashboard - Periodic Report */}
+          <Route
+            path="/pos-dashboard/periodic"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 13]}>
+                <PosPeriodicDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* POS Dashboard - Master Target */}
+          <Route
+            path="/pos-dashboard/master-target"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 13]}>
+                <MasterTargetPage />
               </ProtectedRoute>
             }
           />
@@ -904,7 +941,7 @@ function App() {
           <Route
             path="/crm/inbox-outlet"
             element={
-              <ProtectedRoute allowedRoles={[6, 19, 8, 18]}>
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 19]}>
                 <CrmInboxOutletPage />
               </ProtectedRoute>
             }
@@ -914,6 +951,41 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[10, 8, 18]}>
                 <CrmInboxHoldingPage />
+              </ProtectedRoute>
+            }
+          />
+
+
+          {/* HRD Evaluasi TR Routes */}
+          <Route
+            path="/hrd/tr-kategori"
+            element={
+              <ProtectedRoute allowedRoles={[8, 16]}>
+                <TrCategoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/tr-variabel"
+            element={
+              <ProtectedRoute allowedRoles={[8, 16]}>
+                <TrVariablePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/tr-buat-evaluasi"
+            element={
+              <ProtectedRoute allowedRoles={[8, 16]}>
+                <TrCreateEvaluationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/tr-laporan"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 19]}>
+                <TrReportListPage />
               </ProtectedRoute>
             }
           />

@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText } from 'lucide-react'
@@ -17,8 +16,6 @@ import { useAuthUser } from '@/hooks/useAuth'
 import { StoOrder } from '@/types/database'
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
-
-
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
 
@@ -73,6 +70,28 @@ export default function StoInvoicingPage() {
         if (!selectedSto || !user) return
         invoiceMutation.mutate({ stoId: selectedSto.id, userId: user.id })
     }
+
+    // Calculate actual total based on received items if receipts exist
+    const actualItemsTotal = (() => {
+        if (!selectedSto) return 0
+        if (selectedSto.sto_receipts && selectedSto.sto_receipts.length > 0) {
+            const itemPriceMap = new Map<string, number>()
+            selectedSto.sto_items?.forEach((item: any) => {
+                itemPriceMap.set(item.id, Number(item.price_unit) || 0)
+            })
+            let total = 0
+            selectedSto.sto_receipts.forEach((receipt: any) => {
+                receipt.sto_receipt_items?.forEach((recItem: any) => {
+                    const price = itemPriceMap.get(recItem.sto_item_id) || 0
+                    total += (Number(recItem.qty_received) || 0) * price
+                })
+            })
+            return total
+        }
+        return selectedSto.total_items_price || 0
+    })()
+
+    const totalPayable = actualItemsTotal + (selectedSto?.shipping_cost || 0)
 
     return (
         <DashboardLayout>
@@ -145,7 +164,7 @@ export default function StoInvoicingPage() {
                             <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span>Total Items Cost ({selectedSto?.sto_items?.length || 0} items)</span>
-                                    <span className="font-mono">{formatCurrency(selectedSto?.total_items_price || 0)}</span>
+                                    <span className="font-mono">{formatCurrency(actualItemsTotal)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span>Shipping Cost</span>
@@ -154,7 +173,7 @@ export default function StoInvoicingPage() {
                                 <Separator />
                                 <div className="flex justify-between items-center pt-2">
                                     <span className="font-bold text-lg">Total Payable</span>
-                                    <span className="font-bold text-xl text-blue-600">{formatCurrency(selectedSto?.grand_total || 0)}</span>
+                                    <span className="font-bold text-xl text-blue-600">{formatCurrency(totalPayable)}</span>
                                 </div>
                             </div>
 

@@ -28,10 +28,6 @@ export default function StoGoodsIssuePage() {
     const [isDetailOpen, setIsDetailOpen] = useState(false)
 
     // 1. Fetch STOs (Sender Logic)
-    // Showing DRAFT (to process initially) and ISSUED (if waiting shipment).
-    // Ideally, Admin creates DRAFT -> Approves to ISSUED -> Warehouse Ships.
-    // But purely based on task flow, Warehouse might pick up DRAFT too if no strict separation.
-    // I will filter for DRAFT and ISSUED.
     const { data: stos, isLoading } = useQuery({
         queryKey: ['sto_orders', 'sender', user?.kode_outlet],
         queryFn: () => stoService.getStoOrders(1, 100, {
@@ -80,9 +76,26 @@ export default function StoGoodsIssuePage() {
     const handleSubmitShipment = async () => {
         if (!selectedSto || !user) return
 
-        // Validate
-        if (shippingItems.some(i => i.qty_shipped <= 0)) {
-            toast.error('Quantity shipped must be greater than 0')
+        // Validate negative quantity
+        if (shippingItems.some(i => i.qty_shipped < 0)) {
+            toast.error('Kuantitas pengiriman tidak boleh bernilai negatif')
+            return
+        }
+
+        // Validate exceeding requested quantity
+        const exceededItem = selectedSto.sto_items?.find(item => {
+            const ship = shippingItems.find(s => s.sto_item_id === item.id)
+            return (ship?.qty_shipped || 0) > item.qty_requested
+        })
+        if (exceededItem) {
+            toast.error(`Kuantitas kirim untuk "${exceededItem.master_barang?.name || 'barang'}" melebihi jumlah permintaan (${exceededItem.qty_requested})`)
+            return
+        }
+
+        // Validate total shipped items (at least one item must be > 0)
+        const totalShipped = shippingItems.reduce((sum, i) => sum + (Number(i.qty_shipped) || 0), 0)
+        if (totalShipped <= 0) {
+            toast.error('Setidaknya minimal 1 barang harus memiliki kuantitas pengiriman lebih dari 0')
             return
         }
 
@@ -114,7 +127,7 @@ export default function StoGoodsIssuePage() {
 
     const updateQty = (stoItemId: string, qty: number) => {
         setShippingItems(prev => prev.map(item =>
-            item.sto_item_id === stoItemId ? { ...item, qty_shipped: qty } : item
+            item.sto_item_id === stoItemId ? { ...item, qty_shipped: Math.max(0, qty) } : item
         ))
     }
 
@@ -156,7 +169,7 @@ export default function StoGoodsIssuePage() {
                                     <div className="flex items-center gap-4">
                                         <div className="text-right">
                                             <p className="text-sm text-muted-foreground">Total Items</p>
-                                            {/* <p className="font-bold">{formatCurrency(sto.total_items_price)}</p> */}
+                                            <p className="font-bold">{sto.sto_items?.length || 0} SKU</p>
                                         </div>
                                         <Button onClick={() => handleOpenShipModule(sto)}>
                                             Process Shipment <ArrowRight className="ml-2 h-4 w-4" />
@@ -174,7 +187,7 @@ export default function StoGoodsIssuePage() {
                         <DialogHeader>
                             <DialogTitle>Process Shipment: {selectedSto?.document_number}</DialogTitle>
                             <DialogDescription>
-                                Verify quantities before shipping. Stock will be deducted immediately.
+                                Verify quantities before shipping. Stock will be deducted immediately for shipped items.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -182,7 +195,7 @@ export default function StoGoodsIssuePage() {
                             <div className="bg-blue-50 p-3 rounded-md border border-blue-100 text-sm text-blue-700 flex items-start gap-2">
                                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                                 <p>
-                                    Ensure physical goods match the quantities below.
+                                    Ensure physical goods match the quantities below. Barang yang kosong di gudang dapat diset bernilai <strong>0</strong>.
                                     Once shipped, the status will change to <strong>SHIPPED</strong>.
                                 </p>
                             </div>
@@ -192,17 +205,26 @@ export default function StoGoodsIssuePage() {
                                     <TableRow>
                                         <TableHead>Product</TableHead>
                                         <TableHead className="text-right">Ordered</TableHead>
-                                        <TableHead className="text-right w-32">Shipped Qty</TableHead>
+                                        <TableHead className="text-right w-36">Shipped Qty</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {selectedSto?.sto_items?.map(item => {
                                         const shipItem = shippingItems.find(i => i.sto_item_id === item.id)
+                                        const isZero = shipItem?.qty_shipped === 0
+
                                         return (
-                                            <TableRow key={item.id}>
+                                            <TableRow key={item.id} className={isZero ? 'bg-amber-50/40' : ''}>
                                                 <TableCell>
                                                     <div>
-                                                        <p className="font-medium">{item.master_barang?.name}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-medium">{item.master_barang?.name}</p>
+                                                            {isZero && (
+                                                                <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-300 text-[10px] px-1.5 py-0">
+                                                                    Stok Kosong (0)
+                                                                </Badge>
+                                                            )}
+                                                        </div>
                                                         <p className="text-xs text-muted-foreground">{item.master_barang?.sku}</p>
                                                     </div>
                                                 </TableCell>
@@ -210,8 +232,10 @@ export default function StoGoodsIssuePage() {
                                                 <TableCell className="text-right">
                                                     <Input
                                                         type="number"
-                                                        className="text-right h-8"
-                                                        value={shipItem?.qty_shipped || 0}
+                                                        min={0}
+                                                        max={item.qty_requested}
+                                                        className={`text-right h-8 ${isZero ? 'border-amber-300 text-amber-700 font-semibold' : ''}`}
+                                                        value={shipItem?.qty_shipped ?? 0}
                                                         onChange={(e) => updateQty(item.id, Number(e.target.value))}
                                                     />
                                                 </TableCell>

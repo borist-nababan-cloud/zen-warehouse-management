@@ -20,6 +20,10 @@
   --color-zen-bark: #544A3C;      /* Deep Bark Brown */
   --color-zen-muted: #8C8578;     /* Muted Text */
 
+  --shadow-zen: 0 4px 20px -2px rgba(60, 60, 50, 0.05);
+  --shadow-zen-md: 0 8px 30px -4px rgba(60, 60, 50, 0.08);
+  --shadow-zen-hover: 0 12px 35px -4px rgba(136, 157, 53, 0.15);
+
   /* ====================================================
      SEMANTIC THEME TOKENS (SHADCN / TAILWIND ALIGNED)
      ==================================================== */
