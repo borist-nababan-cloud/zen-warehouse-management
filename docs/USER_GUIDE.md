@@ -35,7 +35,7 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 ---
 
 ### C. Antarmuka Utama & Zen Dark Mode
-* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja: *Dashboard*, *Master Data*, *Pengadaan Barang*, *Inventaris & Stok*, *Kirim Barang (STO)*, *Produksi*, dan *Keuangan*.
+* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dasbor Utama*, *Inventaris & Stok*, *Penerimaan Barang (GR)*, *Pengeluaran Barang (GI)*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
 * **Ganti Mode Gelap (Zen Dark Mode)**:
   - Klik tombol **Ganti Mode Gelap** di bagian bawah sidebar untuk mengaktifkan tema malam (*River Stone Palette*) yang nyaman di mata untuk shift malam.
   - Klik kembali untuk beralih ke mode terang (*Zen Linen*). Pilihan tema tersimpan otomatis di perangkat Anda.
@@ -205,6 +205,26 @@ Fitur moderasi terpusat untuk memeriksa, menyetujui, atau menonaktifkan ulasan (
 
 ---
 
+---
+
+### D. Berita & Promo (`Web Data > Berita & Promo`)
+Digunakan oleh tim promosi dan admin web untuk mengelola konten spanduk dan pengumuman promosi yang tampil dalam bentuk Carousel mewah di halaman utama website statis:
+1. **Daftar Berita & Promo**:
+   - Menampilkan tabel seluruh materi promosi lengkap dengan thumbnail gambar, judul, teks badge promosi, periode tanggal aktif, status tayang, dan urutan tampilan.
+2. **Tambah / Ubah Berita & Promo**:
+   - Klik tombol **+ Tambah Berita & Promo**.
+   - Masukkan **Judul Promosi** dan **Subjudul** dalam Bahasa Indonesia serta versi Bahasa Inggris (opsional).
+   - Isi kolom **Deskripsi Lengkap Promosi** (tersedia kolom terjemahan bahasa Inggris).
+   - Masukkan **Teks Badge** (misal: `PROMO TERBATAS`, `SPECIAL DISCOUNT`, `NEW TREATMENT`).
+   - Tentukan **Tautan Aksi (CTA URL)**, misalnya link menuju nomor WhatsApp cabang atau halaman menu layanan.
+   - Atur **Periode Aktif**: Tanggal Mulai (`start_date`) dan Tanggal Berakhir (`end_date`). Promosi otomatis tidak tampil di website jika telah melewati tanggal berakhir.
+   - Atur **Nomor Urutan (`sort_order`)** untuk menentukan urutan slide carousel.
+   - **Unggah Gambar Banner**: Unggah gambar banner promosi lanskap beresolusi tinggi langsung dari penyimpanan perangkat Anda (tanpa kamera / zero-camera standard) ke Supabase Storage *bucket* `web-news-promo` (maks. 5 MB).
+3. **Saklar Alih Aktif / Nonaktif (`active`)**:
+   - Admin dapat menonaktifkan promosi kapan saja dengan saklar alih tanpa menghapus data historis.
+
+---
+
 ## 4. Pengadaan Barang (Procurement)
 
 ### A. Membuat Pesanan Pembelian / Purchase Order (PO)
@@ -311,9 +331,10 @@ Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purc
 ### C. Alur Pengiriman (Issue), Persetujuan (Approval), & Penerimaan STO (Receipt)
 1. **Pengiriman STO / Goods Issue (`Transfer Stok (STO) > Pengiriman STO (Issue)`)**:
    - Staf gudang pengirim membuka daftar STO berstatus `DRAFT` dan mengklik **Process Shipment**.
-   - Verifikasi kuantitas fisik barang yang dikirim.
+   - Verifikasi kuantitas fisik barang yang siap dikirim dari gudang.
+   - **Penanganan Item Kosong di Gudang (Kuantitas 0 Diizinkan)**: Jika salah satu atau beberapa barang dalam daftar STO kebetulan kosong di rak gudang pengirim, staf dapat memasukkan angka **`0`** pada kolom *Shipped Qty* barang tersebut. Sistem menandai item tersebut dengan badge kuning **"Stok Kosong (0)"** dan **tetap mengizinkan proses pengiriman** selama minimal ada 1 barang lain yang kuantitasnya $> 0$. Hanya item dengan kuantitas $> 0$ yang stoknya akan dipotong di gudang pengirim.
    - **Foto Bukti Pengiriman STO (Opsional - Maks. 1 Foto)**: Staf pengirim dapat mengambil foto kondisi barang/paket saat dikirim menggunakan **Kamera Perangkat (`Ambil Foto (Kamera)`)** atau mengunggah dari **Galeri / File (`Pilih File / Galeri`)**.
-   - Klik **Confirm Shipment**. Stok pada **Outlet Pengirim langsung dipotong** dan status pengirim berubah menjadi **`SHIPPED`** (barang berstatus *In-Transit* menuju outlet penerima).
+   - Klik **Confirm Shipment**. Stok pada **Outlet Pengirim langsung dipotong** untuk item yang dikirim dan status pengirim berubah menjadi **`SHIPPED`** (barang berstatus *In-Transit* menuju outlet penerima).
 2. **Kotak Persetujuan STO (`Transfer Stok (STO) > Kotak Persetujuan STO`)**:
    - Setelah gudang pengirim melakukan *Pengiriman STO (Issue)* (`SHIPPED`), dokumen STO otomatis muncul di **Kotak Persetujuan STO** milik **Outlet Penerima**.
    - Admin/pihak berwenang di Outlet Penerima memeriksa rincian STO lalu memilih:
@@ -333,7 +354,160 @@ Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purc
 
 ---
 
-## 7. Proses Produksi (Production Run)
+---
+
+## 7. Modul POS Dashboard (Eksekutif)
+
+Modul ini dirancang khusus bagi jajaran manajemen eksekutif, direksi, dan tim keuangan untuk memantau performa penjualan kasir POS, efisiensi operasional cabang, dan perbandingan terhadap target penjualan secara real-time.
+
+> [!NOTE]
+> Modul pada menu **POS Dashboard** dialokasikan khusus untuk **Role 5 (Finance)**, **Role 8 (Superuser)**, dan **Role 13 (Supervisor / Direksi)**.
+
+---
+
+### A. Live Report (`POS Dashboard > Live Report`)
+Dasbor pemantauan real-time untuk hari operasional berjalan (cut-off pergantian hari operasional pukul 06:00 WIB):
+1. **Zen Garden Summary**:
+   - **Gross Revenue**: Total omset penjualan kotor dari transaksi aktif (`status != 'CANCEL'`).
+   - **Net Revenue**: Omset bersih setelah dipotong diskon dan penyesuaian promo.
+   - **Tingkat Pembatalan (Void Rate)**: Persentase dan nominal pembatalan transaksi kasir.
+   - **Efisiensi Ruangan & Terapis**: Rasio utilisasi kamar pijat dan okupansi terapis yang sedang bertugas (*in-service* vs *idle*).
+2. **Panorama Seluruh Cabang (Outlet Panorama Grid)**:
+   - Kartu visual performa per cabang yang menampilkan omset harian, progres pencapaian target harian (persentase cincin progresif), serta jumlah pembatalan/penolakan tamu (*rejected count*).
+3. **Analisis Pembayaran & Promo**:
+   - Rincian metode pembayaran (Tunai, EDC BCA/Mandiri, QRIS, Transfer Bank, Gift Voucher) serta penggunaan kode promo transaksi.
+4. **Breakdown Layanan & Produk (Mix Analysis)**:
+   - Pengelompokan omset berdasarkan 4 kategori standar Zen POS:
+     - `BJ` (**Foot & Body**): Pijat tubuh & refleksi kaki utama.
+     - `BA` (**Additional**): Layanan tambahan / add-on.
+     - `BP` (**Product**): Penjualan produk retail dan aromaterapi.
+     - `BG` (**GC Sales**): Penjualan voucher Gift Certificate.
+5. **Analisis Penolakan Tamu (Walk-in Rejection Analysis)**:
+   - Rincian alasan pembatalan atau penolakan tamu yang batal treatment (misal: *Room Penuh*, *Terapis Tidak Tersedia*, *Waktu Tunggu Terlalu Lama*, dll.).
+6. **Pembaruan Data Otomatis**:
+   - Dilengkapi timer hitung mundur (*countdown*) 30 detik untuk pembaruan otomatis di latar belakang, serta tombol **Segarkan** (*Refresh*) manual.
+
+---
+
+### B. Periodic Report (`POS Dashboard > Periodic Report`)
+Dasbor evaluasi performa penjualan historis berdasarkan rentang tanggal fleksibel:
+1. **Filter Tanggal Fleksibel**:
+   - Pengguna dapat memilih **Tanggal Mulai** dan **Tanggal Selesai** (misal: 1 minggu terakhir, bulan ini, kuartal, atau kustom).
+2. **Skalabilitas Target Proporsional**:
+   - Target penjualan cabang otomatis diskalakan proporsional terhadap jumlah hari dalam rentang periode ($N \text{ hari} \times \text{Target Harian}$).
+3. **Penyelarasan Formula Omset**:
+   - Formula perhitungan Gross Revenue diselaraskan 100% dengan Live Report untuk transaksi berstatus aktif.
+4. **Indikator Render Item Dinamis**:
+   - Pada bagian rincian layanan dan produk, label kuantitas menampilkan jumlah riil baris yang berhasil diolah sesuai data yang ditarik.
+5. **Kartu Ringkasan Outlet Terfokus**:
+   - Menampilkan total pendapatan kotor, persentase target periode, dan jumlah penolakan tamu secara ringkas dan rapi.
+
+---
+
+### C. Master Target Penjualan (`POS Dashboard > Master Target`)
+Digunakan oleh tim Finance dan Direksi untuk menetapkan target pencapaian penjualan tahunan per outlet:
+1. Masukkan nilai **Target Penjualan Tahunan** untuk masing-masing cabang.
+2. Sistem secara otomatis menghitung:
+   - **Target Bulanan**: Target Tahunan $\div 12$ bulan.
+   - **Target Harian**: Target Tahunan $\div 365$ hari (atau 366 hari pada tahun kabisat).
+3. Target harian ini digunakan sebagai patokan benchmark garis target pada grafik Live Report dan Periodic Report. Nilai fallback otomatis Rp 5.000.000 / hari jika target belum diatur.
+
+---
+
+## 8. Modul CRM (Customer Relationship Management)
+
+Modul CRM menghubungkan tamu yang berkunjung ke website resmi Zen Family Spa dengan staf cabang dan tim holding secara langsung melalui fitur obrolan web (*live web chat*).
+
+---
+
+### A. Inbox Outlet (`CRM > Inbox Outlet`)
+> [!NOTE]
+> Dapat diakses oleh **Role 6 (Outlet Admin)**, **Role 19 (Resepsionis Cabang)**, serta **Role 5, 8, 13**.
+1. **Penguncian Akses Cabang**:
+   - Untuk **Role 6 (Admin Outlet)** dan **Role 19 (Resepsionis)**, sistem secara otomatis mengunci ruang obrolan **hanya untuk pesan yang masuk ke cabang mereka sendiri**.
+   - Untuk Role 5, 8, 13, tersedia dropdown pemilih cabang untuk memantau chat di cabang mana pun.
+2. **Kategori Chat Reservasi**:
+   - Menampilkan percakapan tamu yang memilih bantuan reservasi gerai (*RESERVASI*).
+3. **Fitur Kotak Obrolan (CrmChatBox)**:
+   - **Notifikasi Pesan Baru**: Dilengkapi indikator badge pesan belum dibaca (*unread count*). Pada kasir desktop ZenSystem, penerimaan pesan ini memicu lonceng audio instan.
+   - **Balasan Cepat (Quick Replies)**: Template pesan standar perhotelan/spa untuk membalas salam dan pertanyaan ketersediaan slot dengan 1 klik.
+   - **Tautan Langsung WhatsApp (Direct WhatsApp CTA)**: Jika tamu memerlukan koordinasi lanjut via ponsel, staf dapat mengklik tombol WhatsApp untuk membuka chat WhatsApp langsung ke nomor telepon tamu.
+   - **Selesaikan Percakapan (Resolve Ticket)**: Klik tombol **Selesaikan** saat konsultasi reservasi telah tuntas untuk mengarsipkan percakapan.
+
+---
+
+### B. Inbox Holding (`CRM > Inbox`)
+> [!NOTE]
+> Dialokasikan untuk **Role 10 (Finance Outlet / CS Holding)**, **Role 8 (Superuser)**, dan **Role 18 (Web Admin)**.
+1. Menampung obrolan pelanggan untuk kategori umum, komplain layanan tingkat holding, peluang kemitraan/franchise, atau pertanyaan kerja sama korporasi.
+2. Menampilkan riwayat interaksi chatbot otomatis (*Bot Knowledge Base*) sebelum tiket dialihkan ke staf penanggung jawab holding.
+
+---
+
+## 9. Modul HRD (Evaluasi Terapis)
+
+Modul HRD Evaluasi Terapis dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis, dan standarisasi kualitas perawatan di seluruh gerai Zen Family Spa & Reflexology.
+
+---
+
+### A. Kategori Evaluasi TR (`HRD > Kategori Evaluasi TR`)
+> [!NOTE]
+> Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
+1. Digunakan untuk mengelola master kelompok penilaian performa terapis (misal: *Sikap & Keramahan*, *Standar Grooming & Kerapian*, *Kualitas Pijat & Treatment*, *Kebersihan Area Kerja & Sanitasi*).
+2. **Pengaturan Urutan & Status**:
+   - Tentukan nomor urutan (`urutan`) agar kategori tampil berurutan saat formulir penilaian dibuka.
+   - Tombol saklar alih aktif/nonaktif untuk menonaktifkan kategori tanpa menghapus jejak audit evaluasi lampau.
+
+---
+
+### B. Variabel Evaluasi TR (`HRD > Variabel Evaluasi TR`)
+> [!NOTE]
+> Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
+1. Mengelola indikator variabel spesifik di bawah masing-masing kategori master.
+2. Setiap variabel dilengkapi **Deskripsi Kriteria Penilaian** (misal: *"Menyapa tamu dengan salam Zen dan senyum ramah"*, *"Tekanan pijatan konsisten dan menanyakan kenyamanan tamu"*, *"Merapikan kembali sprei bed dan aromaterapi setelah sesi"*).
+3. Variabel yang berstatus **Aktif** otomatis dimuat saat evaluator membuka form penilaian terapis.
+
+---
+
+### C. Buat Evaluasi TR (`HRD > Buat Evaluasi TR`)
+> [!NOTE]
+> Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
+Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*):
+1. **Langkah 1 - Pilih Cabang**:
+   - Pilih cabang outlet tempat terapis bertugas untuk mempersempit daftar karyawan.
+2. **Langkah 2 - Pilih Terapis**:
+   - Dropdown karyawan secara otomatis menyaring staf dari `ot_hrd_karyawan_info` dengan kriteria departemen **`TR`** (*Therapist*) atau **`TB`** (*Therapist Baru*) yang berstatus aktif (`active = 'Y'`).
+3. **Langkah 3 - Rekam Jejak 3 Evaluasi Terakhir**:
+   - Begitu terapis dipilih, sistem otomatis menarik dan menampilkan kartu ringkasan **3 riwayat evaluasi terakhir** terapis bersangkutan, memuat skor rata-rata (`nilai_total`) dan kesimpulan evaluasi terdahulu untuk bahan pembanding obyektif.
+4. **Langkah 4 - Penilaian Variabel Terstruktur**:
+   - Sistem secara otomatis me-render seluruh variabel aktif yang dikelompokkan rapi per kategori master.
+   - Setiap variabel memiliki nilai awal (*default score*) sebesar **5** dengan pilihan tombol nilai rentang **1 s/d 10**.
+   - Terdapat kolom input catatan spesifik per variabel jika evaluator ingin memberikan observasi khusus pada poin tersebut.
+5. **Langkah 5 - Kalkulasi Otomatis & Kesimpulan**:
+   - Sistem menghitung skor akhir rata-rata (`nilai_total`) secara otomatis dan instan dari seluruh variabel yang dinilai.
+   - Evaluator mengisi catatan **Kesimpulan & Tindak Lanjut**.
+   - Kolom `nilai_guest` dan `catatan_auto` telah disediakan di sistem untuk integrasi otomatis rating tamu via aplikasi member di masa depan.
+6. **Langkah 6 - Simpan Dokumen**:
+   - Klik tombol **Simpan Penilaian Evaluasi**. Sistem menerbitkan nomor dokumen resmi berformat **`EV-TR-YYMMDD-XXXX`**.
+
+---
+
+### D. Laporan Evaluasi TR (`HRD > Laporan Evaluasi TR`)
+> [!NOTE]
+> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Auditor)**, dan **Role 19 (Resepsionis Cabang)**.
+1. **Aturan Keamanan Cabang Ketat**:
+   - **Role 6 (Admin Outlet)** dan **Role 19 (Resepsionis)**: Akses terkunci secara otomatis dan hanya dapat meninjau hasil evaluasi terapis pada cabang mereka sendiri (`user.kode_outlet`).
+   - **Role 5, 8, 13, 14**: Memiliki akses lintas outlet dengan dropdown penyaring cabang (Semua Cabang vs Cabang Tertentu).
+2. **Metrik Ringkasan Performa**:
+   - Menampilkan total evaluasi terlaksana, rata-rata skor keseluruhan, dan jumlah terapis berpredikat performa tinggi (skor rata-rata $\ge 8.5$).
+3. **Pencarian & Filter Tanggal**:
+   - Filter rentang tanggal fleksibel (default 30 hari terakhir) serta pencarian instan nama karyawan, ID terapis, atau kode dokumen evaluasi.
+4. **Dialog Rincian Nilai (Modal View)**:
+   - Klik tombol **Lihat Rincian** pada baris laporan untuk membuka jendela rincian lengkap: memuat skor total, detail nilai setiap variabel per kelompok kategori, catatan evaluator, dan kesimpulan tindak lanjut.
+
+---
+
+## 10. Proses Produksi (Production Run)
 
 Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: campuran massage oil aroma khusus, racikan scrub badan, dan lulur herbal) berdasarkan standar formula/resep:
 1. Buka menu **Produksi > Proses Produksi**.
@@ -350,7 +524,7 @@ Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: cam
 
 ---
 
-## 8. Keuangan & Kas/Bank (Finance)
+## 11. Keuangan & Kas/Bank (Finance)
 
 ### A. Transaksi Kas Masuk & Kas Keluar
 1. Buka menu **Keuangan > Kas & Bank**.
@@ -379,7 +553,7 @@ Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: cam
 
 ---
 
-## 9. Laporan & Rekapitulasi (Reports)
+## 12. Laporan & Rekapitulasi (Reports)
 
 Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, metrik ringkasan kartu, serta tombol **Ekspor CSV** untuk pengolahan lebih lanjut di Microsoft Excel:
 
@@ -397,7 +571,7 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 
 ---
 
-## 10. Tanya Jawab & Kendala Umum (Troubleshooting)
+## 13. Tanya Jawab & Kendala Umum (Troubleshooting)
 
 **1. Muncul pesan "Sesi telah berakhir" atau "Failed to load session"**
 - Muat ulang (*refresh*) halaman peramban web Anda (tekan **F5** atau **Ctrl + F5**). Jika masih berlanjut, lakukan Logout dan masuk kembali.
@@ -419,7 +593,7 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 
 ---
 
-## 11. Layanan Bantuan & Dukungan IT
+## 14. Layanan Bantuan & Dukungan IT
 
 Apabila Anda mengalami kendala teknis atau membutuhkan bantuan terkait hak akses akun, silakan hubungi tim IT Administrator:
 * **Email Dukungan IT**: `it-support@zenfamilyspa.id` / `borist@nababancloud.net`
