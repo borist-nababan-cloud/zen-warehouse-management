@@ -99,6 +99,9 @@ import { TrCategoryPage } from '@/pages/hrd/TrCategoryPage'
 import { TrVariablePage } from '@/pages/hrd/TrVariablePage'
 import { TrCreateEvaluationPage } from '@/pages/hrd/TrCreateEvaluationPage'
 import { TrReportListPage } from '@/pages/hrd/TrReportListPage'
+import { MasterFaultsPage } from '@/pages/hrd/MasterFaultsPage'
+import { TrFaultsPage } from '@/pages/hrd/TrFaultsPage'
+import { ReportTrFaultsPage } from '@/pages/hrd/ReportTrFaultsPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -986,6 +989,30 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 19]}>
                 <TrReportListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/master-faults"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 15, 16]}>
+                <MasterFaultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/tr-faults"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 15, 16, 19]}>
+                <TrFaultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/report-tr-faults"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 15, 16, 19]}>
+                <ReportTrFaultsPage />
               </ProtectedRoute>
             }
           />

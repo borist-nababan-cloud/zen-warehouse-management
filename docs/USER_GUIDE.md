@@ -444,9 +444,9 @@ Modul CRM menghubungkan tamu yang berkunjung ke website resmi Zen Family Spa den
 
 ---
 
-## 9. Modul HRD (Evaluasi Terapis)
+## 9. Modul HRD (Evaluasi Kinerja & Pelanggaran Terapis)
 
-Modul HRD Evaluasi Terapis dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis, dan standarisasi kualitas perawatan di seluruh gerai Zen Family Spa & Reflexology.
+Modul HRD dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis, standarisasi kualitas perawatan, serta sistem pencatatan pelanggaran harian (*demerit points*) di seluruh gerai Zen Family Spa & Reflexology.
 
 ---
 
@@ -466,29 +466,55 @@ Modul HRD Evaluasi Terapis dirancang khusus untuk memantau mutu pelayanan, kepat
 1. Mengelola indikator variabel spesifik di bawah masing-masing kategori master.
 2. Setiap variabel dilengkapi **Deskripsi Kriteria Penilaian** (misal: *"Menyapa tamu dengan salam Zen dan senyum ramah"*, *"Tekanan pijatan konsisten dan menanyakan kenyamanan tamu"*, *"Merapikan kembali sprei bed dan aromaterapi setelah sesi"*).
 3. Variabel yang berstatus **Aktif** otomatis dimuat saat evaluator membuka form penilaian terapis.
+4. **Audit Trail Kolom Update**:
+   - Pada tabel grid variabel, sistem menyajikan kolom **Terakhir Diperbarui Oleh** (`users_profile.full_name`) dan **Waktu Update** (`update_at`) untuk transparansi riwayat pengubahan standar variabel.
 
 ---
 
 ### C. Buat Evaluasi TR (`HRD > Buat Evaluasi TR`)
 > [!NOTE]
 > Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
-Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*):
-1. **Langkah 1 - Pilih Cabang**:
-   - Pilih cabang outlet tempat terapis bertugas untuk mempersempit daftar karyawan.
-2. **Langkah 2 - Pilih Terapis**:
-   - Dropdown karyawan secara otomatis menyaring staf dari `ot_hrd_karyawan_info` dengan kriteria departemen **`TR`** (*Therapist*) atau **`TB`** (*Therapist Baru*) yang berstatus aktif (`active = 'Y'`).
-3. **Langkah 3 - Rekam Jejak 3 Evaluasi Terakhir**:
-   - Begitu terapis dipilih, sistem otomatis menarik dan menampilkan kartu ringkasan **3 riwayat evaluasi terakhir** terapis bersangkutan, memuat skor rata-rata (`nilai_total`) dan kesimpulan evaluasi terdahulu untuk bahan pembanding obyektif.
-4. **Langkah 4 - Penilaian Variabel Terstruktur**:
+Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*) yang terintegrasi langsung dengan data Payroll dan Pelanggaran Operasional:
+1. **Langkah 1 - Pilih Cabang & Terapis**:
+   - **Cabang Outlet**: Pilih cabang outlet tempat terapis bertugas untuk mempersempit daftar karyawan.
+   - **Pilih Terapis (TR / TB)**: Dropdown karyawan secara otomatis menyaring staf dari `ot_hrd_karyawan_info` dengan kriteria departemen **`TR`** (*Therapist*) atau **`TB`** (*Therapist Baru*) yang berstatus aktif (`active = 'Y'`).
+   - **Tanggal Evaluasi**: Tanggal pelaksanaan observasi/penginputan evaluasi.
+   - **Pilihan Periode Payroll (5 Terakhir)**: Dropdown memuat 5 periode payroll terbaru terapis yang bersumber dari tabel `ot_hrd_karyawan_payroll_details.payrollperiode`.
+   - **Penguraian Rentang Periode Otomatis (Date Range Parsing)**:
+     - Sistem secara otomatis mengurai 10 digit terakhir kode periode (misal: `PYZ.117.2025012120` $\rightarrow$ `2025012120`).
+     - Digit diuraikan menjadi Tahun (`2025`), Bulan Mulai (`01`), Tanggal Mulai (`21`), dan Tanggal Selesai (`20`).
+     - Karena tanggal mulai ($21$) lebih besar dari tanggal selesai ($20$), sistem mengenali bahwa periode berakhir di bulan berikutnya (`2025-02-20`).
+     - Ditampilkan sebagai lencana informasi: `📅 Rentang Periode Evaluasi: 2025-01-21 s/d 2025-02-20`.
+   - **Matriks Rekap Kehadiran Terapis (Attendance Matrix)**:
+     - Sistem mengekstrak payload `payroll_data` (JSONB) dari periode payroll terpilih dan menampilkan 8 metrik absensi terapis:
+       1. **H. Alpa**: Hari tanpa keterangan.
+       2. **H. Cuti**: Hari cuti resmi.
+       3. **Terlambat < 30m**: Frekuensi terlambat kurang dari 30 menit.
+       4. **Terlambat > 30m**: Frekuensi terlambat lebih dari 30 menit.
+       5. **H. Sakit**: Hari sakit dengan surat keterangan.
+       6. **Under Time**: Pulang sebelum jam kerja berakhir.
+       7. **Tidak Absen**: Lupa / tidak melakukan tap absen.
+       8. **Ijin Tdk Masuk**: Hari ijin resmi tidak masuk kerja.
+   - **Integrasi Catatan Kesalahan & Poin Pengurang (`hrd_tr_faults`)**:
+     - Sistem secara otomatis menyeleksi seluruh catatan pelanggaran terapis pada rentang tanggal periode payroll tersebut.
+     - Disajikan dalam tabel grid interaktif (Tanggal, Nama Kesalahan, Kategori, Poin Pengurang, Keterangan).
+     - Menghitung akumulasi **Total Poin Pengurang** (`-X Poin`) secara instan.
+2. **Rekam Jejak 3 Evaluasi Terakhir**:
+   - Menampilkan kartu ringkasan **3 riwayat evaluasi terakhir** terapis bersangkutan, memuat skor rata-rata (`nilai_total`) dan kesimpulan evaluasi terdahulu untuk bahan pembanding obyektif.
+3. **Langkah 2 - Penilaian Variabel Terstruktur**:
    - Sistem secara otomatis me-render seluruh variabel aktif yang dikelompokkan rapi per kategori master.
    - Setiap variabel memiliki nilai awal (*default score*) sebesar **5** dengan pilihan tombol nilai rentang **1 s/d 10**.
    - Terdapat kolom input catatan spesifik per variabel jika evaluator ingin memberikan observasi khusus pada poin tersebut.
-5. **Langkah 5 - Kalkulasi Otomatis & Kesimpulan**:
-   - Sistem menghitung skor akhir rata-rata (`nilai_total`) secara otomatis dan instan dari seluruh variabel yang dinilai.
-   - Evaluator mengisi catatan **Kesimpulan & Tindak Lanjut**.
-   - Kolom `nilai_guest` dan `catatan_auto` telah disediakan di sistem untuk integrasi otomatis rating tamu via aplikasi member di masa depan.
-6. **Langkah 6 - Simpan Dokumen**:
-   - Klik tombol **Simpan Penilaian Evaluasi**. Sistem menerbitkan nomor dokumen resmi berformat **`EV-TR-YYMMDD-XXXX`**.
+4. **Langkah 3 - Kesimpulan & Kalkulasi Nilai Akhir (Formula Opsi B)**:
+   - Sistem menyajikan 3 kartu ringkasan penilaian:
+     1. **Total Langkah 2: Variabel Standar**: Nilai rata-rata variabel standar sebelum demerit ($\sum \text{Skor} \div N \text{ variabel}$).
+     2. **Total Poin Pengurang (Pelanggaran)**: Akumulasi penalti kesalahan terapis pada periode berjalan (`-X Poin`).
+     3. **Nilai Total Rata-Rata Akhir**: Nilai performa final yang dihitung menggunakan **Formula Opsi B**:
+        $$\text{Nilai Total Akhir} = \max\left(0, \frac{\sum \text{Skor Variabel} - \text{Total Poin Pengurang}}{\text{Jumlah Variabel}}\right)$$
+        *Contoh*: Jika total 10 variabel menghasilkan skor 70, dan terapis memiliki poin kesalahan $-6$, maka $\text{Nilai Akhir} = (70 - 6) \div 10 = 6.4$.
+   - **Kesimpulan & Catatan Evaluator**: Masukkan apresiasi, catatan evaluasi, atau rekomendasi tindakan perbaikan (coaching/training).
+5. **Simpan Dokumen**:
+   - Klik tombol **Simpan Laporan Evaluasi**. Dokumen tersimpan ke tabel `hrd_report_tr` beserta `payrollperiode`, `total_pengurang`, dan `nilai_total` dengan nomor dokumen resmi **`EV-TR-YYMMDD-XXXX`**.
 
 ---
 
@@ -504,6 +530,74 @@ Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*):
    - Filter rentang tanggal fleksibel (default 30 hari terakhir) serta pencarian instan nama karyawan, ID terapis, atau kode dokumen evaluasi.
 4. **Dialog Rincian Nilai (Modal View)**:
    - Klik tombol **Lihat Rincian** pada baris laporan untuk membuka jendela rincian lengkap: memuat skor total, detail nilai setiap variabel per kelompok kategori, catatan evaluator, dan kesimpulan tindak lanjut.
+
+---
+
+### E. Master Kesalahan Terapis (`HRD > Master Faults`)
+> [!NOTE]
+> Dialokasikan khusus untuk **Role 5 (Finance Holding)**, **Role 8 (Superuser)**, **Role 15 (Evaluator Holding)**, dan **Role 16 (HR / Trainer TR)**.
+
+Modul ini merupakan katalog acuan standar tata tertib operasional dan poin penalti (*demerit points*) bagi terapis pijat & refleksi:
+1. **Kategori Tingkat Bobot Pelanggaran**:
+   - **Ringan** (Lencana Hijau): Pelanggaran grooming/kebersihan personal dasar (misal: *Tidak menggunakan masker ketika sakit*, *Bau badan*, *Tidak dapat berbahasa asing dasar*), dengan default pengurang **3 Poin**.
+   - **Sedang** (Lencana Kuning): Ketidaksesuaian teknik penanganan tamu (misal: *Tekanan dan Teknik tidak sesuai*, *Pijatan berbeda dengan standar terapis lain*), dengan default pengurang **6 Poin**.
+   - **Berat** (Lencana Merah): Pelanggaran berat etika dan SOP pelayanan (misal: *Terapis mengantuk / tertidur saat sesi*, *Pengurangan waktu treatment secara sepihak*), dengan default pengurang **9 Poin**.
+2. **Tabel Grid & Audit Trail Terakhir Update**:
+   - Menampilkan nomor urutan, nama kesalahan, badge kategori, poin pengurang (`-X Poin`), status aktif, serta kolom khusus **Terakhir Diperbarui Oleh** (`users_profile.full_name`) dan **Waktu Update** untuk transparansi audit holding.
+3. **Penambahan & Pembaruan Kesalahan**:
+   - Klik **Tambah Jenis Kesalahan** untuk membuka dialog formulir.
+   - Masukkan deskripsi kesalahan, pilih tingkat kategori, tentukan poin pengurang (angka positif $> 0$), dan urutan tampilan.
+   - Klik **Simpan**.
+4. **Kebijakan Nonaktif / Soft-Delete**:
+   - Untuk menonaktifkan jenis kesalahan yang sudah tidak diberlakukan, cukup klik badge status **Aktif / Nonaktif** tanpa menghapus catatan transaksi riil yang pernah terjadi.
+
+---
+
+### F. Pencatatan Kesalahan Terapis (`HRD > TR Faults`)
+> [!NOTE]
+> Dialokasikan untuk **Role 5 (Finance)**, **Role 8 (Superuser)**, **Role 15 (Evaluator Holding)**, **Role 16 (HR TR)**, dan **Role 19 (Resepsionis Cabang)**.
+
+Formulir operasional harian untuk mencatat keluhan tamu (*guest complaints*) atau temuan pelanggaran SOP terapis secara *real-time*:
+1. **Aturan Keamanan Khusus Resepsionis (Role 19)**:
+   - Bagi pengguna dengan Role 19 (Resepsionis Cabang), pilihan cabang **terkunci secara otomatis dan mutlak pada outlet mereka sendiri (`user.kode_outlet`)**.
+   - Sistem menampilkan lencana hijau informatif: *"Mode Resepsionis: Terkunci pada Cabang [KODE_OUTLET]"*.
+   - Dropdown pemilihan terapis secara otomatis hanya menampilkan staf terapis aktif (`departemen IN ('TR', 'TB')` dan `active = 'Y'`) yang bertugas di cabang bersangkutan.
+   - Bagi peran holding (Role 5, 8, 15, 16), pilihan cabang dapat dipilih secara bebas.
+2. **Langkah-Langkah Pencatatan**:
+   - **Tanggal Kejadian**: Otomatis terisi tanggal hari ini (dapat disesuaikan jika mencatat insiden shift malam kemarin).
+   - **Pilih Terapis**: Pilih nama terapis yang bersangkutan dari daftar terapis aktif cabang.
+   - **Pilih Jenis Kesalahan**: Pilih dari dropdown master kesalahan. Begitu dipilih, kotak indikator di sampingnya secara otomatis menampilkan badge visual kategori dan jumlah poin pengurang (*snapshot*).
+   - **Keterangan Kronologi (Opsional)**: Masukkan catatan tambahan kontekstual (misal: *"Tamu di Kamar VIP 2 mengeluhkan tekanan terlalu keras pada sesi reflexology 90 menit"*).
+   - Klik **Simpan Catatan Kesalahan**.
+3. **Dukungan Multi-Record Harian**:
+   - Sistem dirancang tanpa batasan unik per tanggal. Jika seorang terapis melakukan lebih dari satu kelalaian dalam shift yang sama, resepsionis dapat memasukkan catatan berikutnya tanpa tertolak oleh sistem.
+4. **Tabel Live Feed Hari Ini**:
+   - Tepat di bawah formulir, sistem menyajikan tabel daftar kesalahan yang telah dicatat pada tanggal terpilih untuk cabang tersebut.
+   - Petugas dapat langsung memverifikasi bahwa catatan telah masuk, atau menekan tombol ikon sampah (**Hapus**) jika terjadi kekeliruan salah pilih terapis saat penginputan.
+
+---
+
+### G. Laporan Kesalahan Terapis (`HRD > Report TR Faults`)
+> [!NOTE]
+> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Auditor)**, **Role 15 (Evaluator Holding)**, **Role 16 (HR TR)**, dan **Role 19 (Resepsionis Cabang)**.
+
+Modul rekapitulasi audit dan analisis demerit points terapis untuk evaluasi bulanan serta pengawasan operasional:
+1. **Aturan Pembatasan Cabang**:
+   - **Role 6 (Admin Outlet)** dan **Role 19 (Resepsionis Cabang)**: Akses terkunci secara otomatis hanya pada data cabang mereka sendiri (`user.kode_outlet`).
+   - **Role 5, 8, 13, 14, 15, 16**: Memiliki akses multi-cabang dengan opsi dropdown **SEMUA OUTLET (NASIONAL)** atau memilih cabang tertentu.
+2. **Kartu Ringkasan Metrik (KPI Overview)**:
+   - **Total Kasus Tercatat**: Jumlah total insiden kesalahan yang terjadi dalam periode filter.
+   - **Total Poin Penalti**: Akumulasi total demerit points (`-X Poin`) yang dikumpulkan terapis.
+   - **Pelanggaran Ringan / Sedang / Berat**: Penghitung rincian sebaran kasus berdasarkan bobot pelanggaran.
+3. **Filter Data Fleksibel**:
+   - **Dari Tanggal** & **Sampai Tanggal**: Menyaring periode analisis (default 30 hari terakhir).
+   - **Tingkat Kategori**: Memfilter hanya kategori tertentu (*Semua*, *Ringan*, *Sedang*, atau *Berat*).
+   - **Kotak Pencarian Instan**: Menyaring tabel berdasarkan nama terapis, kode karyawan, jenis kesalahan, cabang, atau kata kunci kronologi.
+4. **Tabel Data Rinci**:
+   - Menampilkan Tanggal, Cabang, Nama & Identitas Lengkap Terapis (`kodekaryawan • ID: idkaryawan • departemen`), Jenis Kesalahan, Badge Kategori, Poin Pengurang, Keterangan Kronologi, Petugas Pencatat (`users_profile.full_name`), dan Waktu Catat.
+5. **Ekspor CSV & Cetak Dokumen**:
+   - **Ekspor CSV**: Klik tombol **Ekspor CSV** untuk mengunduh rekapitulasi lengkap dalam format file `.csv` yang siap dianalisis di Microsoft Excel atau Google Sheets.
+   - **Cetak Laporan**: Klik tombol **Cetak** untuk mencetak laporan ke printer fisik atau menyimpan sebagai dokumen PDF resmi.
 
 ---
 

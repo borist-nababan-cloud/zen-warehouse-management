@@ -13,7 +13,9 @@ import {
   XCircle,
   Filter,
   RotateCcw,
-  Tag
+  Tag,
+  User,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -250,23 +252,25 @@ export function TrVariablePage() {
               <thead className="bg-zen-paper/70 text-zen-charcoal uppercase tracking-wider font-semibold border-b border-zen-stone/60">
                 <tr>
                   <th className="py-3.5 px-4 w-16 text-center">Urutan</th>
-                  <th className="py-3.5 px-4 w-52">Kategori</th>
+                  <th className="py-3.5 px-4 w-48">Kategori</th>
                   <th className="py-3.5 px-4">Nama Variabel & Panduan Penilaian</th>
-                  <th className="py-3.5 px-4 w-28 text-center">Status</th>
-                  <th className="py-3.5 px-4 w-32 text-center">Aksi</th>
+                  <th className="py-3.5 px-4 w-24 text-center">Status</th>
+                  <th className="py-3.5 px-4 w-48">Terakhir Diperbarui Oleh</th>
+                  <th className="py-3.5 px-4 w-40">Waktu Update</th>
+                  <th className="py-3.5 px-4 w-24 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zen-stone/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-zen-muted">
+                    <td colSpan={7} className="py-12 text-center text-zen-muted">
                       <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-zen-matcha border-t-transparent mb-2"></div>
                       <p>Memuat daftar variabel evaluasi...</p>
                     </td>
                   </tr>
                 ) : filteredVariables.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-zen-muted">
+                    <td colSpan={7} className="py-12 text-center text-zen-muted">
                       <Tag className="w-8 h-8 mx-auto mb-2 opacity-30 text-zen-moss" />
                       <p>Belum ada variabel evaluasi yang sesuai filter.</p>
                     </td>
@@ -304,6 +308,30 @@ export function TrVariablePage() {
                             Non-aktif
                           </span>
                         )}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-zen-matcha shrink-0" />
+                          <span className="truncate max-w-[160px] font-medium" title={v.update_by_name || '-'}>
+                            {v.update_by_name || '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-gray-500 font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                          <span>
+                            {v.update_at
+                              ? new Date(v.update_at).toLocaleDateString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '-'}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center space-x-1.5">

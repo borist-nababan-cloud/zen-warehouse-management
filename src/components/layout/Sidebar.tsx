@@ -61,7 +61,10 @@ import {
   Target,
   UserCheck,
   ListChecks,
-  FolderTree
+  FolderTree,
+  ShieldAlert,
+  AlertCircle,
+  FileWarning
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -388,7 +391,7 @@ const crmGroup: NavGroup = {
 const hrdGroup: NavGroup = {
   title: 'HRD',
   icon: UserCheck,
-  roleIds: [5, 6, 8, 13, 14, 16, 19],
+  roleIds: [5, 6, 8, 13, 14, 15, 16, 19],
   defaultOpen: false,
   children: [
     {
@@ -414,6 +417,24 @@ const hrdGroup: NavGroup = {
       path: '/hrd/tr-laporan',
       icon: FileText,
       roleIds: [5, 6, 8, 13, 14, 19],
+    },
+    {
+      title: 'Master Faults',
+      path: '/hrd/master-faults',
+      icon: ShieldAlert,
+      roleIds: [5, 8, 15, 16],
+    },
+    {
+      title: 'TR Faults',
+      path: '/hrd/tr-faults',
+      icon: AlertCircle,
+      roleIds: [5, 8, 15, 16, 19],
+    },
+    {
+      title: 'Report TR Faults',
+      path: '/hrd/report-tr-faults',
+      icon: FileWarning,
+      roleIds: [5, 6, 8, 13, 14, 15, 16, 19],
     },
   ],
 }

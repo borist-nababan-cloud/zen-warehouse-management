@@ -207,8 +207,8 @@ This document outlines the authoritative role-based access permissions for each 
 ---
 
 
-### 3.13. HRD (Evaluasi Terapis)
-**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), SUPERUSER (8), Supervisor / Direksi (13), Auditor (14), HR / Evaluator TR (16), Resepsionis (19)
+### 3.13. HRD (Evaluasi Kinerja & Pelanggaran Terapis)
+**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), SUPERUSER (8), Supervisor / Direksi (13), Auditor (14), Evaluator Holding (15), HR / Evaluator TR (16), Resepsionis (19)
 
 | Submenu | Path / Route | Icon | Sidebar Role IDs | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
@@ -216,6 +216,9 @@ This document outlines the authoritative role-based access permissions for each 
 | **Variabel Evaluasi TR** | `/hrd/tr-variabel` | `ListChecks` | **8, 16** | `[8, 16]` | Master variabel indikator penilaian yang dikelompokkan per kategori master. Variabel aktif otomatis tampil saat evaluator mengisi form penilaian terapis. |
 | **Buat Evaluasi TR** | `/hrd/tr-buat-evaluasi` | `UserCheck` | **8, 16** | `[8, 16]` | Formulir evaluasi terapis (departemen `TR` / `TB` aktif). Alur kerja: Filter Outlet $\rightarrow$ Pilih Terapis $\rightarrow$ Intip 3 evaluasi terakhir $\rightarrow$ Skor variabel 1–10 (default 5) & catatan $\rightarrow$ Kalkulasi otomatis skor rata-rata $\rightarrow$ Catatan kesimpulan $\rightarrow$ Simpan. |
 | **Laporan Evaluasi TR** | `/hrd/tr-laporan` | `FileText` | **5, 6, 8, 13, 14, 19** | `[5, 6, 8, 13, 14, 19]` | Laporan rekapitulasi dan riwayat hasil evaluasi terapis. **Khusus Role 6 & 19:** akses terkunci secara ketat hanya untuk outlet mereka sendiri (`user.kode_outlet`). Role 5, 8, 13, 14 dapat memfilter seluruh outlet. Dilengkapi modal rincian variabel per kategori. |
+| **Master Faults** | `/hrd/master-faults` | `ShieldAlert` | **5, 8, 15, 16** | `[5, 8, 15, 16]` | Katalog standar jenis kesalahan dan demerit points terapis (kategori Ringan, Sedang, Berat). Grid menampilkan nama penginput terakhir (`users_profile.full_name`) dan timestamp update. Modal Tambah/Edit. |
+| **TR Faults** | `/hrd/tr-faults` | `AlertCircle` | **5, 8, 15, 16, 19** | `[5, 8, 15, 16, 19]` | Formulir pencatatan insiden kesalahan terapis harian. **Khusus Role 19 (Resepsionis):** terkunci ketat hanya dapat menginput terapis pada cabangnya sendiri (`user.kode_outlet`). Mendukung multi-record per hari. Dilengkapi tabel live feed hari ini. |
+| **Report TR Faults** | `/hrd/report-tr-faults` | `FileWarning` | **5, 6, 8, 13, 14, 15, 16, 19** | `[5, 6, 8, 13, 14, 15, 16, 19]` | Laporan audit rekapitulasi pelanggaran terapis. Filter tanggal, kategori, dan cabang. **Khusus Role 6 & 19:** terkunci pada cabang sendiri. Dilengkapi kartu metrik, ekspor CSV, dan cetak. |
 
 ---
 
@@ -247,7 +250,7 @@ This document outlines the authoritative role-based access permissions for each 
 | **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | ✅ | — |
 | **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | ✅ | — |
 | **POS Dashboard (Live, Periodic, Master Target)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | — | — |
-| **HRD Evaluasi TR** | — | — | — | — | ✅*(Laporan)* | ✅*(Laporan Cabang)* | — | ✅*(All)* | — | ✅*(Laporan)* | ✅*(Laporan)* | — | ✅*(Laporan Cabang)* |
+| **HRD Evaluasi & Faults TR** | — | — | — | — | ✅*(All)* | ✅*(Laporan Cabang)* | — | ✅*(All)* | — | ✅*(Laporan)* | ✅*(Laporan)* | — | ✅*(Input & Laporan Cabang)* |
 
 ---
 

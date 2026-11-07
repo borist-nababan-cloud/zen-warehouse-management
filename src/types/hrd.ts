@@ -22,6 +22,7 @@ export interface HrdReportTrVariable {
   created_at: string;
   update_by?: string | null;
   update_at: string;
+  update_by_name?: string | null;
   // Join
   category?: HrdReportTrCategory;
 }
@@ -32,6 +33,8 @@ export interface HrdReportTr {
   tanggal_report: string;
   kode_outlet: string;
   kodekaryawan: string;
+  payrollperiode?: string | null;
+  total_pengurang?: number;
   nilai_total: number;
   kesimpulan?: string | null;
   nilai_guest: number;
@@ -70,6 +73,9 @@ export interface CreateHrdReportTrPayload {
   kode_outlet: string;
   kodekaryawan: string;
   tanggal_report?: string;
+  payrollperiode?: string | null;
+  total_pengurang?: number;
+  nilai_total?: number;
   kesimpulan?: string | null;
   items: {
     variable_id: string;
@@ -78,5 +84,79 @@ export interface CreateHrdReportTrPayload {
     nilai_variable: number;
     catatan_variable?: string | null;
   }[];
+}
+
+export interface HrdPayrollAttendance {
+  halpa: number;
+  hcuti: number;
+  hlate1: number;
+  hlate2: number;
+  hsakit: number;
+  hunder: number;
+  hitidakabsen: number;
+  hitidakmasuk: number;
+}
+
+export interface HrdPayrollDetailItem {
+  id: string;
+  payrollperiode: string;
+  kode_outlet: string;
+  kodekaryawan: string;
+  payroll_data: any;
+  attendance?: HrdPayrollAttendance;
+  startDate?: string;
+  endDate?: string;
+}
+
+export type FaultCategory = 'Ringan' | 'Sedang' | 'Berat';
+
+export interface HrdMasterFault {
+  uid: string;
+  nama_faults: string;
+  pengurang: number;
+  kategori: FaultCategory;
+  urutan: number;
+  active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  update_by?: string | null;
+  update_at: string;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
+}
+
+export interface HrdTrFault {
+  uid: string;
+  tanggal: string;
+  kode_outlet: string;
+  kodekaryawan: string;
+  idkaryawan: number;
+  fault_id?: string | null;
+  nama_faults: string;
+  kategori: FaultCategory;
+  pengurang: number;
+  keterangan?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  update_by?: string | null;
+  update_at: string;
+  name_outlet?: string | null;
+  city?: string | null;
+  namakaryawan?: string | null;
+  departemen?: string | null;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
+}
+
+export interface CreateHrdTrFaultPayload {
+  tanggal?: string;
+  kode_outlet: string;
+  kodekaryawan: string;
+  idkaryawan: number;
+  fault_id?: string | null;
+  nama_faults: string;
+  kategori: FaultCategory;
+  pengurang: number;
+  keterangan?: string | null;
 }
 
