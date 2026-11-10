@@ -50,9 +50,10 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, dan profil cabang.
 
 ### A. Master Produk (`Master Data > Master Produk`)
-1. **Daftar Produk & Pencarian**:
+1. **Daftar Produk & Pencarian Menyeluruh (Server-Side Search)**:
    - Menampilkan seluruh katalog barang lengkap dengan SKU, Nama Produk, Kategori, Satuan Beli/Jual, dan Status.
-   - Dilengkapi kolom pencarian instan dan filter cepat jenis produk: **Semua Barang**, **Khusus Laundry**, atau **Bukan Laundry**.
+   - Dilengkapi kolom pencarian instan berbasis server (*server-side search* via `ilike` Supabase) yang menyaring nama produk dan SKU di seluruh basis data, memastikan barang yang berada di halaman-halaman berikutnya (*pagination*) tetap ditemukan seketika tanpa harus berpindah halaman secara manual.
+   - Filter cepat jenis produk: **Semua Barang**, **Khusus Laundry**, atau **Bukan Laundry**.
 2. **Penanda Barang Binatu / Laundry**:
    - Saat menambah atau mengubah produk linen (misal: handuk mandi, kimono, sprei bed spa, sarung bantal), aktifkan saklar toggle **"Barang Binatu / Laundry"**.
    - Produk binatu akan memiliki badge hijau **"Laundry"** pada tabel, mempermudah identifikasi alur cucian linen cabang.
@@ -256,18 +257,50 @@ Digunakan oleh tim promosi dan admin web untuk mengelola konten spanduk dan peng
 
 ## 5. Inventaris & Pengelolaan Stok
 
-### A. Stock Opname (Penyesuaian Fisik Stok)
+### A. Pengajuan Stock Opname (`Inventaris & Stok > Stock Opname`)
+> [!NOTE]
+> Modul ini dialokasikan untuk staf gudang dan admin cabang (**Role 6 - Outlet Admin** dan **Role 7 - Warehouse Staff**).
 1. Buka menu **Inventaris & Stok > Stock Opname**.
-2. Tersedia 2 metode perhitungan:
-   * **Mode Tunggal (Single Item Spot Check)**: Menghitung 1 produk spesifik secara cepat. Kolom pencarian memuat seluruh katalog produk aktif.
-   * **Mode Massal (Batch Count)**: Menghitung seluruh item dalam satu kategori/lokasi gudang sekaligus.
+2. Tersedia 2 tab metode perhitungan:
+   * **Pemeriksaan Satuan (Single Item Spot Check)**: Menghitung 1 produk spesifik secara cepat. Kolom pencarian memuat produk gerai sendiri, produk master Zen Produk (`901`), serta produk yang masuk melalui mutasi/transfer STO.
+   * **Opname Massal (Batch Count)**: Menghitung seluruh item dalam satu kategori/lokasi gudang sekaligus secara terstruktur.
 3. Masukkan **Kuantitas Fisik** hasil perhitungan nyata di rak gudang.
-4. Sistem otomatis menampilkan selisih (*Variance*) antara catatan sistem dengan fisik.
-5. Masukkan catatan penjelasan selisih (jika ada), lalu klik **Finalisasi Stock Opname**. Saldo buku stok akan diperbarui ke angka fisik terkini.
+4. Sistem otomatis menghitung dan menampilkan selisih (*Variance = Fisik - Sistem*) antara saldo buku dengan saldo fisik nyata.
+5. Masukkan catatan penjelasan selisih (jika ada), lalu klik tombol pengajuan:
+   - Pada tab Opname Massal: Klik tombol floating **"Kirim Pengajuan Batch Opname"**.
+   - Pada tab Pemeriksaan Satuan: Klik tombol **"Kirim Pengajuan Pemeriksaan"**.
+6. **Mekanisme Persetujuan Berjenjang (Approval Workflow)**:
+   > [!IMPORTANT]
+   > Pengajuan Stock Opname **TIDAK LAGI LANGSUNG MENGUBAH SALDO STOK GUDANG**.
+   > Seluruh pengajuan akan disimpan dalam antrean dengan status **`PENDING_APPROVAL` (Menunggu Persetujuan)** untuk diaudit dan disetujui oleh Manager Cabang atau Finance Holding.
 
 ---
 
-### B. Pemakaian Internal (`Inventaris & Stok > Pemakaian Internal`)
+### B. Persetujuan Stock Opname (`Inventaris & Stok > Persetujuan Opname`)
+> [!NOTE]
+> Modul ini dialokasikan khusus untuk **Role 5 (Finance Holding)**, **Role 8 (Superuser)**, dan **Role 14 (Manager)**.
+1. Buka menu **Inventaris & Stok > Persetujuan Opname** (`/inventory/opname-approval`).
+2. **Aturan Pembatasan Gerai Berbasis Peran**:
+   - **Role 14 (Manager Cabang)**: Pemilih gerai dinonaktifkan secara otomatis (`canSelectOutlet = false`) dan dikunci ketat hanya pada cabang penugasan miliknya (`user.kode_outlet`). Manager hanya dapat meninjau dan menyetujui pengajuan opname dari cabangnya sendiri.
+   - **Role 5 (Finance Holding) & Role 8 (Superuser)**: Memiliki akses menyeluruh untuk memfilter, memeriksa, dan menyetujui pengajuan opname dari seluruh cabang Zen Family Spa.
+3. **Kartu Indikator KPI & Filter**:
+   - Menampilkan ringkasan metrik instan: **Menunggu Persetujuan**, **Disetujui**, dan **Ditolak**.
+   - Filter fleksibel berdasarkan rentang tanggal dokumen dan status pengajuan.
+4. **Audit Rincian Selisih Opname**:
+   - Klik tombol **Lihat Rincian / Audit** (ikon mata) pada baris pengajuan untuk membuka dialog audit detail.
+   - Dialog menyajikan daftar item lengkap dengan: SKU, Nama Barang, Stok Sistem, Kuantitas Fisik, Selisih Kuantitas, Nilai Rupiah Selisih, dan Catatan Staf.
+5. **Aksi Persetujuan atau Penolakan**:
+   * **Menyetujui Batch Opname (Approve)**:
+     - Klik tombol hijau **Setujui Opname**.
+     - Sistem mengeksekusi fungsi database RPC atomik `approve_stock_opname`: status batch diperbarui menjadi `COMPLETED`, audit trail nama penyetuju dicatat, dan angka saldo inventaris di `inventory_balance` resmi disinkronkan ke angka fisik hasil opname secara otomatis.
+   * **Menolak Batch Opname (Reject)**:
+     - Klik tombol merah **Tolak Opname**.
+     - Masukkan **Alasan Penolakan** pada kotak dialog yang muncul, lalu konfirmasi.
+     - Status batch diperbarui menjadi `REJECTED` tanpa mengubah saldo inventaris gudang.
+
+---
+
+### C. Pemakaian Internal (`Inventaris & Stok > Pemakaian Internal`)
 Gunakan formulir ini untuk mencatat pengeluaran barang yang dikonsumsi sendiri untuk kebutuhan operasional harian cabang (misal: minyak massage, scrub, sabun mandi tamu, cairan pembersih, kertas kasir, dll.):
 1. Buka menu **Pemakaian Internal**, klik **+ Tambah Pemakaian**.
 2. Pilih **Kategori Pemakaian** (sesuai data Master Kategori Pemakaian) dan **Tanggal**.
@@ -276,7 +309,7 @@ Gunakan formulir ini untuk mencatat pengeluaran barang yang dikonsumsi sendiri u
 
 ---
 
-### C. Retur Internal (`Inventaris & Stok > Retur Internal`)
+### D. Retur Internal (`Inventaris & Stok > Retur Internal`)
 Gunakan formulir ini jika barang yang sebelumnya diambil untuk operasional dikembalikan kembali ke gudang (misal: sisa bahan produksi, perlengkapan yang tidak jadi dipakai):
 1. Buka menu **Retur Internal**, klik **+ Tambah Retur**.
 2. Masukkan tanggal dan pilih kondisi barang: **Baik (Bisa Digunakan)**, **Rusak**, atau **Kadaluarsa**.
@@ -285,11 +318,23 @@ Gunakan formulir ini jika barang yang sebelumnya diambil untuk operasional dikem
 
 ---
 
-### D. Penyusutan / Pemusnahan (`Inventaris & Stok > Penyusutan / Pemusnahan`)
+### E. Penyusutan / Pemusnahan (`Inventaris & Stok > Penyusutan / Pemusnahan`)
 1. Buka menu **Inventaris & Stok > Penyusutan / Pemusnahan**.
 2. Gunakan formulir ini saat menemukan barang rusak, pecah, tumpah, kadaluarsa, atau selisih hilang di rak gudang cabang.
 3. Pilih **Produk** menggunakan kotak pencarian produk (*Searchable Select*), pilih **Kategori Penyusutan** (dari Master Kategori Penyusutan), masukkan **Jumlah Penyusutan** (tidak boleh melebihi stok tersedia saat ini), dan isi **Keterangan / Catatan**.
 4. Klik **Simpan Penyusutan**. Saldo stok cabang akan langsung dikurangi dan tercatat pada riwayat audit pemusnahan resmi.
+
+---
+
+### F. Aturan Privasi Harga Beli Antar-Cabang (Inter-Outlet Pricing Privacy)
+> [!IMPORTANT]
+> Kebijakan ini diterapkan secara otomatis di seluruh laporan inventaris gudang (`view_inventory_report` dan `view_report_opname_variance`).
+1. **Perlindungan Kerahasiaan Harga Modal**:
+   - Jika cabang Anda menerima barang hasil mutasi/transfer logistik (STO) dari cabang lain atau holding, informasi harga modal beli (`buy_price` / `unit_cost`) gerai asal **secara otomatis disembunyikan**.
+   - Sistem memasking nilai **Harga Beli** dengan **Harga Jual (`sell_price`)** barang bersangkutan.
+2. **Keterbacaan Laporan yang Adil**:
+   - Pada **Laporan Nilai Stok** dan **Laporan Selisih Opname**, kolom *Harga Beli* dan *Harga Jual* bagi barang antar-gerai akan menampilkan angka yang sama (`sell_price`).
+   - Dengan aturan ini, cabang tetap dapat menghitung valuasi aset stok gudang secara akurat tanpa mengekspos margin keuntungan atau harga modal holding kepada staf cabang.
 
 ---
 
@@ -354,67 +399,7 @@ Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purc
 
 ---
 
----
-
-## 7. Modul POS Dashboard (Eksekutif)
-
-Modul ini dirancang khusus bagi jajaran manajemen eksekutif, direksi, dan tim keuangan untuk memantau performa penjualan kasir POS, efisiensi operasional cabang, dan perbandingan terhadap target penjualan secara real-time.
-
-> [!NOTE]
-> Modul pada menu **POS Dashboard** dialokasikan khusus untuk **Role 5 (Finance)**, **Role 8 (Superuser)**, dan **Role 13 (Supervisor / Direksi)**.
-
----
-
-### A. Live Report (`POS Dashboard > Live Report`)
-Dasbor pemantauan real-time untuk hari operasional berjalan (cut-off pergantian hari operasional pukul 06:00 WIB):
-1. **Zen Garden Summary**:
-   - **Gross Revenue**: Total omset penjualan kotor dari transaksi aktif (`status != 'CANCEL'`).
-   - **Net Revenue**: Omset bersih setelah dipotong diskon dan penyesuaian promo.
-   - **Tingkat Pembatalan (Void Rate)**: Persentase dan nominal pembatalan transaksi kasir.
-   - **Efisiensi Ruangan & Terapis**: Rasio utilisasi kamar pijat dan okupansi terapis yang sedang bertugas (*in-service* vs *idle*).
-2. **Panorama Seluruh Cabang (Outlet Panorama Grid)**:
-   - Kartu visual performa per cabang yang menampilkan omset harian, progres pencapaian target harian (persentase cincin progresif), serta jumlah pembatalan/penolakan tamu (*rejected count*).
-3. **Analisis Pembayaran & Promo**:
-   - Rincian metode pembayaran (Tunai, EDC BCA/Mandiri, QRIS, Transfer Bank, Gift Voucher) serta penggunaan kode promo transaksi.
-4. **Breakdown Layanan & Produk (Mix Analysis)**:
-   - Pengelompokan omset berdasarkan 4 kategori standar Zen POS:
-     - `BJ` (**Foot & Body**): Pijat tubuh & refleksi kaki utama.
-     - `BA` (**Additional**): Layanan tambahan / add-on.
-     - `BP` (**Product**): Penjualan produk retail dan aromaterapi.
-     - `BG` (**GC Sales**): Penjualan voucher Gift Certificate.
-5. **Analisis Penolakan Tamu (Walk-in Rejection Analysis)**:
-   - Rincian alasan pembatalan atau penolakan tamu yang batal treatment (misal: *Room Penuh*, *Terapis Tidak Tersedia*, *Waktu Tunggu Terlalu Lama*, dll.).
-6. **Pembaruan Data Otomatis**:
-   - Dilengkapi timer hitung mundur (*countdown*) 30 detik untuk pembaruan otomatis di latar belakang, serta tombol **Segarkan** (*Refresh*) manual.
-
----
-
-### B. Periodic Report (`POS Dashboard > Periodic Report`)
-Dasbor evaluasi performa penjualan historis berdasarkan rentang tanggal fleksibel:
-1. **Filter Tanggal Fleksibel**:
-   - Pengguna dapat memilih **Tanggal Mulai** dan **Tanggal Selesai** (misal: 1 minggu terakhir, bulan ini, kuartal, atau kustom).
-2. **Skalabilitas Target Proporsional**:
-   - Target penjualan cabang otomatis diskalakan proporsional terhadap jumlah hari dalam rentang periode ($N \text{ hari} \times \text{Target Harian}$).
-3. **Penyelarasan Formula Omset**:
-   - Formula perhitungan Gross Revenue diselaraskan 100% dengan Live Report untuk transaksi berstatus aktif.
-4. **Indikator Render Item Dinamis**:
-   - Pada bagian rincian layanan dan produk, label kuantitas menampilkan jumlah riil baris yang berhasil diolah sesuai data yang ditarik.
-5. **Kartu Ringkasan Outlet Terfokus**:
-   - Menampilkan total pendapatan kotor, persentase target periode, dan jumlah penolakan tamu secara ringkas dan rapi.
-
----
-
-### C. Master Target Penjualan (`POS Dashboard > Master Target`)
-Digunakan oleh tim Finance dan Direksi untuk menetapkan target pencapaian penjualan tahunan per outlet:
-1. Masukkan nilai **Target Penjualan Tahunan** untuk masing-masing cabang.
-2. Sistem secara otomatis menghitung:
-   - **Target Bulanan**: Target Tahunan $\div 12$ bulan.
-   - **Target Harian**: Target Tahunan $\div 365$ hari (atau 366 hari pada tahun kabisat).
-3. Target harian ini digunakan sebagai patokan benchmark garis target pada grafik Live Report dan Periodic Report. Nilai fallback otomatis Rp 5.000.000 / hari jika target belum diatur.
-
----
-
-## 8. Modul CRM (Customer Relationship Management)
+## 7. Modul CRM (Customer Relationship Management)
 
 Modul CRM menghubungkan tamu yang berkunjung ke website resmi Zen Family Spa dengan staf cabang dan tim holding secara langsung melalui fitur obrolan web (*live web chat*).
 
@@ -444,7 +429,7 @@ Modul CRM menghubungkan tamu yang berkunjung ke website resmi Zen Family Spa den
 
 ---
 
-## 9. Modul HRD (Evaluasi Kinerja & Pelanggaran Terapis)
+## 8. Modul HRD (Evaluasi Kinerja & Pelanggaran Terapis)
 
 Modul HRD dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis, standarisasi kualitas perawatan, serta sistem pencatatan pelanggaran harian (*demerit points*) di seluruh gerai Zen Family Spa & Reflexology.
 
@@ -601,24 +586,37 @@ Modul rekapitulasi audit dan analisis demerit points terapis untuk evaluasi bula
 
 ---
 
-## 10. Proses Produksi (Production Run)
+## 9. Resep & Proses Produksi (Production Module)
 
-Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: campuran massage oil aroma khusus, racikan scrub badan, dan lulur herbal) berdasarkan standar formula/resep:
-1. Buka menu **Produksi > Proses Produksi**.
-2. Pilih formula resep (**Master Recipe**) yang akan dijalankan dan tentukan jumlah batch yang diproduksi.
-3. Sistem secara otomatis menampilkan lembar kerja bahan baku:
-   - Menghitung kebutuhan kuantitas setiap bahan baku.
-   - Memeriksa ketersediaan stok bahan di gudang cabang.
-   - Menampilkan estimasi Harga Pokok Produksi (HPP) per unit dalam format Rupiah (`Rp`).
-4. Pastikan stok bahan baku mencukupi, lalu klik **Proses Produksi**.
-5. Sistem secara otomatis:
-   - Memotong seluruh bahan baku dari saldo gudang.
-   - Menambahkan produk jadi ke stok gudang.
-   - Mencatat mutasi riwayat perubahan harga pada audit database.
+### A. Formula & Master Resep (`Produksi > Master Resep`)
+1. Buka menu **Produksi > Master Resep** untuk mendefinisikan formula racikan produk jadi spa (misal: racikan massage oil, body scrub, lulur rempah).
+2. **Pencarian Bahan Baku Lintas Cabang & Mutasi STO**:
+   - Saat menyusun komposisi bahan baku (*Pilih Bahan Baku*), sistem menyediakan pencarian menyeluruh (*fallback search*).
+   - Staf dapat mencari bahan baku milik gerai sendiri, bahan baku terstandar dari **Zen Produk (`901`)**, maupun bahan baku yang diperoleh dari transfer logistik antar-cabang (STO) yang tercatat di saldo fisik gudang (`inventory_balance`).
+3. Tentukan takaran kuantitas dan satuan bahan baku per 1 batch racikan, lalu simpan formula resep.
 
 ---
 
-## 11. Keuangan & Kas/Bank (Finance)
+### B. Proses Produksi (`Produksi > Proses Produksi`)
+Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula resep yang telah didaftarkan:
+1. Buka menu **Produksi > Proses Produksi**.
+2. **Pilihan Produk Jadi Terbatas pada Resep Cabang**:
+   - Dropdown **Produk (Barang Jadi)** secara ketat **hanya menampilkan produk yang telah terdaftar di Master Resep (`master_recipes`) dengan `kode_outlet` cabang aktif Anda**.
+   - Hal ini mencegah staf memproses racikan produk jadi yang belum memiliki formula resep resmi atau formula milik cabang lain.
+3. Masukkan **Jumlah Batch** yang akan diproduksi.
+4. Sistem secara otomatis menampilkan lembar kerja bahan baku:
+   - Menghitung kebutuhan total kuantitas setiap bahan baku.
+   - Memeriksa ketersediaan stok bahan baku di gudang cabang secara *real-time*.
+   - Menampilkan estimasi Harga Pokok Produksi (HPP) per unit dalam format Rupiah (`Rp`).
+5. Pastikan seluruh stok bahan baku berstatus mencukupi (indikator hijau), lalu klik **Proses Produksi**.
+6. Sistem secara otomatis:
+   - Memotong seluruh bahan baku dari saldo stok gudang cabang.
+   - Menambahkan produk jadi ke saldo inventaris gudang secara instan.
+   - Mencatat mutasi produksi ke kartu stok dan histori biaya database.
+
+---
+
+## 10. Keuangan & Kas/Bank (Finance)
 
 ### A. Transaksi Kas Masuk & Kas Keluar
 1. Buka menu **Keuangan > Kas & Bank**.
@@ -647,25 +645,41 @@ Digunakan untuk meracik atau memproduksi bahan perawatan spa mandiri (misal: cam
 
 ---
 
-## 12. Laporan & Rekapitulasi (Reports)
+## 11. Laporan & Rekapitulasi (Reports)
 
 Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, metrik ringkasan kartu, serta tombol **Ekspor CSV** untuk pengolahan lebih lanjut di Microsoft Excel:
 
-1. **Laporan Pemakaian Internal (`Inventaris & Stok > Laporan Pemakaian Internal`)**:
+1. **Laporan Selisih Stock Opname (`Inventaris & Stok > Laporan Selisih Opname`)**:
+   - Memantau rincian audit selisih perhitungan fisik stok terhadap catatan sistem beserta estimasi dampak finansial (nilai selisih rupiah).
+   - **Filter Nomor Batch Dokumen Opname**: Dilengkapi dropdown dinamis untuk memfilter data berdasarkan nomor batch opname spesifik (`document_number`) atau menampilkan seluruh batch.
+   - **Filter Hanya yang Berselisih**: Saklar cepat untuk menyaring hanya barang yang mengalami perbedaan stok (selisih $\neq 0$).
+   - **Format Cetak Dokumen A4 Resmi (4 Kolom Tanda Tangan)**:
+     - Klik tombol **Cetak Laporan** untuk mencetak dokumen selisih berstandar audit format kertas A4.
+     - Di bagian paling bawah halaman terakhir, sistem otomatis mencetak 4 kolom tanda tangan pertanggungjawaban:
+       1. **Kolom 1 (Dibuat Oleh)**: Otomatis mencantumkan nama lengkap petugas opname dari data profil pengguna (`users_profile.full_name`).
+       2. **Kolom 2 (Pemeriksa / Verifikator 1)**: Garis tanda tangan kosong `(...................)`.
+       3. **Kolom 3 (Pemeriksa / Verifikator 2)**: Garis tanda tangan kosong `(...................)`.
+       4. **Kolom 4 (Disetujui / Manager Cabang)**: Garis tanda tangan kosong `(...................)`.
+2. **Laporan Nilai Stok (`Inventaris & Stok > Laporan Nilai Stok`)**:
+   - Menghitung total valuasi aset gudang per cabang berdasarkan saldo kuantitas stok (*Qty on Hand*), harga beli, dan harga jual.
+   - **Pemberlakuan Privasi Harga Antar-Cabang**: Pada item yang diperoleh dari transfer logistik (STO) cabang lain, kolom *Harga Beli* otomatis disamakan dengan *Harga Jual* untuk melindungi kerahasiaan harga modal holding/cabang asal.
+3. **Laporan Kuantitas Stok (`Inventaris & Stok > Laporan Kuantitas Stok`)**:
+   - Memantau saldo fisik barang secara murni (tanpa nominal rupiah) untuk kebutuhan cek fisik cepat di rak gudang.
+4. **Laporan Pemakaian Internal (`Inventaris & Stok > Laporan Pemakaian Internal`)**:
    - Merekap seluruh barang yang dipakai untuk operasional, total biaya pengeluaran, perincian kategori pemakaian, dan staf penanggung jawab.
-2. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
+5. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
    - Memantau nilai barang yang dikembalikan ke gudang beserta persentase kondisi barang (Baik vs Rusak).
-3. **Laporan STO Lengkap (`Transfer Stok (STO)`)**:
+6. **Laporan STO Lengkap (`Transfer Stok (STO)`)**:
    - **Laporan Request Barang (`Transfer Stok (STO) > Laporan Request Barang`)**: Laporan komprehensif 2-tab yang memantau **Ringkasan Dokumen Request** (status pemenuhan `OPEN`/`FULFILLED`/`CANCELLED` beserta tautan nomor STO realisasi) serta **Detail Item: Request vs Realisasi STO** (membandingkan jumlah diminta vs jumlah dipesan di STO, dikirim, diterima, dan selisih pemenuhan).
    - **Ringkasan STO**: Rekapitulasi volume dan nilai transfer antar-cabang.
    - **STO Transit**: Melacak barang yang masih dalam perjalanan ekspedisi antar-outlet.
    - **Piutang Antar-Outlet (STO AR Report)**: Memantau saldo piutang yang belum dilunasi oleh cabang penerima barang.
-4. **Laporan Biaya & Hasil Produksi (`Produksi > Biaya & Hasil Produksi`)**:
+7. **Laporan Biaya & Hasil Produksi (`Produksi > Biaya & Hasil Produksi`)**:
    - Evaluasi efisiensi racikan, persentase rendemen hasil (*yield percentage*), dan varians biaya produksi.
 
 ---
 
-## 13. Tanya Jawab & Kendala Umum (Troubleshooting)
+## 12. Tanya Jawab & Kendala Umum (Troubleshooting)
 
 **1. Muncul pesan "Sesi telah berakhir" atau "Failed to load session"**
 - Muat ulang (*refresh*) halaman peramban web Anda (tekan **F5** atau **Ctrl + F5**). Jika masih berlanjut, lakukan Logout dan masuk kembali.
@@ -687,8 +701,9 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 
 ---
 
-## 14. Layanan Bantuan & Dukungan IT
+## 13. Layanan Bantuan & Dukungan IT
 
 Apabila Anda mengalami kendala teknis atau membutuhkan bantuan terkait hak akses akun, silakan hubungi tim IT Administrator:
-* **Email Dukungan IT**: `it-support@zenfamilyspa.id` / `borist@nababancloud.net`
+* **Email Dukungan IT**: `support@zenfamilyspa.id` / `borist@nababancloud.net`
+* **WhatsApp Dukungan IT**: `+6282188800071`
 * **Portal Sistem**: Tim IT & DevOps Zen Family Spa & Reflexology
