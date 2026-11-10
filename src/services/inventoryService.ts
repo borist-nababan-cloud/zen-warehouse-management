@@ -170,13 +170,12 @@ export async function createStockOpname(payload: OpnamePayload): Promise<ApiResp
         return { data: null, error: headerError?.message || 'Failed to create header', isSuccess: false }
     }
 
-    // 2. Insert Items with difference calculated
+    // 2. Insert Items (difference is calculated automatically by PostgreSQL GENERATED ALWAYS AS (actual_qty - system_qty))
     const itemsToInsert = payload.items.map(item => ({
         header_id: header.id,
         barang_id: item.barang_id,
         system_qty: item.system_qty,
         actual_qty: item.actual_qty,
-        difference: item.actual_qty - item.system_qty,
         notes: item.notes
     }))
 
