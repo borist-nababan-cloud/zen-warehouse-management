@@ -396,6 +396,12 @@ const hrdGroup: NavGroup = {
   defaultOpen: false,
   children: [
     {
+      title: 'Info Karyawan',
+      path: '/hrd/karyawan-info',
+      icon: Users,
+      roleIds: [5, 6, 8, 13, 14, 15],
+    },
+    {
       title: 'Kategori Evaluasi TR',
       path: '/hrd/tr-kategori',
       icon: FolderTree,
@@ -411,13 +417,13 @@ const hrdGroup: NavGroup = {
       title: 'Buat Evaluasi TR',
       path: '/hrd/tr-buat-evaluasi',
       icon: UserCheck,
-      roleIds: [8, 16],
+      roleIds: [8, 15, 16],
     },
     {
-      title: 'Laporan Evaluasi TR',
+      title: 'Lap. Evaluasi',
       path: '/hrd/tr-laporan',
       icon: FileText,
-      roleIds: [5, 6, 8, 13, 14, 19],
+      roleIds: [5, 6, 8, 13, 14, 15, 16],
     },
     {
       title: 'Master Faults',
@@ -429,7 +435,7 @@ const hrdGroup: NavGroup = {
       title: 'TR Faults',
       path: '/hrd/tr-faults',
       icon: AlertCircle,
-      roleIds: [5, 8, 15, 16, 19],
+      roleIds: [5, 8, 14, 15, 16],
     },
     {
       title: 'Report TR Faults',

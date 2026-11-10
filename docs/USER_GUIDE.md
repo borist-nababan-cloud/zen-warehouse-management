@@ -429,13 +429,39 @@ Modul CRM menghubungkan tamu yang berkunjung ke website resmi Zen Family Spa den
 
 ---
 
-## 8. Modul HRD (Evaluasi Kinerja & Pelanggaran Terapis)
+## 8. Modul HRD (Manajemen Karyawan, Evaluasi Kinerja & Pelanggaran Terapis)
 
-Modul HRD dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis, standarisasi kualitas perawatan, serta sistem pencatatan pelanggaran harian (*demerit points*) di seluruh gerai Zen Family Spa & Reflexology.
+Modul HRD dirancang khusus untuk memantau mutu pelayanan, data kepegawaian cabang, kepatuhan SOP terapis, standarisasi kualitas perawatan, serta sistem pencatatan pelanggaran harian (*demerit points*) di seluruh gerai Zen Family Spa & Reflexology.
 
 ---
 
-### A. Kategori Evaluasi TR (`HRD > Kategori Evaluasi TR`)
+### A. Informasi & Status Karyawan (`HRD > Info Karyawan`)
+> [!NOTE]
+> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager Cabang)**, dan **Role 15 (Evaluator Cabang)**.
+
+Halaman ini berfungsi sebagai pusat kendali profil staf dan status keaktifan kerja karyawan (`ot_hrd_karyawan_info`):
+1. **Aturan Pembatasan Cabang (Outlet Scoping)**:
+   - **Role 6 (Admin Outlet)**, **Role 14 (Manager Cabang)**, dan **Role 15 (Evaluator Cabang)**: Akses terkunci secara otomatis hanya pada cabang tugasnya (`user.kode_outlet`).
+   - **Role 5, 8, 13**: Memiliki akses multi-cabang dengan opsi dropdown **SEMUA OUTLET (NASIONAL)** atau memilih cabang tertentu.
+2. **Paginasi Server-Side Skala Besar (>100 Karyawan)**:
+   - Dilengkapi sistem paginasi berbasis server (`.range()`) yang sangat ringan dan cepat untuk cabang dengan ratusan staf.
+   - Pilihan baris per halaman: **10, 25, 50, atau 100 data**.
+3. **Filter & Pencarian Nama Karyawan**:
+   - Filter status keaktifan: **Aktif Saja (Y)** (*default*), **Nonaktif (N)**, atau **Semua Status**.
+   - Kolom pencarian instan nama karyawan (`ilike`) yang langsung menyaring ke basis data cloud Supabase.
+4. **Pengunggahan & Kompresi Foto Karyawan Otomatis**:
+   - Klik tombol **Kelola Foto** pada baris karyawan untuk mengunggah atau mengganti foto resmi staf.
+   - **Kompresi Gambar Client-Side**: Sistem otomatis mengompresi foto menggunakan HTML Canvas (maks. 1.000px, kualitas JPEG 0.82) sehingga file yang tersimpan di bucket Supabase Storage `employee-photos` tetap tajam namun sangat ringan dan hemat bandwidth.
+   - Dilengkapi tombol hapus foto jika staf ingin menghapus foto profilnya.
+5. **Pratinjau Foto Ukuran Penuh (Zoom Photo Modal)**:
+   - Klik thumbnail/avatar foto staf pada tabel untuk membuka jendela pratinjau gambar resolusi penuh, lengkap dengan tautan buka gambar di tab baru.
+6. **Pengubahan Status Keaktifan Karyawan (Active Y $\leftrightarrow$ N)**:
+   - Kolom status menyajikan saklar alih (*switch toggle*).
+   - Mengubah status keaktifan staf memicu dialog konfirmasi aman untuk mencegah ketidaksengajaan. Menonaktifkan staf (`N`) akan mengeluarkan terapis dari dropdown form penilaian evaluasi.
+
+---
+
+### B. Kategori Evaluasi TR (`HRD > Kategori Evaluasi TR`)
 > [!NOTE]
 > Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
 1. Digunakan untuk mengelola master kelompok penilaian performa terapis (misal: *Sikap & Keramahan*, *Standar Grooming & Kerapian*, *Kualitas Pijat & Treatment*, *Kebersihan Area Kerja & Sanitasi*).
@@ -445,7 +471,7 @@ Modul HRD dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis,
 
 ---
 
-### B. Variabel Evaluasi TR (`HRD > Variabel Evaluasi TR`)
+### C. Variabel Evaluasi TR (`HRD > Variabel Evaluasi TR`)
 > [!NOTE]
 > Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
 1. Mengelola indikator variabel spesifik di bawah masing-masing kategori master.
@@ -456,19 +482,23 @@ Modul HRD dirancang khusus untuk memantau mutu pelayanan, kepatuhan SOP terapis,
 
 ---
 
-### C. Buat Evaluasi TR (`HRD > Buat Evaluasi TR`)
+### D. Buat Evaluasi TR (`HRD > Buat Evaluasi TR`)
 > [!NOTE]
-> Dialokasikan khusus untuk **Role 8 (Superuser)** dan **Role 16 (HR / Trainer TR)**.
-Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*) yang terintegrasi langsung dengan data Payroll dan Pelanggaran Operasional:
+> Dialokasikan khusus untuk **Role 8 (Superuser)**, **Role 15 (Evaluator Cabang)**, dan **Role 16 (HR / Trainer TR)**.
+
+Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*) yang terintegrasi langsung dengan data Payroll, Foto Profil, dan Pelanggaran Operasional:
 1. **Langkah 1 - Pilih Cabang & Terapis**:
-   - **Cabang Outlet**: Pilih cabang outlet tempat terapis bertugas untuk mempersempit daftar karyawan.
-   - **Pilih Terapis (TR / TB)**: Dropdown karyawan secara otomatis menyaring staf dari `ot_hrd_karyawan_info` dengan kriteria departemen **`TR`** (*Therapist*) atau **`TB`** (*Therapist Baru*) yang berstatus aktif (`active = 'Y'`).
+   - **Cabang Outlet**:
+     - **Role 15 (Evaluator Cabang)**: Dropdown outlet **terkunci otomatis dan dinonaktifkan (`disabled`)** pada cabangnya sendiri (`user.kode_outlet`).
+     - **Role 8 (Superuser)** dan **Role 16 (HR Holding)**: Bebas memilih cabang mana pun secara nasional.
+   - **Pilih Terapis (TR / TB)**: Dropdown karyawan menyaring staf dari `ot_hrd_karyawan_info` dengan departemen **`TR`** (*Therapist*) atau **`TB`** (*Therapist Baru*) yang aktif (`active = 'Y'`).
+   - **Pratinjau Foto Profil Resmi Terapis**:
+     - Begitu nama terapis dipilih, sistem menampilkan kartu identitas lengkap dengan avatar foto resmi ($56\times56\text{ px}$ circular dengan bingkai hijau Zen Matcha).
+     - Klik foto untuk memperbesar tampilan (*Zoom Photo Modal*). Jika belum ada foto, sistem menampilkan inisial nama terapis.
    - **Tanggal Evaluasi**: Tanggal pelaksanaan observasi/penginputan evaluasi.
    - **Pilihan Periode Payroll (5 Terakhir)**: Dropdown memuat 5 periode payroll terbaru terapis yang bersumber dari tabel `ot_hrd_karyawan_payroll_details.payrollperiode`.
    - **Penguraian Rentang Periode Otomatis (Date Range Parsing)**:
-     - Sistem secara otomatis mengurai 10 digit terakhir kode periode (misal: `PYZ.117.2025012120` $\rightarrow$ `2025012120`).
-     - Digit diuraikan menjadi Tahun (`2025`), Bulan Mulai (`01`), Tanggal Mulai (`21`), dan Tanggal Selesai (`20`).
-     - Karena tanggal mulai ($21$) lebih besar dari tanggal selesai ($20$), sistem mengenali bahwa periode berakhir di bulan berikutnya (`2025-02-20`).
+     - Sistem secara otomatis mengurai kode periode (misal: `PYZ.117.2025012120` $\rightarrow$ `2025012120` $\rightarrow$ `2025-01-21 s/d 2025-02-20`).
      - Ditampilkan sebagai lencana informasi: `📅 Rentang Periode Evaluasi: 2025-01-21 s/d 2025-02-20`.
    - **Matriks Rekap Kehadiran Terapis (Attendance Matrix)**:
      - Sistem mengekstrak payload `payroll_data` (JSONB) dari periode payroll terpilih dan menampilkan 8 metrik absensi terapis:
@@ -503,22 +533,39 @@ Formulir evaluasi terpadu dengan alur multi-langkah (*multi-step workflow*) yang
 
 ---
 
-### D. Laporan Evaluasi TR (`HRD > Laporan Evaluasi TR`)
+### E. Lap. Evaluasi TR (`HRD > Lap. Evaluasi`)
 > [!NOTE]
-> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Auditor)**, dan **Role 19 (Resepsionis Cabang)**.
-1. **Aturan Keamanan Cabang Ketat**:
-   - **Role 6 (Admin Outlet)** dan **Role 19 (Resepsionis)**: Akses terkunci secara otomatis dan hanya dapat meninjau hasil evaluasi terapis pada cabang mereka sendiri (`user.kode_outlet`).
-   - **Role 5, 8, 13, 14**: Memiliki akses lintas outlet dengan dropdown penyaring cabang (Semua Cabang vs Cabang Tertentu).
-2. **Metrik Ringkasan Performa**:
-   - Menampilkan total evaluasi terlaksana, rata-rata skor keseluruhan, dan jumlah terapis berpredikat performa tinggi (skor rata-rata $\ge 8.5$).
-3. **Pencarian & Filter Tanggal**:
-   - Filter rentang tanggal fleksibel (default 30 hari terakhir) serta pencarian instan nama karyawan, ID terapis, atau kode dokumen evaluasi.
-4. **Dialog Rincian Nilai (Modal View)**:
-   - Klik tombol **Lihat Rincian** pada baris laporan untuk membuka jendela rincian lengkap: memuat skor total, detail nilai setiap variabel per kelompok kategori, catatan evaluator, dan kesimpulan tindak lanjut.
+> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager Cabang)**, **Role 15 (Evaluator Cabang)**, dan **Role 16 (HR Holding)**.
+
+Modul rekapitulasi evaluasi terapis per periode payroll dengan transparansi data antar-cabang:
+1. **Akses Lintas Cabang Bebas (Cross-Outlet Scoping)**:
+   - Pada halaman ini, **tidak ada pembatasan/penguncian `kode_outlet`**. Seluruh pengguna dengan peran di atas dapat meninjau hasil evaluasi seluruh cabang Zen secara transparan.
+2. **Alur Kerja Pemilihan Data 2 Langkah (Step-by-Step Flow)**:
+   - **Langkah 1 (Pilih Cabang Outlet)**: Pilih cabang spesifik atau opsi **`SEMUA OUTLET (NASIONAL)`**.
+   - **Langkah 2 (Pilih Periode Payroll)**: Dropdown dinamis dari `hrd_report_tr.payrollperiode` yang memuat rentang tanggal periode payroll (misal: `2026-10-21 s/d 2026-11-20 (2026102120)`).
+   - **Pencarian Cepat**: Filter instan berdasarkan nama terapis, kode TR, ID karyawan, atau nama cabang.
+3. **Tabel Rekapitulasi Evaluasi (Grid Table)**:
+   - **Terapis**: Menampilkan avatar foto profil resmi staf (`foto_url`) yang dapat diklik untuk zoom, nama terapis, dan nomor dokumen evaluasi.
+   - **Kode & ID Karyawan**: Kolom `kodekaryawan` dan `idkaryawan`.
+   - **Outlet Cabang**: Kolom dinamis `kode_outlet` & `name_outlet` yang otomatis muncul saat memilih `SEMUA OUTLET`.
+   - **Total Pengurang**: Poin demerit pelanggaran SOP (lencana merah jika $> 0$).
+   - **Nilai Total**: Skor performa akhir (skala 1–10) dengan lencana warna predikat (Hijau $\ge 8.5$, Biru $\ge 7.0$, Kuning $\ge 5.0$, Merah $< 5.0$).
+   - **Kesimpulan**: Rangkuman catatan dari evaluator.
+   - **Diperbarui Oleh & Waktu Update**: Menampilkan nama staf evaluator (`users_profile.full_name`) dan timestamp pembaruan.
+   - **Aksi (Lihat Rincian)**: Klik tombol **Lihat Rincian** untuk membuka modal audit komprehensif.
+4. **Modal Lihat Rincian (View Details)**:
+   - **Header Profil Terapis**: Foto profil $64\times64\text{ px}$ (zoomable), nama lengkap, NIK/ID, kode TR, departemen, outlet penempatan, skor akhir, dan total poin pengurang.
+   - **Bagian 1: Rincian Variabel Evaluasi**: Tabel skor variabel (`hrd_report_tr_detail`) yang dikelompokkan rapi per kategori master, menampilkan nilai per variabel dan catatan khusus.
+   - **Bagian 2: Riwayat Insiden Pelanggaran SOP (`hrd_tr_faults`)**: Menampilkan seluruh catatan kesalahan terapis pada rentang tanggal periode evaluasi terpilih (Tanggal, Jenis Kesalahan, Kategori, Poin Pengurang, dan Kronologi) atau banner hijau *"✓ Nihil Pelanggaran"*.
+   - **Bagian 3: Kesimpulan & Rekomendasi Evaluator**: Catatan arahan evaluasi.
+   - **Audit Footer**: Informasi petugas pengubah dan waktu pembaruan.
+5. **Mode Cetak Standar Zen A4 (Dual Print Mode)**:
+   - **Cetak Laporan Utama**: Klik tombol **Cetak Laporan** di header utama untuk menghasilkan rekapitulasi tabel evaluasi seluruh terapis format A4 standar Zen (`printReportA4`), lengkap dengan kop Zen resmi, alamat cabang / `ALL OUTLET`, tanggal cetak, status periode payroll, kartu KPI, dan 3 kolom tanda tangan (*Dibuat Oleh*, *Mengetahui Manager Cabang*, dan *Disetujui HR Holding*).
+   - **Cetak Lembar Evaluasi Personal**: Klik tombol **Cetak Lembar Evaluasi** di dalam modal rincian untuk menghasilkan lembar rapor evaluasi perorangan terapis format A4 standar Zen (`printTherapistEvaluationA4`) lengkap dengan foto profil terapis, skor akhir, rincian per kategori, riwayat insiden SOP, kesimpulan, dan 3 kolom tanda tangan (*Terapis yang Dinilai*, *Evaluator / Penilai*, dan *Mengetahui Manager Cabang / HR*).
 
 ---
 
-### E. Master Kesalahan Terapis (`HRD > Master Faults`)
+### F. Master Kesalahan Terapis (`HRD > Master Faults`)
 > [!NOTE]
 > Dialokasikan khusus untuk **Role 5 (Finance Holding)**, **Role 8 (Superuser)**, **Role 15 (Evaluator Holding)**, dan **Role 16 (HR / Trainer TR)**.
 
@@ -538,16 +585,14 @@ Modul ini merupakan katalog acuan standar tata tertib operasional dan poin penal
 
 ---
 
-### F. Pencatatan Kesalahan Terapis (`HRD > TR Faults`)
+### G. Pencatatan Kesalahan Terapis (`HRD > TR Faults`)
 > [!NOTE]
-> Dialokasikan untuk **Role 5 (Finance)**, **Role 8 (Superuser)**, **Role 15 (Evaluator Holding)**, **Role 16 (HR TR)**, dan **Role 19 (Resepsionis Cabang)**.
+> Dialokasikan untuk **Role 5 (Finance Holding)**, **Role 8 (Superuser)**, **Role 14 (Manager Cabang)**, **Role 15 (Evaluator Cabang)**, dan **Role 16 (HR Holding)**. (Akses Role 19 / Resepsionis telah dicabut).
 
 Formulir operasional harian untuk mencatat keluhan tamu (*guest complaints*) atau temuan pelanggaran SOP terapis secara *real-time*:
-1. **Aturan Keamanan Khusus Resepsionis (Role 19)**:
-   - Bagi pengguna dengan Role 19 (Resepsionis Cabang), pilihan cabang **terkunci secara otomatis dan mutlak pada outlet mereka sendiri (`user.kode_outlet`)**.
-   - Sistem menampilkan lencana hijau informatif: *"Mode Resepsionis: Terkunci pada Cabang [KODE_OUTLET]"*.
-   - Dropdown pemilihan terapis secara otomatis hanya menampilkan staf terapis aktif (`departemen IN ('TR', 'TB')` dan `active = 'Y'`) yang bertugas di cabang bersangkutan.
-   - Bagi peran holding (Role 5, 8, 15, 16), pilihan cabang dapat dipilih secara bebas.
+1. **Aturan Pembatasan Cabang (Role 14 & 15 Terkunci)**:
+   - Bagi **Role 14 (Manager Cabang)** dan **Role 15 (Evaluator Cabang)**, pilihan cabang **terkunci secara otomatis dan mutlak hanya pada cabang tugasnya (`user.kode_outlet`)**, mencegah pemilihan cabang lain.
+   - Bagi peran holding (**Role 5, 8, 16**), pilihan cabang dapat dipilih secara bebas via dropdown.
 2. **Langkah-Langkah Pencatatan**:
    - **Tanggal Kejadian**: Otomatis terisi tanggal hari ini (dapat disesuaikan jika mencatat insiden shift malam kemarin).
    - **Pilih Terapis**: Pilih nama terapis yang bersangkutan dari daftar terapis aktif cabang.
@@ -555,21 +600,21 @@ Formulir operasional harian untuk mencatat keluhan tamu (*guest complaints*) ata
    - **Keterangan Kronologi (Opsional)**: Masukkan catatan tambahan kontekstual (misal: *"Tamu di Kamar VIP 2 mengeluhkan tekanan terlalu keras pada sesi reflexology 90 menit"*).
    - Klik **Simpan Catatan Kesalahan**.
 3. **Dukungan Multi-Record Harian**:
-   - Sistem dirancang tanpa batasan unik per tanggal. Jika seorang terapis melakukan lebih dari satu kelalaian dalam shift yang sama, resepsionis dapat memasukkan catatan berikutnya tanpa tertolak oleh sistem.
+   - Sistem dirancang tanpa batasan unik per tanggal. Jika seorang terapis melakukan lebih dari satu kelalaian dalam shift yang sama, petugas dapat memasukkan catatan berikutnya tanpa tertolak oleh sistem.
 4. **Tabel Live Feed Hari Ini**:
    - Tepat di bawah formulir, sistem menyajikan tabel daftar kesalahan yang telah dicatat pada tanggal terpilih untuk cabang tersebut.
    - Petugas dapat langsung memverifikasi bahwa catatan telah masuk, atau menekan tombol ikon sampah (**Hapus**) jika terjadi kekeliruan salah pilih terapis saat penginputan.
 
 ---
 
-### G. Laporan Kesalahan Terapis (`HRD > Report TR Faults`)
+### H. Laporan Kesalahan Terapis (`HRD > Report TR Faults`)
 > [!NOTE]
-> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Auditor)**, **Role 15 (Evaluator Holding)**, **Role 16 (HR TR)**, dan **Role 19 (Resepsionis Cabang)**.
+> Dialokasikan untuk **Role 5 (Finance)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager Cabang)**, **Role 15 (Evaluator Cabang)**, **Role 16 (HR Holding)**, dan **Role 19 (Resepsionis Cabang)**.
 
 Modul rekapitulasi audit dan analisis demerit points terapis untuk evaluasi bulanan serta pengawasan operasional:
-1. **Aturan Pembatasan Cabang**:
-   - **Role 6 (Admin Outlet)** dan **Role 19 (Resepsionis Cabang)**: Akses terkunci secara otomatis hanya pada data cabang mereka sendiri (`user.kode_outlet`).
-   - **Role 5, 8, 13, 14, 15, 16**: Memiliki akses multi-cabang dengan opsi dropdown **SEMUA OUTLET (NASIONAL)** atau memilih cabang tertentu.
+1. **Aturan Pembatasan Cabang Ketat**:
+   - **Role 6 (Admin Outlet)**, **Role 14 (Manager Cabang)**, **Role 15 (Evaluator Cabang)**, dan **Role 19 (Resepsionis Cabang)**: Akses **terkunci ketat hanya pada data cabang mereka sendiri (`user.kode_outlet`)**. Dropdown cabang dinonaktifkan dengan lencana gembok `[kode_outlet] nama_cabang`.
+   - **Role 5, 8, 13, 16**: Memiliki akses multi-cabang secara nasional dengan opsi dropdown **`SEMUA OUTLET (NASIONAL)`** atau memilih cabang tertentu.
 2. **Kartu Ringkasan Metrik (KPI Overview)**:
    - **Total Kasus Tercatat**: Jumlah total insiden kesalahan yang terjadi dalam periode filter.
    - **Total Poin Penalti**: Akumulasi total demerit points (`-X Poin`) yang dikumpulkan terapis.

@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { MasterOutlet } from '@/types/database'
 import { masterOutletService } from '@/services/masterOutletService'
+import { HrdReportTr, HrdReportTrDetail, HrdTrFault } from '@/types/hrd'
 
 export interface ReportPrintColumn {
     header: string
@@ -628,6 +629,522 @@ export async function printReportA4(options: ReportPrintOptions): Promise<void> 
         </div>
     </div>
     ${pagesHtml}
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                window.print();
+            }, 350);
+        });
+    </script>
+</body>
+</html>`
+
+    printWindow.document.open()
+    printWindow.document.write(htmlDocument)
+    printWindow.document.close()
+}
+
+export interface TherapistEvaluationPrintOptions {
+    report: HrdReportTr
+    details: HrdReportTrDetail[]
+    faults: HrdTrFault[]
+    evaluatorName?: string | null
+    availableOutlets?: Partial<MasterOutlet>[]
+    periodDates?: { startDate: string; endDate: string } | null
+}
+
+/**
+ * Print individual Therapist Evaluation sheet on standard Zen A4 layout
+ */
+export async function printTherapistEvaluationA4(options: TherapistEvaluationPrintOptions): Promise<void> {
+    const { report, details, faults, evaluatorName, availableOutlets, periodDates } = options
+
+    const outletInfo = await resolveOutletHeaderData(
+        false,
+        report.kode_outlet,
+        report.kode_outlet,
+        availableOutlets
+    )
+
+    const iconUrl = `${window.location.origin}/assets/icon/icon-192x192.png`
+    const printedAt = format(new Date(), 'dd/MMM/yyyy HH:mm:ss')
+
+    const periodText = periodDates?.startDate && periodDates?.endDate
+        ? `${formatReportPrintDate(periodDates.startDate)} s/d ${formatReportPrintDate(periodDates.endDate)}`
+        : report.payrollperiode || formatReportPrintDate(report.tanggal_report)
+
+    const finalScore = Number(report.nilai_total) || 0
+    let predikatText = 'Cukup'
+    let scoreColor = '#d97706'
+    if (finalScore >= 8.5) {
+        predikatText = 'Sangat Baik (A)'
+        scoreColor = '#15803d'
+    } else if (finalScore >= 7.0) {
+        predikatText = 'Baik (B)'
+        scoreColor = '#2563eb'
+    } else if (finalScore < 5.0) {
+        predikatText = 'Kurang / Perlu Pembinaan (D)'
+        scoreColor = '#b91c1c'
+    }
+
+    const therapistPhotoHtml = report.karyawan_info?.foto_url
+        ? `<img src="${report.karyawan_info.foto_url}" alt="${escapeHtml(report.karyawan_info?.namakaryawan || '')}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #889D35; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />`
+        : `<div style="width: 64px; height: 64px; border-radius: 50%; background: #F8F5F1; border: 2px solid #D2C0A7; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #889D35;">
+            ${(report.karyawan_info?.namakaryawan || report.kodekaryawan || 'TR').substring(0, 2).toUpperCase()}
+           </div>`
+
+    // Group details by category
+    const groupedDetails: Record<string, HrdReportTrDetail[]> = {}
+    details.forEach((det) => {
+        const cat = det.nama_kategori || 'Variabel Penilaian'
+        if (!groupedDetails[cat]) groupedDetails[cat] = []
+        groupedDetails[cat].push(det)
+    })
+
+    const detailsRowsHtml = Object.entries(groupedDetails).map(([catName, items]) => {
+        const itemsHtml = items.map((it) => `
+            <tr>
+                <td style="padding: 5px 8px; font-weight: 500;">${escapeHtml(it.nama_variable)}</td>
+                <td style="padding: 5px 8px; text-align: center; font-weight: 700; color: #1e293b;">${escapeHtml(it.nilai_variable)} / 10</td>
+                <td style="padding: 5px 8px; color: #475569; font-style: ${it.catatan_variable ? 'normal' : 'italic'};">
+                    ${it.catatan_variable ? escapeHtml(it.catatan_variable) : '-'}
+                </td>
+            </tr>
+        `).join('')
+
+        return `
+            <tr style="background: #f1f5f9;">
+                <td colspan="3" style="padding: 6px 8px; font-weight: 700; font-size: 10.5px; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+                    📁 ${escapeHtml(catName)} (${items.length} Variabel)
+                </td>
+            </tr>
+            ${itemsHtml}
+        `
+    }).join('')
+
+    const faultsRowsHtml = faults.length > 0
+        ? faults.map((f, idx) => `
+            <tr class="${idx % 2 === 1 ? 'row-alt' : ''}">
+                <td style="padding: 5px 8px; text-align: center;">${formatReportPrintDate(f.tanggal)}</td>
+                <td style="padding: 5px 8px; font-weight: 600;">${escapeHtml(f.nama_faults)}</td>
+                <td style="padding: 5px 8px; text-align: center;">
+                    <span style="font-weight: 600; font-size: 10px; color: ${f.kategori === 'Berat' ? '#b91c1c' : f.kategori === 'Sedang' ? '#d97706' : '#15803d'};">
+                        ${escapeHtml(f.kategori)}
+                    </span>
+                </td>
+                <td style="padding: 5px 8px; text-align: center; font-weight: 700; color: #b91c1c;">
+                    -${escapeHtml(f.pengurang || 0)}
+                </td>
+                <td style="padding: 5px 8px; color: #475569;">
+                    ${f.keterangan ? escapeHtml(f.keterangan) : '-'}
+                </td>
+            </tr>
+        `).join('')
+        : ''
+
+    const rightHeaderHtml = outletInfo.isAllOutlets
+        ? `
+            <div class="outlet-box">
+                <div class="outlet-badge">ALL OUTLET</div>
+                <div class="outlet-sub">Seluruh Cabang / Gudang</div>
+            </div>
+        `
+        : `
+            <div class="outlet-box">
+                <div class="outlet-name">${escapeHtml(outletInfo.outlet?.name_outlet || outletInfo.fallbackCode)}</div>
+                ${outletInfo.outlet?.alamat ? `<div class="outlet-line">${escapeHtml(outletInfo.outlet.alamat)}</div>` : ''}
+                ${outletInfo.outlet?.city ? `<div class="outlet-line">${escapeHtml(outletInfo.outlet.city)}</div>` : ''}
+                ${outletInfo.outlet?.no_telp ? `<div class="outlet-line">Telp: ${escapeHtml(outletInfo.outlet.no_telp)}</div>` : ''}
+            </div>
+        `
+
+    const printWindow = window.open('', '_blank', 'width=1024,height=800')
+    if (!printWindow) {
+        alert('Pop-up diblokir oleh browser. Mohon izinkan pop-up untuk mencetak lembar evaluasi.')
+        return
+    }
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <title>Lembar Evaluasi Terapis - ${escapeHtml(report.kode_report)}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #e2e8f0;
+            font-size: 10.5px;
+            line-height: 1.35;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: #1e293b;
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .toolbar-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .toolbar-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            border: none;
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-print {
+            background: #10b981;
+            color: #fff;
+        }
+        .btn-print:hover {
+            background: #059669;
+        }
+        .btn-close {
+            background: #475569;
+            color: #fff;
+        }
+        .btn-close:hover {
+            background: #334155;
+        }
+        .print-page {
+            width: 210mm;
+            min-height: 276mm;
+            margin: 12px auto;
+            padding: 10mm;
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .page-body {
+            flex: 1;
+        }
+        .report-header {
+            margin-bottom: 12px;
+            border-bottom: 2px solid #889D35;
+            padding-bottom: 8px;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+        }
+        .report-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .report-subtitle {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 1px;
+        }
+        .outlet-box {
+            text-align: right;
+            font-size: 10px;
+            color: #475569;
+            max-width: 280px;
+        }
+        .outlet-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .outlet-badge {
+            display: inline-block;
+            background: #10b981;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+        }
+        .outlet-sub {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .header-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 10px;
+        }
+        .meta-item {
+            display: flex;
+            gap: 4px;
+        }
+        .meta-label {
+            color: #64748b;
+            font-weight: 600;
+        }
+        .meta-val {
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .therapist-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            margin-bottom: 12px;
+        }
+        .therapist-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .score-box {
+            text-align: right;
+            border-left: 2px solid #e2e8f0;
+            padding-left: 14px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 10px 0 6px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-bottom: 10px;
+        }
+        .data-table th {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 5px 8px;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            font-size: 9.5px;
+        }
+        .data-table td {
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+        .data-table tr.row-alt td {
+            background: #f8fafc;
+        }
+        .page-footer {
+            margin-top: 10px;
+            padding-top: 6px;
+            border-top: 1px solid #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+            color: #475569;
+            font-weight: 500;
+        }
+        @media print {
+            body {
+                background: #ffffff;
+            }
+            .toolbar {
+                display: none !important;
+            }
+            .print-page {
+                width: 100%;
+                min-height: 274mm;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar-title">Pratinjau Lembar Evaluasi TR — ${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}</div>
+        <div class="toolbar-actions">
+            <button class="btn btn-print" onclick="window.print()">🖨️ Cetak Lembar Ini</button>
+            <button class="btn btn-close" onclick="window.close()">Tutup</button>
+        </div>
+    </div>
+    <section class="print-page">
+        <div class="page-body">
+            <!-- Header -->
+            <div class="report-header">
+                <div class="header-top">
+                    <div class="header-left">
+                        <img src="${iconUrl}" alt="ZEN Icon" class="brand-icon" />
+                        <div>
+                            <h1 class="report-title">LEMBAR EVALUASI & PENILAIAN TERAPIS</h1>
+                            <p class="report-subtitle">Dokumen Penilaian Kinerja & Audit Kepatuhan Standar SOP Terapis</p>
+                        </div>
+                    </div>
+                    <div class="header-right">
+                        ${rightHeaderHtml}
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <div class="meta-item"><span class="meta-label">No. Dokumen:</span> <span class="meta-val">${escapeHtml(report.kode_report)}</span></div>
+                    <div class="meta-item"><span class="meta-label">Tanggal Evaluasi:</span> <span class="meta-val">${formatReportPrintDate(report.tanggal_report)}</span></div>
+                    <div class="meta-item"><span class="meta-label">Periode Payroll:</span> <span class="meta-val">${escapeHtml(report.payrollperiode || '-')}</span></div>
+                    <div class="meta-item"><span class="meta-label">Rentang Evaluasi:</span> <span class="meta-val">${escapeHtml(periodText)}</span></div>
+                    <div class="meta-item"><span class="meta-label">Evaluator:</span> <span class="meta-val">${escapeHtml(report.update_by_name || evaluatorName || 'Evaluator Cabang')}</span></div>
+                </div>
+            </div>
+
+            <!-- Therapist Identity Card -->
+            <div class="therapist-card">
+                <div class="therapist-info">
+                    ${therapistPhotoHtml}
+                    <div>
+                        <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}</div>
+                        <div style="font-size: 10px; color: #475569; margin-top: 2px;">
+                            ID Karyawan: <strong>${escapeHtml(report.karyawan_info?.idkaryawan || '-')}</strong> | Kode: <strong>${escapeHtml(report.kodekaryawan)}</strong> | Dept: <strong>${escapeHtml(report.karyawan_info?.departemen || 'TR')}</strong>
+                        </div>
+                        <div style="font-size: 10px; color: #475569; margin-top: 1px;">
+                            Penempatan: <strong>[${escapeHtml(report.kode_outlet)}] ${escapeHtml(report.master_outlet?.name_outlet || '')}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="score-box">
+                    <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600;">Skor Evaluasi</div>
+                    <div style="font-size: 22px; font-weight: 900; color: ${scoreColor}; line-height: 1.1;">
+                        ${finalScore.toFixed(2)} <span style="font-size: 11px; font-weight: 600; color: #64748b;">/ 10</span>
+                    </div>
+                    <div style="font-size: 9.5px; font-weight: 700; color: ${scoreColor}; margin-top: 1px;">${escapeHtml(predikatText)}</div>
+                    <div style="font-size: 9px; color: ${report.total_pengurang ? '#b91c1c' : '#15803d'}; font-weight: 700; margin-top: 3px;">
+                        ${report.total_pengurang ? `Pengurang: -${report.total_pengurang} Poin` : 'Nihil Pengurang SOP'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 1: Scored Variables -->
+            <div class="section-title">
+                <span>1. Rincian Penilaian Variabel Evaluasi</span>
+                <span style="font-size: 9.5px; font-weight: normal; color: #64748b;">Total ${details.length} Variabel</span>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%; text-align: left;">Variabel Penilaian</th>
+                        <th style="width: 15%; text-align: center;">Skor (1-10)</th>
+                        <th style="width: 35%; text-align: left;">Catatan Evaluator</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${detailsRowsHtml || '<tr><td colspan="3" style="text-align: center; padding: 12px; color: #64748b;">Tidak ada variabel tercatat.</td></tr>'}
+                </tbody>
+            </table>
+
+            <!-- Section 2: Faults Record -->
+            <div class="section-title">
+                <span>2. Catatan Pelanggaran SOP (TR Faults) Pada Periode Ini</span>
+                <span style="font-size: 9.5px; font-weight: normal; color: ${faults.length > 0 ? '#b91c1c' : '#15803d'};">
+                    ${faults.length > 0 ? `${faults.length} Insiden Pelanggaran` : 'Nihil Pelanggaran'}
+                </span>
+            </div>
+            ${faults.length > 0 ? `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%; text-align: center;">Tanggal</th>
+                            <th style="width: 30%; text-align: left;">Jenis Kesalahan</th>
+                            <th style="width: 14%; text-align: center;">Kategori</th>
+                            <th style="width: 12%; text-align: center;">Poin</th>
+                            <th style="width: 32%; text-align: left;">Kronologi / Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${faultsRowsHtml}
+                    </tbody>
+                </table>
+            ` : `
+                <div style="padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 9.5px; font-weight: 600; margin-bottom: 10px;">
+                    ✓ Terapis ini tidak memiliki catatan kesalahan SOP pada periode evaluasi terpilih (Nihil Kesalahan).
+                </div>
+            `}
+
+            <!-- Section 3: Conclusion -->
+            <div class="section-title">3. Kesimpulan & Rekomendasi Evaluator</div>
+            <div style="padding: 8px 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 10px; line-height: 1.45; min-height: 38px; margin-bottom: 15px; color: #1e293b; white-space: pre-wrap;">
+                ${report.kesimpulan ? escapeHtml(report.kesimpulan) : 'Tidak ada catatan kesimpulan khusus dari evaluator.'}
+            </div>
+
+            <!-- Signatures -->
+            <div style="display: flex; justify-content: space-between; margin-top: 18px; margin-bottom: 8px; page-break-inside: avoid;">
+                <div style="width: 30%; text-align: center; font-size: 9.5px; color: #1e293b;">
+                    <div style="font-weight: 600; margin-bottom: 40px; text-transform: uppercase; font-size: 9px; color: #475569;">Terapis yang Dinilai</div>
+                    <div style="font-weight: 700; border-bottom: 1px solid #0f172a; padding-bottom: 2px;">
+                        ${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}
+                    </div>
+                </div>
+                <div style="width: 30%; text-align: center; font-size: 9.5px; color: #1e293b;">
+                    <div style="font-weight: 600; margin-bottom: 40px; text-transform: uppercase; font-size: 9px; color: #475569;">Evaluator / Penilai</div>
+                    <div style="font-weight: 700; border-bottom: 1px solid #0f172a; padding-bottom: 2px;">
+                        ${escapeHtml(report.update_by_name || evaluatorName || 'Evaluator Cabang')}
+                    </div>
+                </div>
+                <div style="width: 30%; text-align: center; font-size: 9.5px; color: #1e293b;">
+                    <div style="font-weight: 600; margin-bottom: 40px; text-transform: uppercase; font-size: 9px; color: #475569;">Mengetahui (Manager Cabang / HR)</div>
+                    <div style="font-weight: 700; border-bottom: 1px solid #0f172a; padding-bottom: 2px;">
+                        ( ........................................ )
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="page-footer">
+            <div>Dicetak pada: ${escapeHtml(printedAt)}</div>
+            <div>Dokumen Resmi Zen Family Spa & Reflexology — Lembar Evaluasi TR</div>
+        </footer>
+    </section>
     <script>
         window.addEventListener('load', function() {
             setTimeout(function() {

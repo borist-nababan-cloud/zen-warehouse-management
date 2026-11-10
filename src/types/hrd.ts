@@ -9,6 +9,8 @@ export interface HrdReportTrCategory {
   created_at: string;
   update_by?: string | null;
   update_at: string;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
 }
 
 export interface HrdReportTrVariable {
@@ -23,6 +25,7 @@ export interface HrdReportTrVariable {
   update_by?: string | null;
   update_at: string;
   update_by_name?: string | null;
+  created_by_name?: string | null;
   // Join
   category?: HrdReportTrCategory;
 }
@@ -43,6 +46,8 @@ export interface HrdReportTr {
   created_at: string;
   update_by?: string | null;
   update_at: string;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
   // Joins
   master_outlet?: MasterOutlet | null;
   karyawan_info?: HrdEmployeeSimple | null;
@@ -67,6 +72,7 @@ export interface HrdEmployeeSimple {
   kode_outlet?: string | null;
   departemen?: string | null;
   active?: string | null;
+  foto_url?: string | null;
 }
 
 export interface CreateHrdReportTrPayload {
@@ -159,4 +165,49 @@ export interface CreateHrdTrFaultPayload {
   pengurang: number;
   keterangan?: string | null;
 }
+
+export interface HrdKaryawanInfo {
+  id: string;
+  local_autonum?: number | null;
+  kode_outlet: string;
+  kodekaryawan: string;
+  idkaryawan?: string | null;
+  namakaryawan: string;
+  departemen?: string | null;
+  jadwaltetap?: string | null;
+  kodejadwal?: number | null;
+  kodekontrak?: string | null;
+  tglmasukkerja?: string | null;
+  tglhabiskontrak?: string | null;
+  namabank?: string | null;
+  norek?: string | null;
+  namarek?: string | null;
+  active: 'Y' | 'N' | string;
+  foto_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string | null;
+  // Join
+  master_outlet?: {
+    kode_outlet: string;
+    name_outlet: string;
+  } | null;
+}
+
+export interface KaryawanListParams {
+  page: number;
+  pageSize: number;
+  kode_outlet?: string;
+  activeStatus?: 'Y' | 'N' | 'ALL';
+  search?: string;
+}
+
+export interface KaryawanListResponse {
+  data: HrdKaryawanInfo[];
+  count: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 

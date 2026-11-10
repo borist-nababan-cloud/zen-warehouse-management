@@ -38,7 +38,8 @@ import {
 
 export function TrFaultsPage() {
   const { user } = useAuthUser();
-  const isReception = user?.user_role === 19;
+  // Role 14 (Manager) and Role 15 (Evaluator) are strictly restricted to their own assigned outlet
+  const isOutletRestricted = [14, 15].includes(Number(user?.user_role));
 
   // Master Data States
   const [outlets, setOutlets] = useState<MasterOutlet[]>([]);
@@ -81,10 +82,10 @@ export function TrFaultsPage() {
         setOutlets(rawOutlets);
         setMasterFaults(faultsRes);
 
-        // Enforce branch lock for reception or user with outlet
-        if (isReception && user?.kode_outlet) {
+        // Enforce branch lock for restricted roles (Role 14 & 15) or user with outlet
+        if (isOutletRestricted && user?.kode_outlet) {
           setSelectedOutlet(user.kode_outlet);
-        } else if (user?.kode_outlet) {
+        } else if (user?.kode_outlet && rawOutlets.some((o) => o.kode_outlet === user.kode_outlet)) {
           setSelectedOutlet(user.kode_outlet);
         } else if (rawOutlets.length > 0) {
           setSelectedOutlet(rawOutlets[0].kode_outlet);
@@ -96,7 +97,7 @@ export function TrFaultsPage() {
     };
 
     initData();
-  }, [user, isReception]);
+  }, [user, isOutletRestricted]);
 
   // 2. Load Therapists when selectedOutlet changes
   useEffect(() => {
@@ -256,11 +257,11 @@ export function TrFaultsPage() {
               </p>
             </div>
 
-            {isReception && (
+            {isOutletRestricted && (
               <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-2 rounded-xl text-xs font-medium">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
-                  Mode Resepsionis: Terkunci pada Cabang <strong>{user?.kode_outlet}</strong>
+                  Cabang Terkunci: <strong>{user?.kode_outlet}</strong>
                 </span>
               </div>
             )}
@@ -295,19 +296,26 @@ export function TrFaultsPage() {
 
               {/* Outlet */}
               <div>
-                <label className="text-xs font-semibold text-[#3C3C32] dark:text-[#EBE6DF] flex items-center gap-1.5 mb-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-[#889D35]" />
-                  <span>Cabang / Outlet</span>
+                <label className="text-xs font-semibold text-[#3C3C32] dark:text-[#EBE6DF] flex items-center justify-between mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#889D35]" />
+                    <span>Cabang / Outlet</span>
+                  </span>
+                  {isOutletRestricted && (
+                    <span className="text-[10px] text-[#889D35] font-semibold">Terkunci (Cabang Anda)</span>
+                  )}
                 </label>
                 <select
                   value={selectedOutlet}
-                  disabled={isReception}
+                  disabled={isOutletRestricted}
                   onChange={(e) => setSelectedOutlet(e.target.value)}
-                  className={`w-full bg-[#F8F5F1]/50 dark:bg-[#191914] border border-[#D2C0A7]/40 dark:border-[#38382E] rounded-xl px-3 py-2 text-sm text-[#3C3C32] dark:text-[#EBE6DF] focus:outline-none focus:ring-1 focus:ring-[#889D35] ${
-                    isReception ? 'opacity-80 cursor-not-allowed bg-gray-100 dark:bg-gray-900' : ''
-                  }`}
+                  className={`w-full bg-[#F8F5F1]/50 dark:bg-[#191914] border border-[#D2C0A7]/40 dark:border-[#38382E] rounded-xl px-3 py-2 text-sm text-[#3C3C32] dark:text-[#EBE6DF] focus:outline-none focus:ring-1 focus:ring-[#889D35] ${isOutletRestricted ? 'opacity-80 cursor-not-allowed bg-gray-100 dark:bg-gray-900' : ''
+                    }`}
                 >
-                  {outlets.map((o) => (
+                  {(isOutletRestricted && user?.kode_outlet
+                    ? outlets.filter((o) => o.kode_outlet === user.kode_outlet)
+                    : outlets
+                  ).map((o) => (
                     <option key={o.kode_outlet} value={o.kode_outlet}>
                       [{o.kode_outlet}] {o.name_outlet} - {o.city}
                     </option>
@@ -331,8 +339,8 @@ export function TrFaultsPage() {
                     {loadingTherapists
                       ? 'Memuat daftar terapis...'
                       : therapists.length === 0
-                      ? 'Tidak ada terapis aktif'
-                      : '-- Pilih Terapis --'}
+                        ? 'Tidak ada terapis aktif'
+                        : '-- Pilih Terapis --'}
                   </option>
                   {therapists.map((t) => (
                     <option key={t.kodekaryawan} value={t.kodekaryawan}>

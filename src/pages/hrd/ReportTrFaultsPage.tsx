@@ -25,8 +25,8 @@ import { toast } from 'sonner';
 export function ReportTrFaultsPage() {
   const { user } = useAuthUser();
 
-  // Role Restriction Check (Roles 6 and 19 can only access their own outlet)
-  const isOutletRestricted = user?.user_role === 6 || user?.user_role === 19;
+  // Role Restriction Check (Roles 6, 14, 15, and 19 can only access their own outlet)
+  const isOutletRestricted = [6, 14, 15, 19].includes(Number(user?.user_role));
   const userOutletCode = user?.kode_outlet || '';
 
   // Filter States
@@ -304,7 +304,7 @@ export function ReportTrFaultsPage() {
               </label>
               {isOutletRestricted ? (
                 <div className="h-9 px-3 bg-gray-100 dark:bg-gray-800 border border-[#D2C0A7]/40 dark:border-[#38382E] rounded-xl flex items-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                  [{userOutletCode}] Cabang Saya
+                  [{userOutletCode}] {outlets.find((o) => o.kode_outlet === userOutletCode)?.name_outlet || 'Cabang Terkunci'}
                 </div>
               ) : (
                 <select

@@ -32,6 +32,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface FormVariableItem {
   variable_id: string;
@@ -47,11 +54,19 @@ export function TrCreateEvaluationPage() {
   const { user } = useAuthUser();
   const navigate = useNavigate();
 
+  // Role 15 (Evaluator) is locked strictly to their own assigned outlet
+  const isOutletRestricted = Number(user?.user_role) === 15;
+
   // Outlets & Employees State
   const [outlets, setOutlets] = useState<MasterOutlet[]>([]);
   const [selectedOutlet, setSelectedOutlet] = useState<string>('');
   const [therapists, setTherapists] = useState<HrdEmployeeSimple[]>([]);
   const [selectedKaryawan, setSelectedKaryawan] = useState<string>('');
+
+  // Photo Preview State
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState<boolean>(false);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string>('');
+  const [previewPhotoName, setPreviewPhotoName] = useState<string>('');
 
   // Payroll Periods & Faults State
   const [payrolls, setPayrolls] = useState<HrdPayrollDetailItem[]>([]);
@@ -105,8 +120,10 @@ export function TrCreateEvaluationPage() {
         }));
         setFormItems(items);
 
-        // Set default outlet if user is assigned to an outlet
-        if (user?.kode_outlet && rawOutlets.some((o) => o.kode_outlet === user.kode_outlet)) {
+        // Set default outlet: if Role 15 or assigned to an outlet, lock to user.kode_outlet
+        if (isOutletRestricted && user?.kode_outlet) {
+          setSelectedOutlet(user.kode_outlet);
+        } else if (user?.kode_outlet && rawOutlets.some((o) => o.kode_outlet === user.kode_outlet)) {
           setSelectedOutlet(user.kode_outlet);
         } else if (rawOutlets.length > 0) {
           setSelectedOutlet(rawOutlets[0].kode_outlet);
@@ -120,7 +137,14 @@ export function TrCreateEvaluationPage() {
     };
 
     initData();
-  }, [user]);
+  }, [user, isOutletRestricted]);
+
+  const getInitials = (name: string) => {
+    if (!name) return 'TR';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  };
 
   // 2. When Outlet changes: Fetch Therapists in that outlet
   useEffect(() => {
@@ -383,17 +407,23 @@ export function TrCreateEvaluationPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Outlet Selector */}
               <div>
-                <label className="block text-xs font-bold text-zen-charcoal mb-1.5">
-                  Cabang Outlet <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-zen-charcoal mb-1.5 flex items-center justify-between">
+                  <span>Cabang Outlet <span className="text-red-500">*</span></span>
+                  {isOutletRestricted && (
+                    <span className="text-[10px] text-zen-matcha font-semibold">Terkunci (Cabang Anda)</span>
+                  )}
                 </label>
                 <select
                   value={selectedOutlet}
                   onChange={(e) => setSelectedOutlet(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-white border border-zen-sand/60 text-xs font-semibold text-zen-charcoal focus:ring-2 focus:ring-zen-matcha/30"
-                  disabled={loadingInitial}
+                  className="w-full h-10 px-3 rounded-xl bg-white border border-zen-sand/60 text-xs font-semibold text-zen-charcoal focus:ring-2 focus:ring-zen-matcha/30 disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed"
+                  disabled={loadingInitial || isOutletRestricted}
                 >
                   <option value="" disabled>Pilih Outlet...</option>
-                  {outlets.map((o) => (
+                  {(isOutletRestricted && user?.kode_outlet
+                    ? outlets.filter((o) => o.kode_outlet === user.kode_outlet)
+                    : outlets
+                  ).map((o) => (
                     <option key={o.kode_outlet} value={o.kode_outlet}>
                       {o.kode_outlet} - {o.name_outlet}
                     </option>
@@ -473,20 +503,48 @@ export function TrCreateEvaluationPage() {
               </div>
             </div>
 
-            {/* Selected Therapist Details & Parsed Date Range Badge */}
+            {/* Selected Therapist Details & Parsed Date Range Badge with Photo */}
             {selectedTherapistObj && (
-              <div className="mt-4 p-3 bg-zen-paper/60 rounded-xl border border-zen-sand/40 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-zen-matcha text-white font-bold font-mono flex items-center justify-center text-xs shadow-xs">
-                    {selectedTherapistObj.departemen || 'TR'}
-                  </div>
+              <div className="mt-4 p-3.5 bg-zen-paper/60 rounded-xl border border-zen-sand/40 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex items-center space-x-3.5">
+                  {selectedTherapistObj.foto_url ? (
+                    <img
+                      src={selectedTherapistObj.foto_url}
+                      alt={selectedTherapistObj.namakaryawan || 'Terapis'}
+                      onClick={() => {
+                        setPreviewPhotoUrl(selectedTherapistObj.foto_url!);
+                        setPreviewPhotoName(selectedTherapistObj.namakaryawan || 'Terapis');
+                        setPhotoPreviewOpen(true);
+                      }}
+                      className="w-14 h-14 rounded-full object-cover border-2 border-zen-matcha shadow-xs cursor-pointer hover:border-zen-moss hover:scale-105 transition-all"
+                      title="Klik untuk melihat foto ukuran penuh"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-zen-charcoal text-white font-bold flex flex-col items-center justify-center border-2 border-zen-sand shadow-xs">
+                      <span className="text-sm tracking-wider">{getInitials(selectedTherapistObj.namakaryawan || '')}</span>
+                      <span className="text-[9px] text-zen-sand font-mono">{selectedTherapistObj.departemen || 'TR'}</span>
+                    </div>
+                  )}
                   <div>
-                    <span className="font-bold text-zen-charcoal text-sm">
-                      {selectedTherapistObj.namakaryawan}
-                    </span>
-                    <span className="text-zen-muted ml-2 font-mono text-[11px]">
-                      Kode: {selectedTherapistObj.kodekaryawan}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-zen-charcoal text-sm">
+                        {selectedTherapistObj.namakaryawan}
+                      </span>
+                      {selectedTherapistObj.departemen && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zen-matcha/15 text-zen-moss border border-zen-matcha/30">
+                          {selectedTherapistObj.departemen === 'TR' ? 'Reflexology (TR)' : 'Body Massage (TB)'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-zen-muted text-xs mt-0.5 flex items-center gap-2 font-mono">
+                      <span>Kode: <strong className="text-zen-charcoal">{selectedTherapistObj.kodekaryawan}</strong></span>
+                      {selectedTherapistObj.idkaryawan && (
+                        <>
+                          <span>•</span>
+                          <span>ID: {selectedTherapistObj.idkaryawan}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -525,15 +583,13 @@ export function TrCreateEvaluationPage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                   {/* H. Alpa */}
-                  <div className={`p-2.5 rounded-xl border text-center transition-all ${
-                    (selectedPayroll.attendance?.halpa || 0) > 0
+                  <div className={`p-2.5 rounded-xl border text-center transition-all ${(selectedPayroll.attendance?.halpa || 0) > 0
                       ? 'bg-red-50/70 border-red-200 text-red-900'
                       : 'bg-zen-paper/40 border-zen-sand/30 text-zen-charcoal'
-                  }`}>
-                    <span className="text-[10px] font-semibold text-zen-muted block">H. Alpa</span>
-                    <span className={`text-base font-extrabold ${
-                      (selectedPayroll.attendance?.halpa || 0) > 0 ? 'text-red-600' : 'text-zen-charcoal'
                     }`}>
+                    <span className="text-[10px] font-semibold text-zen-muted block">H. Alpa</span>
+                    <span className={`text-base font-extrabold ${(selectedPayroll.attendance?.halpa || 0) > 0 ? 'text-red-600' : 'text-zen-charcoal'
+                      }`}>
                       {selectedPayroll.attendance?.halpa ?? 0}
                     </span>
                   </div>
@@ -547,29 +603,25 @@ export function TrCreateEvaluationPage() {
                   </div>
 
                   {/* H. Terlambat < 30 Menit */}
-                  <div className={`p-2.5 rounded-xl border text-center transition-all ${
-                    (selectedPayroll.attendance?.hlate1 || 0) > 0
+                  <div className={`p-2.5 rounded-xl border text-center transition-all ${(selectedPayroll.attendance?.hlate1 || 0) > 0
                       ? 'bg-amber-50/70 border-amber-200 text-amber-900'
                       : 'bg-zen-paper/40 border-zen-sand/30 text-zen-charcoal'
-                  }`}>
-                    <span className="text-[10px] font-semibold text-zen-muted block leading-tight">Terlambat &lt;30m</span>
-                    <span className={`text-base font-extrabold ${
-                      (selectedPayroll.attendance?.hlate1 || 0) > 0 ? 'text-amber-600' : 'text-zen-charcoal'
                     }`}>
+                    <span className="text-[10px] font-semibold text-zen-muted block leading-tight">Terlambat &lt;30m</span>
+                    <span className={`text-base font-extrabold ${(selectedPayroll.attendance?.hlate1 || 0) > 0 ? 'text-amber-600' : 'text-zen-charcoal'
+                      }`}>
                       {selectedPayroll.attendance?.hlate1 ?? 0}
                     </span>
                   </div>
 
                   {/* H. Terlambat > 30 Menit */}
-                  <div className={`p-2.5 rounded-xl border text-center transition-all ${
-                    (selectedPayroll.attendance?.hlate2 || 0) > 0
+                  <div className={`p-2.5 rounded-xl border text-center transition-all ${(selectedPayroll.attendance?.hlate2 || 0) > 0
                       ? 'bg-orange-50/70 border-orange-200 text-orange-900'
                       : 'bg-zen-paper/40 border-zen-sand/30 text-zen-charcoal'
-                  }`}>
-                    <span className="text-[10px] font-semibold text-zen-muted block leading-tight">Terlambat &gt;30m</span>
-                    <span className={`text-base font-extrabold ${
-                      (selectedPayroll.attendance?.hlate2 || 0) > 0 ? 'text-orange-600' : 'text-zen-charcoal'
                     }`}>
+                    <span className="text-[10px] font-semibold text-zen-muted block leading-tight">Terlambat &gt;30m</span>
+                    <span className={`text-base font-extrabold ${(selectedPayroll.attendance?.hlate2 || 0) > 0 ? 'text-orange-600' : 'text-zen-charcoal'
+                      }`}>
                       {selectedPayroll.attendance?.hlate2 ?? 0}
                     </span>
                   </div>
@@ -583,43 +635,37 @@ export function TrCreateEvaluationPage() {
                   </div>
 
                   {/* H. Under Time */}
-                  <div className={`p-2.5 rounded-xl border text-center transition-all ${
-                    (selectedPayroll.attendance?.hunder || 0) > 0
+                  <div className={`p-2.5 rounded-xl border text-center transition-all ${(selectedPayroll.attendance?.hunder || 0) > 0
                       ? 'bg-amber-50/70 border-amber-200 text-amber-900'
                       : 'bg-zen-paper/40 border-zen-sand/30 text-zen-charcoal'
-                  }`}>
-                    <span className="text-[10px] font-semibold text-zen-muted block">Under Time</span>
-                    <span className={`text-base font-extrabold ${
-                      (selectedPayroll.attendance?.hunder || 0) > 0 ? 'text-amber-600' : 'text-zen-charcoal'
                     }`}>
+                    <span className="text-[10px] font-semibold text-zen-muted block">Under Time</span>
+                    <span className={`text-base font-extrabold ${(selectedPayroll.attendance?.hunder || 0) > 0 ? 'text-amber-600' : 'text-zen-charcoal'
+                      }`}>
                       {selectedPayroll.attendance?.hunder ?? 0}
                     </span>
                   </div>
 
                   {/* H. Tidak Absen */}
-                  <div className={`p-2.5 rounded-xl border text-center transition-all ${
-                    (selectedPayroll.attendance?.hitidakabsen || 0) > 0
+                  <div className={`p-2.5 rounded-xl border text-center transition-all ${(selectedPayroll.attendance?.hitidakabsen || 0) > 0
                       ? 'bg-red-50/70 border-red-200 text-red-900'
                       : 'bg-zen-paper/40 border-zen-sand/30 text-zen-charcoal'
-                  }`}>
-                    <span className="text-[10px] font-semibold text-zen-muted block">Tidak Absen</span>
-                    <span className={`text-base font-extrabold ${
-                      (selectedPayroll.attendance?.hitidakabsen || 0) > 0 ? 'text-red-600' : 'text-zen-charcoal'
                     }`}>
+                    <span className="text-[10px] font-semibold text-zen-muted block">Tidak Absen</span>
+                    <span className={`text-base font-extrabold ${(selectedPayroll.attendance?.hitidakabsen || 0) > 0 ? 'text-red-600' : 'text-zen-charcoal'
+                      }`}>
                       {selectedPayroll.attendance?.hitidakabsen ?? 0}
                     </span>
                   </div>
 
                   {/* H. Ijin Tidak Masuk */}
-                  <div className={`p-2.5 rounded-xl border text-center transition-all ${
-                    (selectedPayroll.attendance?.hitidakmasuk || 0) > 0
+                  <div className={`p-2.5 rounded-xl border text-center transition-all ${(selectedPayroll.attendance?.hitidakmasuk || 0) > 0
                       ? 'bg-amber-50/70 border-amber-200 text-amber-900'
                       : 'bg-zen-paper/40 border-zen-sand/30 text-zen-charcoal'
-                  }`}>
-                    <span className="text-[10px] font-semibold text-zen-muted block leading-tight">Ijin Tdk Masuk</span>
-                    <span className={`text-base font-extrabold ${
-                      (selectedPayroll.attendance?.hitidakmasuk || 0) > 0 ? 'text-amber-600' : 'text-zen-charcoal'
                     }`}>
+                    <span className="text-[10px] font-semibold text-zen-muted block leading-tight">Ijin Tdk Masuk</span>
+                    <span className={`text-base font-extrabold ${(selectedPayroll.attendance?.hitidakmasuk || 0) > 0 ? 'text-amber-600' : 'text-zen-charcoal'
+                      }`}>
                       {selectedPayroll.attendance?.hitidakmasuk ?? 0}
                     </span>
                   </div>
@@ -642,11 +688,10 @@ export function TrCreateEvaluationPage() {
                       Total Poin Pengurang:
                     </span>
                     <Badge
-                      className={`font-mono text-xs font-black px-2.5 py-0.5 ${
-                        totalPengurang > 0
+                      className={`font-mono text-xs font-black px-2.5 py-0.5 ${totalPengurang > 0
                           ? 'bg-red-500 text-white border-red-600'
                           : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                      }`}
+                        }`}
                     >
                       {totalPengurang > 0 ? `-${totalPengurang} Poin` : '0 Poin (Nihil)'}
                     </Badge>
@@ -687,13 +732,12 @@ export function TrCreateEvaluationPage() {
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  f.kategori === 'Berat'
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${f.kategori === 'Berat'
                                     ? 'bg-red-50 text-red-700 border-red-200'
                                     : f.kategori === 'Sedang'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : 'bg-blue-50 text-blue-700 border-blue-200'
-                                }`}
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                                  }`}
                               >
                                 {f.kategori}
                               </span>
@@ -746,13 +790,12 @@ export function TrCreateEvaluationPage() {
                         {rev.tanggal_report}
                       </span>
                       <span
-                        className={`text-xs font-black px-2 py-0.5 rounded-full border ${
-                          rev.nilai_total >= 8.5
+                        className={`text-xs font-black px-2 py-0.5 rounded-full border ${rev.nilai_total >= 8.5
                             ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                             : rev.nilai_total >= 7.0
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
                       >
                         Skor: {Number(rev.nilai_total).toFixed(1)} / 10
                       </span>
@@ -822,11 +865,10 @@ export function TrCreateEvaluationPage() {
                                 key={num}
                                 type="button"
                                 onClick={() => handleScoreChange(item.variable_id, num)}
-                                className={`w-6 h-7 sm:w-7 sm:h-8 rounded-lg text-xs font-bold transition-all ${
-                                  isSelected
+                                className={`w-6 h-7 sm:w-7 sm:h-8 rounded-lg text-xs font-bold transition-all ${isSelected
                                     ? 'bg-zen-matcha text-white shadow-xs scale-105'
                                     : 'text-zen-charcoal hover:bg-white hover:text-zen-moss'
-                                }`}
+                                  }`}
                               >
                                 {num}
                               </button>
@@ -891,9 +933,8 @@ export function TrCreateEvaluationPage() {
                     Total Poin Pengurang (Pelanggaran)
                   </span>
                   <div className="flex items-baseline justify-center">
-                    <span className={`text-3xl font-extrabold tracking-tight ${
-                      totalPengurang > 0 ? 'text-red-600' : 'text-zen-moss'
-                    }`}>
+                    <span className={`text-3xl font-extrabold tracking-tight ${totalPengurang > 0 ? 'text-red-600' : 'text-zen-moss'
+                      }`}>
                       {totalPengurang > 0 ? `-${totalPengurang}` : '0'}
                     </span>
                     <span className="text-xs text-zen-muted ml-1">Poin</span>
@@ -923,19 +964,18 @@ export function TrCreateEvaluationPage() {
 
                   <div className="mt-2">
                     <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        nilaiTotalAkhir >= 8.5
+                      className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${nilaiTotalAkhir >= 8.5
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           : nilaiTotalAkhir >= 7.0
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
                     >
                       {nilaiTotalAkhir >= 8.5
                         ? 'Sangat Baik (Exceeds Standard)'
                         : nilaiTotalAkhir >= 7.0
-                        ? 'Baik (Meets Standard)'
-                        : 'Perlu Bimbingan (Needs Improvement)'}
+                          ? 'Baik (Meets Standard)'
+                          : 'Perlu Bimbingan (Needs Improvement)'}
                     </span>
                   </div>
                 </div>
@@ -978,6 +1018,37 @@ export function TrCreateEvaluationPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal Pratinjau Foto Terapis Ukuran Penuh */}
+        <Dialog open={photoPreviewOpen} onOpenChange={setPhotoPreviewOpen}>
+          <DialogContent className="sm:max-w-md bg-white border-zen-sand p-4">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold text-zen-charcoal truncate">
+                Foto Resmi: {previewPhotoName}
+              </DialogTitle>
+            </DialogHeader>
+            {previewPhotoUrl && (
+              <div className="flex items-center justify-center p-3">
+                <img
+                  src={previewPhotoUrl}
+                  alt={previewPhotoName}
+                  className="max-h-[65vh] max-w-full rounded-2xl object-contain border border-zen-sand/60 shadow-md"
+                />
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPhotoPreviewOpen(false)}
+                className="border-zen-sand text-xs"
+              >
+                Tutup
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

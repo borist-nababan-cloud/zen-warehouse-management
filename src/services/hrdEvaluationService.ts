@@ -200,7 +200,7 @@ export const hrdEvaluationService = {
   async getTherapists(outletCode?: string): Promise<HrdEmployeeSimple[]> {
     let query = supabase
       .from('ot_hrd_karyawan_info')
-      .select('kodekaryawan, idkaryawan, namakaryawan, kode_outlet, departemen, active')
+      .select('kodekaryawan, idkaryawan, namakaryawan, kode_outlet, departemen, active, foto_url')
       .in('departemen', ['TR', 'TB'])
       .eq('active', 'Y')
       .order('namakaryawan', { ascending: true });
@@ -294,10 +294,34 @@ export const hrdEvaluationService = {
   },
 
   // ==========================================
-  // 6. GET EVALUATIONS LIST (REPORT VIEW)
+  // 6. GET EVALUATIONS LIST & PERIODS (REPORT VIEW)
   // ==========================================
+  async getPayrollPeriods(outletCode?: string): Promise<string[]> {
+    let query = supabase
+      .from('hrd_report_tr')
+      .select('payrollperiode')
+      .not('payrollperiode', 'is', null)
+      .order('payrollperiode', { ascending: false });
+
+    if (outletCode && outletCode !== 'ALL') {
+      query = query.eq('kode_outlet', outletCode);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Error fetching payroll periods from hrd_report_tr:', error);
+      return [];
+    }
+
+    const uniquePeriods = Array.from(
+      new Set((data || []).map((r: any) => r.payrollperiode).filter(Boolean))
+    );
+    return uniquePeriods as string[];
+  },
+
   async getEvaluationsList(filters?: {
     outletCode?: string;
+    payrollperiode?: string;
     kodekaryawan?: string;
     startDate?: string;
     endDate?: string;
@@ -306,8 +330,8 @@ export const hrdEvaluationService = {
       .from('hrd_report_tr')
       .select(`
         *,
-        master_outlet:master_outlet(kode_outlet, name_outlet, city),
-        karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active),
+        master_outlet:master_outlet(kode_outlet, name_outlet, city, alamat, no_telp),
+        karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active, foto_url),
         details:hrd_report_tr_detail(*)
       `)
       .order('tanggal_report', { ascending: false })
@@ -315,6 +339,9 @@ export const hrdEvaluationService = {
 
     if (filters?.outletCode && filters.outletCode !== 'ALL') {
       query = query.eq('kode_outlet', filters.outletCode);
+    }
+    if (filters?.payrollperiode && filters.payrollperiode !== 'ALL') {
+      query = query.eq('payrollperiode', filters.payrollperiode);
     }
     if (filters?.kodekaryawan && filters.kodekaryawan !== 'ALL') {
       query = query.eq('kodekaryawan', filters.kodekaryawan);
@@ -328,7 +355,36 @@ export const hrdEvaluationService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as HrdReportTr[];
+    if (!data || data.length === 0) return [];
+
+    // Resolve update_by and created_by names from users_profile
+    const userIds = Array.from(
+      new Set(
+        data
+          .flatMap((item: any) => [item.update_by, item.created_by])
+          .filter(Boolean) as string[]
+      )
+    );
+
+    let userMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users_profile')
+        .select('uid, full_name, email')
+        .in('uid', userIds);
+
+      if (users) {
+        users.forEach((u) => {
+          userMap.set(u.uid, u.full_name || u.email || 'Petugas');
+        });
+      }
+    }
+
+    return data.map((item: any) => ({
+      ...item,
+      update_by_name: item.update_by ? userMap.get(item.update_by) || 'Petugas' : (item.created_by ? userMap.get(item.created_by) || 'Petugas' : '-'),
+      created_by_name: item.created_by ? userMap.get(item.created_by) || 'Petugas' : 'Sistem',
+    })) as HrdReportTr[];
   },
 
   async getEvaluationDetail(reportId: string): Promise<HrdReportTr> {
@@ -336,15 +392,38 @@ export const hrdEvaluationService = {
       .from('hrd_report_tr')
       .select(`
         *,
-        master_outlet:master_outlet(kode_outlet, name_outlet, city),
-        karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active),
+        master_outlet:master_outlet(kode_outlet, name_outlet, city, alamat, no_telp),
+        karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active, foto_url),
         details:hrd_report_tr_detail(*)
       `)
       .eq('uid', reportId)
       .single();
 
     if (error) throw error;
-    return data as HrdReportTr;
+
+    let updateByName = 'Petugas';
+    let createdByName = 'Sistem';
+
+    const userIds = [data.update_by, data.created_by].filter(Boolean) as string[];
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users_profile')
+        .select('uid, full_name, email')
+        .in('uid', userIds);
+
+      if (users) {
+        const userMap = new Map<string, string>();
+        users.forEach((u) => userMap.set(u.uid, u.full_name || u.email || 'Petugas'));
+        if (data.update_by && userMap.has(data.update_by)) updateByName = userMap.get(data.update_by)!;
+        if (data.created_by && userMap.has(data.created_by)) createdByName = userMap.get(data.created_by)!;
+      }
+    }
+
+    return {
+      ...data,
+      update_by_name: updateByName,
+      created_by_name: createdByName,
+    } as HrdReportTr;
   },
 
   // ==========================================

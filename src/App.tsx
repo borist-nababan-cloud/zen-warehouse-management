@@ -103,6 +103,7 @@ import { TrReportListPage } from '@/pages/hrd/TrReportListPage'
 import { MasterFaultsPage } from '@/pages/hrd/MasterFaultsPage'
 import { TrFaultsPage } from '@/pages/hrd/TrFaultsPage'
 import { ReportTrFaultsPage } from '@/pages/hrd/ReportTrFaultsPage'
+import { KaryawanInfoPage } from '@/pages/hrd/KaryawanInfoPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -972,6 +973,15 @@ function App() {
 
           {/* HRD Evaluasi TR Routes */}
           <Route
+            path="/hrd/karyawan-info"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 15]}>
+                <KaryawanInfoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/hrd/tr-kategori"
             element={
               <ProtectedRoute allowedRoles={[8, 16]}>
@@ -990,7 +1000,7 @@ function App() {
           <Route
             path="/hrd/tr-buat-evaluasi"
             element={
-              <ProtectedRoute allowedRoles={[8, 16]}>
+              <ProtectedRoute allowedRoles={[8, 15, 16]}>
                 <TrCreateEvaluationPage />
               </ProtectedRoute>
             }
@@ -998,7 +1008,7 @@ function App() {
           <Route
             path="/hrd/tr-laporan"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 19]}>
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 15, 16]}>
                 <TrReportListPage />
               </ProtectedRoute>
             }
@@ -1014,7 +1024,7 @@ function App() {
           <Route
             path="/hrd/tr-faults"
             element={
-              <ProtectedRoute allowedRoles={[5, 8, 15, 16, 19]}>
+              <ProtectedRoute allowedRoles={[5, 8, 14, 15, 16]}>
                 <TrFaultsPage />
               </ProtectedRoute>
             }
