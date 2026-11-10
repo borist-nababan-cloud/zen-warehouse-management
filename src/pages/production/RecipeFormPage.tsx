@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthUser } from '@/hooks/useAuth'
-import { useProductsPaginated } from '@/hooks/useMasterBarang'
+import { useProductsByOutlet } from '@/hooks/useMasterBarang'
 import { createRecipe, getRecipeById, updateRecipe } from '@/services/recipeService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
@@ -40,9 +40,10 @@ export function RecipeFormPage() {
     const [description, setDescription] = useState('')
     const [ingredients, setIngredients] = useState<IngredientRow[]>([])
 
-    // Data Fetching
-    const { data: productsData } = useProductsPaginated(0, 200, false, user?.kode_outlet || undefined)
-    const allProducts = productsData?.data || []
+    // Data Fetching: load ALL active products for the outlet (and holding), without arbitrary pagination cuts
+    const outletCode = user?.kode_outlet || '111'
+    const { data: productsRes, isLoading: isProductsLoading } = useProductsByOutlet(outletCode)
+    const allProducts = productsRes?.data || []
 
     // Fetch existing recipe if editing
     useEffect(() => {
@@ -216,7 +217,8 @@ export function RecipeFormPage() {
                                     <SearchableSelect
                                         value={targetProductId}
                                         onChange={setTargetProductId}
-                                        placeholder="Pilih Produk..."
+                                        placeholder={isProductsLoading ? "Memuat daftar produk..." : "Pilih Produk..."}
+                                        disabled={isProductsLoading || isSubmitting}
                                         options={allProducts.map(p => ({
                                             value: p.id.toString(),
                                             label: p.name || 'Unknown',
@@ -288,7 +290,8 @@ export function RecipeFormPage() {
                                                     <SearchableSelect
                                                         value={row.materialId}
                                                         onChange={(val) => updateIngredient(row.tempId, 'materialId', val)}
-                                                        placeholder="Pilih Bahan Baku..."
+                                                        placeholder={isProductsLoading ? "Memuat bahan baku..." : "Pilih Bahan Baku..."}
+                                                        disabled={isProductsLoading || isSubmitting}
                                                         options={allProducts.map(p => ({
                                                             value: p.id.toString(),
                                                             label: p.name || 'Unknown',

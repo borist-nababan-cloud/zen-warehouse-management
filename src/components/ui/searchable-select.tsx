@@ -35,60 +35,72 @@ export function SearchableSelect({
     const triggerRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
-    // Calculate position when opening
-    useEffect(() => {
-        if (open && triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect()
-            // Check if space below is enough, else flip? (Simple version: always below for now, unless edge case)
-            // Ideally we'd calculate available height.
-
-            setPosition({
-                top: rect.bottom + window.scrollY + 4, // 4px gap
-                left: rect.left + window.scrollX,
-                width: rect.width
-            })
+    // Calculate fixed viewport position (avoids drifting on window scroll)
+    const updatePosition = () => {
+        if (!triggerRef.current) return
+        const rect = triggerRef.current.getBoundingClientRect()
+        // If trigger scrolled off screen completely, close dropdown
+        if (rect.bottom < 0 || rect.top > window.innerHeight) {
+            setOpen(false)
+            return
         }
-    }, [open])
 
-    // Close on click outside
+        const spaceBelow = window.innerHeight - rect.bottom
+        const showAbove = spaceBelow < 280 && rect.top > 280
+
+        setPosition({
+            top: showAbove ? Math.max(8, rect.top - 265) : rect.bottom + 4,
+            left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)),
+            width: rect.width
+        })
+    }
+
+    // Manage listeners for click outside, scroll tracking, and resize
     useEffect(() => {
+        if (!open) return
+
+        updatePosition()
+
         const handleClickOutside = (event: MouseEvent) => {
-            // If clicking trigger, don't close immediately (toggle handles it)
             if (triggerRef.current?.contains(event.target as Node)) {
                 return
             }
-
-            // If clicking inside dropdown, don't close
             if (dropdownRef.current?.contains(event.target as Node)) {
                 return
             }
-
             setOpen(false)
-            setSearch('') // Reset search on close
+            setSearch('')
         }
 
-        // Close on scroll/resize to prevent drifting
-        const handleScrollOrResize = () => {
-            if (open) setOpen(false)
+        const handleScroll = (event: Event) => {
+            // Ignore scrolling inside the dropdown itself so users can scroll options
+            if (dropdownRef.current?.contains(event.target as Node)) {
+                return
+            }
+            updatePosition()
         }
 
-        if (open) {
-            document.addEventListener("mousedown", handleClickOutside)
-            window.addEventListener("scroll", handleScrollOrResize, true) // Capture phase for all scroll containers
-            window.addEventListener("resize", handleScrollOrResize)
+        const handleResize = () => {
+            updatePosition()
         }
+
+        document.addEventListener("mousedown", handleClickOutside)
+        window.addEventListener("scroll", handleScroll, true)
+        window.addEventListener("resize", handleResize)
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
-            window.removeEventListener("scroll", handleScrollOrResize, true)
-            window.removeEventListener("resize", handleScrollOrResize)
+            window.removeEventListener("scroll", handleScroll, true)
+            window.removeEventListener("resize", handleResize)
         }
     }, [open])
 
-    const filteredOptions = options.filter((option) =>
-        option.label.toLowerCase().includes(search.toLowerCase()) ||
-        option.subLabel?.toLowerCase().includes(search.toLowerCase())
-    )
+    const filteredOptions = options.filter((option) => {
+        if (!search.trim()) return true
+        const terms = search.toLowerCase().trim().split(/\s+/)
+        const target = `${option.label} ${option.subLabel || ''}`.toLowerCase()
+        return terms.every(term => target.includes(term))
+    })
 
     const selectedOption = options.find((option) => option.value === value)
 
@@ -124,7 +136,7 @@ export function SearchableSelect({
                         width: position.width,
                         zIndex: 9999 // Ensure it's on top of everything
                     }}
-                    className="fixed mt-1 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+                    className="fixed overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
                 >
                     <div className="flex items-center border-b px-3">
                         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />

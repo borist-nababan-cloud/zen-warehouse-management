@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
-import { useProductsPaginated } from '@/hooks/useMasterBarang'
+import { useProductsByOutlet } from '@/hooks/useMasterBarang'
 import { createProductionRun, getRecipeByProduct, getIngredientsWithCost } from '@/services/productionService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
@@ -49,9 +49,10 @@ export function ProductionRunPage() {
 
     const [ingredients, setIngredients] = useState<ProductionItem[]>([])
 
-    // Data Fetching
-    const { data: productsData } = useProductsPaginated(0, 200, false, user?.kode_outlet || undefined)
-    const allProducts = productsData?.data || []
+    // Data Fetching: load ALL active products for the outlet without 200-row cutoff
+    const outletCode = user?.kode_outlet || '111'
+    const { data: productsRes } = useProductsByOutlet(outletCode)
+    const allProducts = productsRes?.data || []
 
     // Fetch Recipe when Product Changes
     useEffect(() => {

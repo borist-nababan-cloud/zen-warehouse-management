@@ -41,19 +41,26 @@ function getCurrentKodeOutlet(): string | null {
 // ============================================
 
 /**
- * Get products with pagination
+ * Get products with pagination and optional search / laundry filters
  * Role-based filtering is handled by RLS policies
  *
  * @param page - Page number (0-based)
  * @param pageSize - Items per page (default 100)
  * @param includeDeleted - Include soft-deleted items
+ * @param kodeOutlet - Optional outlet code filter
+ * @param search - Optional search query for name, sku, or matched categories
+ * @param laundryFilter - Optional laundry filter ('ALL' | 'LAUNDRY' | 'REGULAR')
+ * @param matchedTypeIds - Optional matched category IDs
  * @returns Paginated products with type and outlet data
  */
 export async function getProductsPaginated(
   page: number = 0,
   pageSize: number = 100,
   includeDeleted: boolean = false,
-  kodeOutlet?: string
+  kodeOutlet?: string,
+  search?: string,
+  laundryFilter?: 'ALL' | 'LAUNDRY' | 'REGULAR',
+  matchedTypeIds?: number[]
 ): Promise<PaginatedResponse<MasterBarangWithType>> {
   try {
     // Build query with joins
@@ -74,6 +81,25 @@ export async function getProductsPaginated(
     // Filter out deleted items unless explicitly requested
     if (!includeDeleted) {
       query = query.eq('deleted', false)
+    }
+
+    // Filter by laundry flag
+    if (laundryFilter === 'LAUNDRY') {
+      query = query.eq('is_laundry', true)
+    } else if (laundryFilter === 'REGULAR') {
+      query = query.eq('is_laundry', false)
+    }
+
+    // Server-side search filter across name, sku, and matched categories
+    if (search && search.trim()) {
+      const cleanSearch = search.trim().replace(/[%_,()]/g, '')
+      if (cleanSearch) {
+        if (matchedTypeIds && matchedTypeIds.length > 0) {
+          query = query.or(`name.ilike.%${cleanSearch}%,sku.ilike.%${cleanSearch}%,id_type.in.(${matchedTypeIds.join(',')})`)
+        } else {
+          query = query.or(`name.ilike.%${cleanSearch}%,sku.ilike.%${cleanSearch}%`)
+        }
+      }
     }
 
     // Apply pagination
@@ -154,7 +180,7 @@ export async function getProductsByOutlet(
   kodeOutlet: string
 ): Promise<ApiResponse<MasterBarangWithType[]>> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('master_barang')
       .select(`
         *,
@@ -163,9 +189,16 @@ export async function getProductsByOutlet(
         barang_units(*),
         barang_prices(*)
       `)
-      .eq('kode_outlet', kodeOutlet)
       .eq('deleted', false)
       .order('name', { ascending: true })
+
+    if (kodeOutlet && kodeOutlet !== '111') {
+      query = query.in('kode_outlet', [kodeOutlet, '111'])
+    } else if (kodeOutlet === '111') {
+      query = query.eq('kode_outlet', '111')
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
 

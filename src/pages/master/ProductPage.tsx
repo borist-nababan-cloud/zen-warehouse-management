@@ -500,6 +500,7 @@ function ProductFormDialog({
 export function ProductPage() {
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [laundryFilter, setLaundryFilter] = useState<'ALL' | 'LAUNDRY' | 'REGULAR'>('ALL')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<MasterBarangWithType | null>(null)
@@ -511,13 +512,7 @@ export function ProductPage() {
   const { canEdit } = useCanEditProducts()
   const { canSeeAll } = useCanSeeAllOutlets()
 
-  // Queries
-  const { data, isLoading, error, refetch } = useProductsPaginated(
-    page,
-    100,
-    false, // includeDeleted
-    user?.kode_outlet || undefined
-  )
+  // Types Query
   const { data: typesResponse, isLoading: typesLoading, error: typesError } = useAllTypes()
   const types = typesResponse?.data || []
 
@@ -525,30 +520,52 @@ export function ProductPage() {
     console.error('Failed to load product types:', typesError)
   }
 
+  // Debounce search query to prevent hammering Supabase on each keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Resolve matching category IDs for search filter
+  const cleanQuery = debouncedSearch.toLowerCase().trim()
+  const matchedTypeIds = cleanQuery
+    ? types
+        .filter((t) => t.nama_type && t.nama_type.toLowerCase().includes(cleanQuery))
+        .map((t) => t.id)
+    : []
+
+  // Server-side paginated & filtered products query
+  const { data, isLoading, isFetching, error, refetch } = useProductsPaginated(
+    page,
+    100,
+    false, // includeDeleted
+    user?.kode_outlet || undefined,
+    debouncedSearch,
+    laundryFilter,
+    matchedTypeIds
+  )
+
   // Mutations
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
   const deleteMutation = useSoftDeleteProduct()
 
-  // Filter data based on search and laundry flag
-  const filteredData = (data?.data || []).filter((product) => {
-    const query = searchQuery.toLowerCase().trim()
-    const matchesSearch = !query || (
-      (product.name && product.name.toLowerCase().includes(query)) ||
-      (product.sku && product.sku.toLowerCase().includes(query)) ||
-      (product.master_type?.nama_type && product.master_type.nama_type.toLowerCase().includes(query))
-    )
-
-    const matchesLaundry =
-      laundryFilter === 'ALL' ||
-      (laundryFilter === 'LAUNDRY' && product.is_laundry) ||
-      (laundryFilter === 'REGULAR' && !product.is_laundry)
-
-    return matchesSearch && matchesLaundry
-  })
-
+  const productsList = data?.data || []
   const pageSize = 100
-  const totalPages = Math.ceil((data?.count || 0) / pageSize)
+  const totalItems = data?.count || 0
+  const totalPages = Math.ceil(totalItems / pageSize)
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val)
+    setPage(0)
+  }
+
+  const handleLaundryFilterChange = (val: 'ALL' | 'LAUNDRY' | 'REGULAR') => {
+    setLaundryFilter(val)
+    setPage(0)
+  }
 
   const handleCreate = () => {
     if (!user?.kode_outlet) {
@@ -674,7 +691,7 @@ export function ProductPage() {
                 <CardTitle className="text-xs font-medium text-slate-500 dark:text-[#A6A095]">Total Produk</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-slate-900 dark:text-[#EBE6DF]">{data?.count || 0}</div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-[#EBE6DF]">{totalItems}</div>
               </CardContent>
             </Card>
 
@@ -684,7 +701,7 @@ export function ProductPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
-                  {(data?.data || []).filter(p => p.is_laundry).length}
+                  {productsList.filter(p => p.is_laundry).length}
                 </div>
               </CardContent>
             </Card>
@@ -694,7 +711,10 @@ export function ProductPage() {
                 <CardTitle className="text-xs font-medium text-slate-500 dark:text-[#A6A095]">Produk Terfilter</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-slate-900 dark:text-[#EBE6DF]">{filteredData.length}</div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-[#EBE6DF] flex items-center gap-2">
+                  {totalItems}
+                  {isFetching && <Loader2 className="w-4 h-4 animate-spin text-[#889D35]" />}
+                </div>
               </CardContent>
             </Card>
 
@@ -717,12 +737,21 @@ export function ProductPage() {
                   <Input
                     placeholder="Cari berdasarkan nama produk, SKU, atau kategori..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-9 h-10 dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF] focus:border-[#889D35]"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => handleSearchChange('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
-                <Select value={laundryFilter} onValueChange={(val: any) => setLaundryFilter(val)}>
+                <Select value={laundryFilter} onValueChange={handleLaundryFilterChange}>
                   <SelectTrigger className="w-full sm:w-48 h-10 text-sm dark:bg-[#191914] dark:border-[#38382E] dark:text-[#EBE6DF]">
                     <Filter className="w-3.5 h-3.5 mr-2 text-slate-400" />
                     <SelectValue placeholder="Filter Laundry" />
@@ -757,14 +786,14 @@ export function ProductPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-[#38382E]/50">
-                    {filteredData.length === 0 ? (
+                    {productsList.length === 0 ? (
                       <tr>
                         <td colSpan={canEdit ? 8 : 7} className="px-4 py-12 text-center text-slate-400 dark:text-[#A6A095]">
                           Tidak ada produk ditemukan.
                         </td>
                       </tr>
                     ) : (
-                      filteredData.map((product) => {
+                      productsList.map((product) => {
                         const img = product.image1_url || product.image2_url || product.iamge2_url
                         return (
                           <tr
@@ -878,7 +907,7 @@ export function ProductPage() {
           {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500 dark:text-[#A6A095]">
             <p>
-              Menampilkan {filteredData.length} dari {data?.count || 0} produk
+              Menampilkan {productsList.length} dari {totalItems} produk
             </p>
             <div className="flex items-center gap-2">
               <Button

@@ -44,16 +44,32 @@ export const masterBarangQueryKeys = {
  * @param page - Page number (0-based)
  * @param pageSize - Items per page (default 100)
  * @param includeDeleted - Include soft-deleted items
+ * @param kodeOutlet - Optional outlet code filter
+ * @param search - Optional search query for name, sku, or matched categories
+ * @param laundryFilter - Optional laundry filter ('ALL' | 'LAUNDRY' | 'REGULAR')
+ * @param matchedTypeIds - Optional matched category IDs
  */
 export function useProductsPaginated(
   page: number = 0,
   pageSize: number = 100,
   includeDeleted: boolean = false,
-  kodeOutlet?: string
+  kodeOutlet?: string,
+  search?: string,
+  laundryFilter?: 'ALL' | 'LAUNDRY' | 'REGULAR',
+  matchedTypeIds?: number[]
 ) {
   return useQuery({
-    queryKey: masterBarangQueryKeys.list({ page, pageSize, includeDeleted, kodeOutlet }),
-    queryFn: () => getProductsPaginated(page, pageSize, includeDeleted, kodeOutlet),
+    queryKey: masterBarangQueryKeys.list({
+      page,
+      pageSize,
+      includeDeleted,
+      kodeOutlet,
+      search: search?.trim() || '',
+      laundryFilter: laundryFilter || 'ALL',
+      matchedTypeIds: matchedTypeIds || [],
+    }),
+    queryFn: () =>
+      getProductsPaginated(page, pageSize, includeDeleted, kodeOutlet, search, laundryFilter, matchedTypeIds),
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 }
@@ -101,8 +117,8 @@ export function useCreateProduct() {
     mutationFn: (data: Omit<MasterBarang, 'id' | 'created_at' | 'kode_outlet'>) =>
       createProduct(data),
     onSuccess: () => {
-      // Invalidate products list to refetch
-      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.lists() })
+      // Invalidate all product queries (lists, outlets, details) to ensure instant reflection across all pages
+      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.all })
     },
   })
 }
@@ -124,12 +140,8 @@ export function useUpdateProduct() {
       id: number
       data: Partial<Omit<MasterBarang, 'id' | 'created_at' | 'kode_outlet'>>
     }) => updateProduct(kodeOutlet, id, data),
-    onSuccess: (_, variables) => {
-      // Invalidate both list and detail
-      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.lists() })
-      queryClient.invalidateQueries({
-        queryKey: masterBarangQueryKeys.detail(variables.kodeOutlet, variables.id),
-      })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.all })
     },
   })
 }
@@ -145,8 +157,7 @@ export function useDeleteProduct() {
     mutationFn: ({ kodeOutlet, id }: { kodeOutlet: string; id: number }) =>
       deleteProduct(kodeOutlet, id),
     onSuccess: () => {
-      // Invalidate products list to refetch
-      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.all })
     },
   })
 }
@@ -161,12 +172,8 @@ export function useSoftDeleteProduct() {
   return useMutation({
     mutationFn: ({ kodeOutlet, id }: { kodeOutlet: string; id: number }) =>
       softDeleteProduct(kodeOutlet, id),
-    onSuccess: (_, variables) => {
-      // Invalidate both list and detail
-      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.lists() })
-      queryClient.invalidateQueries({
-        queryKey: masterBarangQueryKeys.detail(variables.kodeOutlet, variables.id),
-      })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterBarangQueryKeys.all })
     },
   })
 }
