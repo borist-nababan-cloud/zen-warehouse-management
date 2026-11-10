@@ -232,7 +232,7 @@ export async function getStockOpnameBatches(
             .from('stock_opname_headers')
             .select(`
                 *,
-                master_outlet:master_outlet!stock_opname_headers_kode_outlet_fkey(name_outlet),
+                master_outlet:master_outlet(name_outlet),
                 stock_opname_items(id, barang_id, system_qty, actual_qty, difference, notes)
             `)
             .order('created_at', { ascending: false })
@@ -265,7 +265,7 @@ export async function getStockOpnameBatchDetail(headerId: string): Promise<ApiRe
             .from('stock_opname_headers')
             .select(`
                 *,
-                master_outlet:master_outlet!stock_opname_headers_kode_outlet_fkey(name_outlet),
+                master_outlet:master_outlet(name_outlet),
                 stock_opname_items(
                     *,
                     master_barang(id, name, sku, image1_url)
