@@ -19,6 +19,8 @@ export interface Recipe {
     standard_qty_output: number
     created_at?: string
     product_name?: string // Joined from master_barang
+    product_sku?: string
+    product_unit?: string
     items?: RecipeItem[]
 }
 
@@ -28,17 +30,31 @@ export async function getRecipes(outletCode: string): Promise<ApiResponse<Recipe
             .from('master_recipes')
             .select(`
                 *,
-                master_barang ( name )
+                master_barang ( 
+                    name, 
+                    sku,
+                    barang_units ( base_uom, purchase_uom, kode_outlet )
+                )
             `)
             .eq('kode_outlet', outletCode)
             .order('created_at', { ascending: false })
 
         if (error) throw error
 
-        const mapped = data.map((r: any) => ({
-            ...r,
-            product_name: r.master_barang?.name
-        }))
+        const mapped = data.map((r: any) => {
+            const units = r.master_barang?.barang_units || []
+            const unit = units.find((u: any) => u.kode_outlet === outletCode)
+                || units.find((u: any) => u.kode_outlet === '901')
+                || units[0]
+            const product_unit = unit?.purchase_uom || unit?.base_uom || 'PCS'
+
+            return {
+                ...r,
+                product_name: r.master_barang?.name,
+                product_sku: r.master_barang?.sku,
+                product_unit
+            }
+        })
 
         return {
             data: mapped,

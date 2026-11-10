@@ -192,10 +192,25 @@ export async function getProductsByOutlet(
       .eq('deleted', false)
       .order('name', { ascending: true })
 
-    if (kodeOutlet && kodeOutlet !== '111') {
-      query = query.in('kode_outlet', [kodeOutlet, '111'])
-    } else if (kodeOutlet === '111') {
-      query = query.eq('kode_outlet', '111')
+    // 1. Fetch any items currently present in this outlet's inventory balance (e.g. STO transfers from other outlets)
+    let inventoryBarangIds: number[] = []
+    if (kodeOutlet) {
+      const { data: invData } = await supabase
+        .from('inventory_balance')
+        .select('barang_id')
+        .eq('kode_outlet', kodeOutlet)
+      if (invData && invData.length > 0) {
+        inventoryBarangIds = invData.map((i: any) => i.barang_id).filter(Boolean)
+      }
+    }
+
+    // Include: outlet's own products, Zen Produk (901), and any products in inventory balance
+    const targetOutlets = Array.from(new Set([kodeOutlet, '901'])).filter(Boolean)
+
+    if (inventoryBarangIds.length > 0) {
+      query = query.or(`kode_outlet.in.(${targetOutlets.join(',')}),id.in.(${inventoryBarangIds.join(',')})`)
+    } else if (targetOutlets.length > 0) {
+      query = query.in('kode_outlet', targetOutlets)
     }
 
     const { data, error } = await query

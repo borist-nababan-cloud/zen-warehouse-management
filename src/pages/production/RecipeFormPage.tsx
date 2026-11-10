@@ -40,8 +40,8 @@ export function RecipeFormPage() {
     const [description, setDescription] = useState('')
     const [ingredients, setIngredients] = useState<IngredientRow[]>([])
 
-    // Data Fetching: load ALL active products for the outlet (and holding), without arbitrary pagination cuts
-    const outletCode = user?.kode_outlet || '111'
+    // Data Fetching: load ALL active products for the outlet and Zen Produk (901) + inventory balance items
+    const outletCode = user?.kode_outlet || '901'
     const { data: productsRes, isLoading: isProductsLoading } = useProductsByOutlet(outletCode)
     const allProducts = productsRes?.data || []
 
@@ -91,7 +91,8 @@ export function RecipeFormPage() {
 
     const getProductUom = (product?: typeof allProducts[0]) => {
         if (!product || !product.barang_units || product.barang_units.length === 0) return 'PCS'
-        const unit = product.barang_units.find(u => u.kode_outlet === (user?.kode_outlet || '111'))
+        const unit = product.barang_units.find(u => u.kode_outlet === (user?.kode_outlet || '901'))
+            || product.barang_units.find(u => u.kode_outlet === '901')
             || product.barang_units.find(u => u.kode_outlet === product.kode_outlet)
             || product.barang_units[0]
         return unit?.purchase_uom || unit?.base_uom || 'PCS'
@@ -142,7 +143,7 @@ export function RecipeFormPage() {
 
             // Determine accurate outlet from target product or logged in user
             const targetProduct = allProducts.find(p => p.id.toString() === targetProductId)
-            const targetOutlet = targetProduct?.kode_outlet || user?.kode_outlet || '111'
+            const targetOutlet = targetProduct?.kode_outlet || user?.kode_outlet || '901'
 
             const payload = {
                 barang_id: parseInt(targetProductId),

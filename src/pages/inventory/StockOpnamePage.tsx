@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
-import { useProductsPaginated } from '@/hooks/useMasterBarang'
+import { useProductsByOutlet } from '@/hooks/useMasterBarang'
 import { getInventoryBalanceForOpname, createStockOpname } from '@/services/inventoryService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
@@ -22,9 +22,48 @@ export function StockOpnamePage() {
     const [isLoading, setIsLoading] = useState(false)
     const [inventory, setInventory] = useState<InventoryBalance[]>([])
 
-    // Load master products for selection
-    const { data: productsData } = useProductsPaginated(0, 500, false, user?.kode_outlet || undefined)
+    // Load master products for selection (includes user's outlet, Zen Produk 901, and STO items)
+    const { data: productsData } = useProductsByOutlet(user?.kode_outlet || '901')
     const allProducts = productsData?.data || []
+
+    // Build consolidated list for spot check (inventory balance + master products)
+    const spotProductList = useMemo(() => {
+        const map = new Map<number, {
+            id: number
+            name: string
+            sku: string
+            typeName: string
+            systemQty: number
+        }>()
+
+        // 1. Add all items physically in inventory balance (guarantees STO-received items are present)
+        inventory.forEach(inv => {
+            if (inv.barang_id) {
+                map.set(inv.barang_id, {
+                    id: inv.barang_id,
+                    name: inv.master_barang?.name || 'Produk Tanpa Nama',
+                    sku: inv.master_barang?.sku || '-',
+                    typeName: (inv.master_barang as any)?.master_type?.nama_type || '',
+                    systemQty: inv.qty_on_hand ?? 0
+                })
+            }
+        })
+
+        // 2. Add master products for this outlet / Zen Produk
+        allProducts.forEach(prod => {
+            if (!map.has(prod.id)) {
+                map.set(prod.id, {
+                    id: prod.id,
+                    name: prod.name || 'Produk Tanpa Nama',
+                    sku: prod.sku || '-',
+                    typeName: (prod.master_type as any)?.nama_type || '',
+                    systemQty: 0
+                })
+            }
+        })
+
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+    }, [inventory, allProducts])
 
     // Batch Mode State
     const [opnameRows, setOpnameRows] = useState<{ [key: number]: { actual: string, outOfStock: boolean, notes: string } }>({})
@@ -123,12 +162,11 @@ export function StockOpnamePage() {
 
         setIsSubmitting(true)
         try {
-            const selectedProduct = allProducts.find(p => p.id.toString() === spotItemId)
-            const inventoryItem = inventory.find(i => i.barang_id.toString() === spotItemId)
-            const systemQty = inventoryItem ? inventoryItem.qty_on_hand : 0
+            const selectedProduct = spotProductList.find(p => p.id.toString() === spotItemId)
+            const currentSystemQty = selectedProduct ? selectedProduct.systemQty : 0
 
             // Determine actual quantity
-            let finalActual = systemQty
+            let finalActual = currentSystemQty
             if (spotOutOfStock) {
                 finalActual = 0
             } else if (spotActual !== '') {
@@ -139,7 +177,7 @@ export function StockOpnamePage() {
                 kode_outlet: user?.kode_outlet || '',
                 items: [{
                     barang_id: parseInt(spotItemId),
-                    system_qty: systemQty,
+                    system_qty: currentSystemQty,
                     actual_qty: finalActual,
                     notes: spotNotes
                 }],
@@ -165,10 +203,9 @@ export function StockOpnamePage() {
         }
     }
 
-    // Find selected product from master_barang and inventory
-    const selectedProduct = allProducts.find(p => p.id.toString() === spotItemId)
-    const selectedInventoryItem = inventory.find(i => i.barang_id.toString() === spotItemId)
-    const currentSystemQty = selectedInventoryItem ? selectedInventoryItem.qty_on_hand : 0
+    // Find selected product from consolidated spot list
+    const selectedProduct = spotProductList.find(p => p.id.toString() === spotItemId)
+    const currentSystemQty = selectedProduct ? selectedProduct.systemQty : 0
 
     return (
         <DashboardLayout>
@@ -303,10 +340,10 @@ export function StockOpnamePage() {
                                         value={spotItemId}
                                         onChange={setSpotItemId}
                                         placeholder="Cari atau pilih nama / SKU produk..."
-                                        options={allProducts.map(p => ({
+                                        options={spotProductList.map(p => ({
                                             value: p.id.toString(),
                                             label: p.name || 'Produk Tanpa Nama',
-                                            subLabel: `${p.sku || '-'} • ${(p.master_type as any)?.nama_type || ''}`
+                                            subLabel: `${p.sku || '-'} • ${p.typeName ? p.typeName + ' • ' : ''}Stok: ${p.systemQty}`
                                         }))}
                                         className="w-full"
                                     />

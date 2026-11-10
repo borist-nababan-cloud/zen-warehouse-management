@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
-import { useProductsByOutlet } from '@/hooks/useMasterBarang'
 import { createProductionRun, getRecipeByProduct, getIngredientsWithCost } from '@/services/productionService'
+import { getRecipes, Recipe } from '@/services/recipeService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,10 +49,25 @@ export function ProductionRunPage() {
 
     const [ingredients, setIngredients] = useState<ProductionItem[]>([])
 
-    // Data Fetching: load ALL active products for the outlet without 200-row cutoff
-    const outletCode = user?.kode_outlet || '111'
-    const { data: productsRes } = useProductsByOutlet(outletCode)
-    const allProducts = productsRes?.data || []
+    // Data Fetching: load recipes for user's own outlet only
+    const outletCode = user?.kode_outlet || '901'
+    const [recipes, setRecipes] = useState<Recipe[]>([])
+    const [isLoadingRecipes, setIsLoadingRecipes] = useState(false)
+
+    useEffect(() => {
+        if (outletCode) {
+            loadRecipesForOutlet(outletCode)
+        }
+    }, [outletCode])
+
+    async function loadRecipesForOutlet(code: string) {
+        setIsLoadingRecipes(true)
+        const res = await getRecipes(code)
+        if (res.data) {
+            setRecipes(res.data)
+        }
+        setIsLoadingRecipes(false)
+    }
 
     // Fetch Recipe when Product Changes
     useEffect(() => {
@@ -207,18 +222,30 @@ export function ProductionRunPage() {
                                 <Select
                                     value={selectedProductId}
                                     onValueChange={setSelectedProductId}
+                                    disabled={isLoadingRecipes || recipes.length === 0}
                                 >
                                     <SelectTrigger className="h-10 border-input bg-background focus:ring-primary">
-                                        <SelectValue placeholder="Pilih Produk Jadi..." />
+                                        <SelectValue placeholder={
+                                            isLoadingRecipes
+                                                ? "Memuat produk dari resep..."
+                                                : recipes.length === 0
+                                                    ? "Belum ada resep untuk gerai ini"
+                                                    : "Pilih Produk Jadi (dari Master Resep)..."
+                                        } />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {allProducts.map(p => (
-                                            <SelectItem key={p.id} value={p.id.toString()}>
-                                                {p.name} ({p.sku})
+                                        {recipes.map(r => (
+                                            <SelectItem key={r.barang_id} value={r.barang_id.toString()}>
+                                                {r.product_name || `Barang #${r.barang_id}`} {r.product_sku ? `(${r.product_sku})` : ''} - Std: {r.standard_qty_output} {r.product_unit || 'PCS'}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {recipes.length === 0 && !isLoadingRecipes && (
+                                    <p className="text-[11px] text-amber-600 font-medium">
+                                        Gerai ini belum memiliki resep aktif. Tambahkan resep terlebih dahulu di menu Resep.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -236,8 +263,8 @@ export function ProductionRunPage() {
                                     <div className="absolute right-3 top-2.5 text-xs text-muted-foreground pointer-events-none text-right truncate">
                                         {(() => {
                                             if (!selectedProductId) return `Standar: ${standardOutputBase}`
-                                            const p = allProducts.find(x => x.id.toString() === selectedProductId)
-                                            const unit = p?.barang_units?.[0]?.purchase_uom || p?.barang_units?.[0]?.base_uom || ''
+                                            const r = recipes.find(x => x.barang_id.toString() === selectedProductId)
+                                            const unit = r?.product_unit || 'PCS'
                                             return unit ? `${unit} (Std: ${standardOutputBase})` : `Std: ${standardOutputBase}`
                                         })()}
                                     </div>
