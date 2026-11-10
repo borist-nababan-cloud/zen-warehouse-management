@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SearchableSelect } from '@/components/ui/searchable-select'
-import { Loader2, Save, FileCheck } from 'lucide-react'
+import { Loader2, FileCheck, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { InventoryBalance } from '@/types/database'
 
@@ -136,11 +136,10 @@ export function StockOpnamePage() {
             })
 
             if (res.isSuccess) {
-                toast.success("Stock Opname berhasil disimpan dan diperbarui!")
-                if (user?.kode_outlet) loadInventory(user.kode_outlet)
+                toast.success("Pengajuan Batch Opname berhasil disimpan! Menunggu persetujuan Manager / Finance.")
                 setOpnameRows({})
             } else {
-                toast.error(res.error || "Gagal menyimpan stock opname")
+                toast.error(res.error || "Gagal menyimpan pengajuan stock opname")
             }
         } catch (e: any) {
             console.error(e)
@@ -185,15 +184,14 @@ export function StockOpnamePage() {
             })
 
             if (res.isSuccess) {
-                toast.success(`Pemeriksaan stok untuk ${selectedProduct?.name || 'produk'} berhasil disimpan!`)
-                if (user?.kode_outlet) loadInventory(user.kode_outlet)
+                toast.success(`Pengajuan pemeriksaan stok untuk ${selectedProduct?.name || 'produk'} berhasil disimpan! Menunggu persetujuan Manager / Finance.`)
                 // Reset spot form
                 setSpotItemId('')
                 setSpotActual('')
                 setSpotOutOfStock(false)
                 setSpotNotes('')
             } else {
-                toast.error(res.error || "Gagal menyimpan pemeriksaan stok")
+                toast.error(res.error || "Gagal menyimpan pengajuan pemeriksaan stok")
             }
 
         } catch (e: any) {
@@ -230,7 +228,7 @@ export function StockOpnamePage() {
                             <CardHeader className="bg-muted/40 pb-4">
                                 <CardTitle className="text-lg">Opname Stok Keseluruhan</CardTitle>
                                 <CardDescription>
-                                    Verifikasi seluruh barang inventaris. Biarkan kolom "Jumlah Fisik" kosong jika sesuai stok sistem. Centang "Habis?" untuk stok bernilai 0.
+                                    Verifikasi seluruh barang inventaris. Biarkan kolom "Jumlah Fisik" kosong jika sesuai stok sistem. Klik "Kirim Pengajuan Batch" untuk menyimpan batch tanpa langsung mengubah stok sampai disetujui Manager/Finance.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -316,8 +314,8 @@ export function StockOpnamePage() {
                                         onClick={handleBatchSubmit}
                                         disabled={isSubmitting || isLoading || inventory.length === 0}
                                     >
-                                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                        Selesaikan Batch Opname
+                                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                        Kirim Pengajuan Batch Opname
                                     </Button>
                                 </div>
                             </CardContent>
@@ -330,7 +328,7 @@ export function StockOpnamePage() {
                             <CardHeader className="bg-muted/40 pb-4">
                                 <CardTitle className="text-lg">Pemeriksaan Satuan Produk</CardTitle>
                                 <CardDescription>
-                                    Pilih produk langsung dari Master Produk untuk memeriksa atau memperbarui stok fisik.
+                                    Pilih produk untuk mengajukan penyesuaian stok satuan. Saldo inventaris akan diperbarui setelah pengajuan disetujui oleh Manager/Finance.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 pt-6">
@@ -402,8 +400,8 @@ export function StockOpnamePage() {
                                     onClick={handleSpotSubmit}
                                     disabled={!spotItemId || isSubmitting}
                                 >
-                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                    Perbarui Stok
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                    Kirim Pengajuan Pemeriksaan
                                 </Button>
                             </CardContent>
                         </Card>

@@ -123,6 +123,7 @@ export interface UserProfile {
   user_role: RoleId        // References role_user.id (1-9)
   kode_outlet: string | null  // References master_outlet.kode_outlet, '111' = holding
   email: string            // User email (from auth)
+  full_name?: string | null
   created_at: string
 }
 
@@ -343,7 +344,7 @@ export interface MasterShrinkageCategory {
   update_by?: string | null
 }
 
-export type StockOpnameStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED'
+export type StockOpnameStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'COMPLETED' | 'REJECTED' | 'CANCELLED'
 
 export interface StockOpnameHeader {
   id: string
@@ -812,7 +813,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   2: ['dashboard', 'inventory', 'purchase-orders'],                           // staff_holding
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'product', 'price-unit', 'supplier'],           // finance
+  5: ['dashboard', 'finance', 'inventory', 'product', 'price-unit', 'supplier'],           // finance
   6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier', 'users'], // outlet_admin
   7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type'], // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
@@ -821,7 +822,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   11: [],                                                                     // Pending ROLE_MENU_PERMISSION
   12: [],                                                                     // Pending ROLE_MENU_PERMISSION
   13: [],                                                                     // Pending ROLE_MENU_PERMISSION
-  14: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  14: ['dashboard', 'inventory', 'hrd'],                                      // MANAGER (Persetujuan Opname & HRD)
   15: [],                                                                     // Pending ROLE_MENU_PERMISSION
   16: [],                                                                     // Pending ROLE_MENU_PERMISSION
   17: [],                                                                     // MEMBER - blocked from login

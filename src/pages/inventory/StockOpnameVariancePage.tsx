@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
-import { useOpnameVarianceReport } from '@/hooks/useInventory'
+import { useOpnameVarianceReport, useOpnameBatchNumbers } from '@/hooks/useInventory'
 import { masterOutletService } from '@/services/masterOutletService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +38,7 @@ export default function StockOpnameVariancePage() {
     })
     const [showOnlyDiscrepancies, setShowOnlyDiscrepancies] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+    const [selectedBatch, setSelectedBatch] = useState<string>('ALL')
 
     // Outlet Logic
     const [selectedOutlet, setSelectedOutlet] = useState<string>('')
@@ -60,11 +61,21 @@ export default function StockOpnameVariancePage() {
         }
     }, [canSelectOutlet])
 
+    // Fetch Batch Numbers for dropdown
+    const effectiveOutlet = selectedOutlet && selectedOutlet !== 'ALL' ? selectedOutlet : undefined
+    const { data: batchesData } = useOpnameBatchNumbers(
+        effectiveOutlet,
+        dateRange.startDate,
+        dateRange.endDate
+    )
+    const availableBatches = batchesData?.data || []
+
     // Fetch Data
     const { data: reportData, isLoading } = useOpnameVarianceReport(
         selectedOutlet || undefined,
         dateRange.startDate,
-        dateRange.endDate
+        dateRange.endDate,
+        selectedBatch !== 'ALL' ? selectedBatch : undefined
     )
 
     const fullData = reportData?.data || []
@@ -73,11 +84,12 @@ export default function StockOpnameVariancePage() {
     const filteredData = fullData.filter((item: OpnameVarianceItem) => {
         const diff = Number(item.difference) || 0
         const matchesDiscrepancy = !showOnlyDiscrepancies || diff !== 0
+        const matchesBatch = selectedBatch === 'ALL' || item.document_number === selectedBatch
         const matchesSearch = (item.item_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.document_number || '').toLowerCase().includes(searchTerm.toLowerCase())
 
-        return matchesDiscrepancy && matchesSearch
+        return matchesDiscrepancy && matchesBatch && matchesSearch
     })
 
     // Summaries
@@ -200,6 +212,16 @@ export default function StockOpnameVariancePage() {
             ? ['', '', '', '', '', '', 'TOTAL BERSIH', totalDiffStr, formatCurrency(totalNetValue)]
             : ['', '', '', '', '', 'TOTAL BERSIH', totalDiffStr, formatCurrency(totalNetValue)]
 
+        const extraFilters: { label: string; value: string }[] = []
+        if (selectedBatch && selectedBatch !== 'ALL') {
+            extraFilters.push({ label: 'No. Batch', value: selectedBatch })
+        }
+        if (searchTerm) {
+            extraFilters.push({ label: 'Pencarian', value: searchTerm })
+        }
+
+        const signerName = user?.full_name || user?.profile?.full_name || 'Staff Opname'
+
         await printReportA4({
             title: 'Laporan Selisih Stock Opname',
             subtitle: 'Audit akurasi inventaris dan dampak finansial dari selisih perhitungan stok.',
@@ -210,7 +232,7 @@ export default function StockOpnameVariancePage() {
             startDate: dateRange.startDate,
             endDate: dateRange.endDate,
             statusLabel: showOnlyDiscrepancies ? 'Hanya yang Berselisih' : 'Semua Data Opname',
-            extraFilters: searchTerm ? [{ label: 'Pencarian', value: searchTerm }] : [],
+            extraFilters,
             summaryItems: [
                 { label: 'Total Selisih (Absolut)', value: formatCurrency(totalVarianceValueAbs) },
                 { label: 'Rugi / Surplus Bersih (Net)', value: formatCurrency(totalNetValue) },
@@ -219,6 +241,12 @@ export default function StockOpnameVariancePage() {
             columns,
             rows,
             totalRow,
+            signatures: [
+                { title: 'Dibuat Oleh', name: signerName },
+                { title: 'Diperiksa Oleh', name: '(...................)' },
+                { title: 'Disetujui Oleh', name: '(...................)' },
+                { title: 'Diketahui Oleh', name: '(...................)' },
+            ]
         })
     }
 
@@ -300,6 +328,24 @@ export default function StockOpnameVariancePage() {
                                     className="bg-white"
                                     aria-label="Tanggal Akhir"
                                 />
+                            </div>
+
+                            {/* Batch Number Filter */}
+                            <div className="flex flex-col gap-2 w-full md:w-auto">
+                                <label className="text-xs font-semibold text-slate-500">No. Batch / Dokumen</label>
+                                <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                                    <SelectTrigger className="w-[200px] bg-white">
+                                        <SelectValue placeholder="Pilih Batch Dokumen" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Semua Batch Dokumen</SelectItem>
+                                        {availableBatches.map((doc) => (
+                                            <SelectItem key={doc} value={doc}>
+                                                {doc}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex items-center space-x-2 pb-2">

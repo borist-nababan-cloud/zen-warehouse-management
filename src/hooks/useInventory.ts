@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getInventoryReport, getShrinkageReport, getOpnameVarianceReport } from '@/services/inventoryService'
+import { getInventoryReport, getShrinkageReport, getOpnameVarianceReport, getOpnameBatchNumbers } from '@/services/inventoryService'
 
 export function useInventoryReport(kode_outlet?: string) {
     return useQuery({
@@ -17,10 +17,22 @@ export function useShrinkageReport(kode_outlet?: string, startDate?: string, end
     })
 }
 
-export function useOpnameVarianceReport(kode_outlet?: string, startDate?: string, endDate?: string) {
+export function useOpnameVarianceReport(
+    kode_outlet?: string, 
+    startDate?: string, 
+    endDate?: string,
+    documentNumber?: string
+) {
     return useQuery({
-        queryKey: ['inventory', 'report', 'opname-variance', kode_outlet, startDate, endDate],
-        queryFn: () => getOpnameVarianceReport(kode_outlet, startDate, endDate),
+        queryKey: ['inventory', 'report', 'opname-variance', kode_outlet, startDate, endDate, documentNumber],
+        queryFn: () => getOpnameVarianceReport(kode_outlet, startDate, endDate, documentNumber),
         enabled: !!kode_outlet,
+    })
+}
+
+export function useOpnameBatchNumbers(kode_outlet?: string, startDate?: string, endDate?: string) {
+    return useQuery({
+        queryKey: ['inventory', 'opname-batches', kode_outlet, startDate, endDate],
+        queryFn: () => getOpnameBatchNumbers(kode_outlet, startDate, endDate),
     })
 }

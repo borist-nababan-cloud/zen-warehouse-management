@@ -47,6 +47,7 @@ import { ProductionRunPage } from '@/pages/production/ProductionRunPage'
 import { ProductionCostYieldPage } from '@/pages/production/ProductionCostYieldPage'
 import { ShrinkageFormPage } from '@/pages/inventory/ShrinkageFormPage'
 import { StockOpnamePage } from '@/pages/inventory/StockOpnamePage'
+import StockOpnameApprovalPage from '@/pages/inventory/StockOpnameApprovalPage'
 import InventoryReportPage from '@/pages/inventory/InventoryReportPage'
 import InventoryQtyReportPage from '@/pages/inventory/InventoryQtyReportPage'
 import ShrinkageReportPage from '@/pages/inventory/ShrinkageReportPage'
@@ -687,6 +688,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 2, 6, 7, 8]}>
                 <StockOpnamePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Persetujuan Stock Opname (Roles 5, 8, 14 only) */}
+          <Route
+            path="/inventory/opname-approval"
+            element={
+              <ProtectedRoute allowedRoles={[5, 8, 14]}>
+                <StockOpnameApprovalPage />
               </ProtectedRoute>
             }
           />

@@ -13,6 +13,11 @@ export interface ReportPrintSummaryItem {
     value: string
 }
 
+export interface ReportPrintSignature {
+    title: string
+    name: string
+}
+
 export interface ReportPrintOptions {
     title: string
     subtitle?: string
@@ -64,6 +69,10 @@ export interface ReportPrintOptions {
      * Optional footer/total row at the end of the table
      */
     totalRow?: (string | number)[]
+    /**
+     * Optional signatures block on the last page
+     */
+    signatures?: ReportPrintSignature[]
     /**
      * Rows per A4 page (default: 22)
      */
@@ -156,6 +165,7 @@ export async function printReportA4(options: ReportPrintOptions): Promise<void> 
         columns,
         rows,
         totalRow,
+        signatures = [],
         rowsPerPage = 22,
     } = options
 
@@ -303,6 +313,19 @@ export async function printReportA4(options: ReportPrintOptions): Promise<void> 
                 `
                     : ''
 
+            const signaturesHtml = isLastPage && signatures && signatures.length > 0
+                ? `
+                    <div class="report-signatures" style="margin-top: 25px; margin-bottom: 12px; display: flex; justify-content: space-between; page-break-inside: avoid;">
+                        ${signatures.map(s => `
+                            <div style="width: 22%; text-align: center; font-size: 10px; color: #1e293b;">
+                                <div style="font-weight: 600; margin-bottom: 45px; text-transform: uppercase; font-size: 9.5px; color: #475569;">${escapeHtml(s.title)}</div>
+                                <div style="font-weight: 700; border-bottom: 1px solid #0f172a; padding-bottom: 3px; min-height: 18px;">${escapeHtml(s.name)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `
+                : ''
+
             return `
                 <section class="print-page ${isLastPage ? 'last-page' : ''}">
                     <div class="page-body">
@@ -316,6 +339,7 @@ export async function printReportA4(options: ReportPrintOptions): Promise<void> 
                                 ${totalRowHtml}
                             </tbody>
                         </table>
+                        ${signaturesHtml}
                     </div>
                     <footer class="page-footer">
                         <div class="footer-left">Dicetak pada: ${escapeHtml(printedAt)}</div>

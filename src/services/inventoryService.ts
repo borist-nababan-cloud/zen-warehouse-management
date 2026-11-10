@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { ApiResponse, InventoryShrinkageLog, StockOpnameHeader, MasterShrinkageCategory, InventoryBalance, InventoryReportItem, ShrinkageReportItem, OpnameVarianceItem } from '@/types/database'
+import { ApiResponse, InventoryShrinkageLog, StockOpnameHeader, StockOpnameStatus, MasterShrinkageCategory, InventoryBalance, InventoryReportItem, ShrinkageReportItem, OpnameVarianceItem } from '@/types/database'
 
 // ==========================================
 // SHRINKAGE
@@ -151,7 +151,7 @@ interface OpnamePayload {
 export async function createStockOpname(payload: OpnamePayload): Promise<ApiResponse<StockOpnameHeader>> {
     const user = (await supabase.auth.getUser()).data.user
 
-    // 1. Create Header
+    // 1. Create Header with PENDING_APPROVAL status
     const docNum = `SO-${Date.now()}`
     
     const { data: header, error: headerError } = await supabase
@@ -161,7 +161,7 @@ export async function createStockOpname(payload: OpnamePayload): Promise<ApiResp
             kode_outlet: payload.kode_outlet,
             notes: payload.notes,
             created_by: user?.id,
-            status: 'DRAFT'
+            status: 'PENDING_APPROVAL'
         })
         .select()
         .single()
@@ -170,12 +170,13 @@ export async function createStockOpname(payload: OpnamePayload): Promise<ApiResp
         return { data: null, error: headerError?.message || 'Failed to create header', isSuccess: false }
     }
 
-    // 2. Insert Items
+    // 2. Insert Items with difference calculated
     const itemsToInsert = payload.items.map(item => ({
         header_id: header.id,
         barang_id: item.barang_id,
         system_qty: item.system_qty,
         actual_qty: item.actual_qty,
+        difference: item.actual_qty - item.system_qty,
         notes: item.notes
     }))
 
@@ -184,63 +185,135 @@ export async function createStockOpname(payload: OpnamePayload): Promise<ApiResp
         .insert(itemsToInsert)
 
     if (itemsError) {
-        // Rollback? Should delete header manually since no transaction block on client.
-        // For MVP, just return error.
+        // Rollback header manually if items fail
+        await supabase.from('stock_opname_headers').delete().eq('id', header.id)
         return { data: null, error: itemsError.message, isSuccess: false }
     }
 
-    // 3. Finalize Logic (Client-Side)
-    // Replace RPC with direct updates to ensure reliability
+    // Inventory balance is NOT updated here.
+    // Stock will only be updated upon approval by Role 5, 8, or 14 via approve_stock_opname RPC.
+    return { data: header as StockOpnameHeader, error: null, isSuccess: true }
+}
+
+// ==========================================
+// STOCK OPNAME BATCH APPROVAL MANAGEMENT
+// ==========================================
+
+export interface StockOpnameBatchRow {
+    id: string
+    document_number: string
+    kode_outlet: string
+    opname_date: string
+    status: StockOpnameStatus
+    notes: string | null
+    created_at: string
+    created_by: string | null
+    master_outlet?: {
+        name_outlet: string
+    }
+    stock_opname_items?: {
+        id: string
+        barang_id: number
+        system_qty: number
+        actual_qty: number
+        difference: number
+        notes: string | null
+    }[]
+}
+
+export async function getStockOpnameBatches(
+    outletCode?: string,
+    status?: string,
+    startDate?: string,
+    endDate?: string
+): Promise<ApiResponse<StockOpnameBatchRow[]>> {
     try {
-        for (const item of itemsToInsert) {
-            // Try to update existing balance
-            const { data: existing, error: updateError } = await supabase
-                .from('inventory_balance')
-                .update({ 
-                    qty_on_hand: item.actual_qty,
-                    opening_balance: item.actual_qty, // Set OB to actual opname qty
-                    last_movement_at: new Date().toISOString(),
-                    date_ob: new Date().toLocaleDateString('en-CA') // YYYY-MM-DD (Local)
-                })
-                .eq('barang_id', item.barang_id)
-                .eq('kode_outlet', header.kode_outlet)
-                .select()
+        let query = supabase
+            .from('stock_opname_headers')
+            .select(`
+                *,
+                master_outlet:master_outlet!stock_opname_headers_kode_outlet_fkey(name_outlet),
+                stock_opname_items(id, barang_id, system_qty, actual_qty, difference, notes)
+            `)
+            .order('created_at', { ascending: false })
 
-            if (updateError) throw new Error("Failed to update inventory: " + updateError.message)
-
-            // If no row existed, we must insert
-            if (!existing || existing.length === 0) {
-                 const { error: insertError } = await supabase
-                    .from('inventory_balance')
-                    .insert({
-                        barang_id: item.barang_id,
-                        kode_outlet: header.kode_outlet,
-                        qty_on_hand: item.actual_qty,
-                        opening_balance: item.actual_qty, // Set OB to actual opname qty
-                        last_movement_at: new Date().toISOString(),
-                        date_ob: new Date().toLocaleDateString('en-CA') // YYYY-MM-DD (Local)
-                    })
-                
-                if (insertError) throw new Error("Failed to insert inventory: " + insertError.message)
-            }
+        if (outletCode && outletCode !== 'ALL') {
+            query = query.eq('kode_outlet', outletCode)
         }
 
-        // 4. Update Header Status to COMPLETED
-        const { error: statusError } = await supabase
-            .from('stock_opname_headers')
-            .update({ status: 'COMPLETED' })
-            .eq('id', header.id)
+        if (status && status !== 'ALL') {
+            query = query.eq('status', status)
+        }
 
-        if (statusError) throw new Error("Failed to update status: " + statusError.message)
+        if (startDate && endDate) {
+            query = query.gte('opname_date', startDate).lte('opname_date', endDate)
+        }
 
+        const { data, error } = await query
+        if (error) throw error
+
+        return { data: data as StockOpnameBatchRow[], error: null, isSuccess: true }
     } catch (err: any) {
-         // If finalization fails, we leave the header as DRAFT (or we could try to rollback items)
-         // For now just report error
-         return { data: header as StockOpnameHeader, error: "Saved as Draft but failed to finalize: " + err.message, isSuccess: false }
+        console.error('Error fetching stock opname batches:', err)
+        return { data: null, error: err.message, isSuccess: false }
     }
+}
 
-    // Return header with updated status logic (conceptually completed)
-    return { data: { ...header, status: 'COMPLETED' } as StockOpnameHeader, error: null, isSuccess: true }
+export async function getStockOpnameBatchDetail(headerId: string): Promise<ApiResponse<any>> {
+    try {
+        const { data, error } = await supabase
+            .from('stock_opname_headers')
+            .select(`
+                *,
+                master_outlet:master_outlet!stock_opname_headers_kode_outlet_fkey(name_outlet),
+                stock_opname_items(
+                    *,
+                    master_barang(id, name, sku, image1_url)
+                )
+            `)
+            .eq('id', headerId)
+            .single()
+
+        if (error) throw error
+        return { data, error: null, isSuccess: true }
+    } catch (err: any) {
+        return { data: null, error: err.message, isSuccess: false }
+    }
+}
+
+export async function approveStockOpnameBatch(headerId: string): Promise<ApiResponse<any>> {
+    try {
+        const user = (await supabase.auth.getUser()).data.user
+        const { data, error } = await supabase.rpc('approve_stock_opname', {
+            p_header_id: headerId,
+            p_user_id: user?.id
+        })
+        if (error) throw error
+        if (data && !data.success) throw new Error(data.error || 'Failed to approve stock opname')
+
+        return { data, error: null, isSuccess: true }
+    } catch (err: any) {
+        console.error('Error approving stock opname batch:', err)
+        return { data: null, error: err.message, isSuccess: false }
+    }
+}
+
+export async function rejectStockOpnameBatch(headerId: string, reason: string): Promise<ApiResponse<any>> {
+    try {
+        const user = (await supabase.auth.getUser()).data.user
+        const { data, error } = await supabase.rpc('reject_stock_opname', {
+            p_header_id: headerId,
+            p_user_id: user?.id,
+            p_reason: reason
+        })
+        if (error) throw error
+        if (data && !data.success) throw new Error(data.error || 'Failed to reject stock opname')
+
+        return { data, error: null, isSuccess: true }
+    } catch (err: any) {
+        console.error('Error rejecting stock opname batch:', err)
+        return { data: null, error: err.message, isSuccess: false }
+    }
 }
 
 // ==========================================
@@ -293,7 +366,8 @@ export async function getShrinkageReport(outletCode: string, startDate?: string,
 export async function getOpnameVarianceReport(
   outletCode?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  documentNumber?: string
 ): Promise<ApiResponse<OpnameVarianceItem[]>> {
   try {
     let query = supabase
@@ -307,6 +381,10 @@ export async function getOpnameVarianceReport(
 
     if (startDate && endDate) {
       query = query.gte('opname_date', startDate).lte('opname_date', endDate)
+    }
+
+    if (documentNumber && documentNumber !== 'ALL') {
+      query = query.eq('document_number', documentNumber)
     }
 
     const { data, error } = await query
@@ -325,5 +403,32 @@ export async function getOpnameVarianceReport(
       error: error.message,
       isSuccess: false,
     }
+  }
+}
+
+export async function getOpnameBatchNumbers(
+  outletCode?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<ApiResponse<string[]>> {
+  try {
+    let query = supabase
+      .from('stock_opname_headers')
+      .select('document_number')
+      .order('created_at', { ascending: false })
+
+    if (outletCode && outletCode !== 'ALL') {
+      query = query.eq('kode_outlet', outletCode)
+    }
+    if (startDate && endDate) {
+      query = query.gte('opname_date', startDate).lte('opname_date', endDate)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    const uniqueDocs = Array.from(new Set((data || []).map((d: any) => d.document_number))).filter(Boolean) as string[]
+    return { data: uniqueDocs, error: null, isSuccess: true }
+  } catch (err: any) {
+    return { data: [], error: err.message, isSuccess: false }
   }
 }
