@@ -429,9 +429,9 @@ Modul CRM menghubungkan tamu yang berkunjung ke website resmi Zen Family Spa den
 
 ---
 
-## 8. Modul HRD (Manajemen Karyawan, Evaluasi Kinerja & Pelanggaran Terapis)
+## 8. Modul HRD (Manajemen Karyawan, Evaluasi Kinerja TR, KPI Karyawan Non-TR/TB & Pelanggaran)
 
-Modul HRD dirancang khusus untuk memantau mutu pelayanan, data kepegawaian cabang, kepatuhan SOP terapis, standarisasi kualitas perawatan, serta sistem pencatatan pelanggaran harian (*demerit points*) di seluruh gerai Zen Family Spa & Reflexology.
+Modul HRD dirancang khusus untuk memantau mutu pelayanan, data kepegawaian cabang, kepatuhan SOP terapis, standarisasi kualitas perawatan, evaluasi KPI karyawan departemen non-TR/TB, serta sistem pencatatan pelanggaran harian (*demerit points*) di seluruh gerai Zen Family Spa & Reflexology.
 
 ---
 
@@ -631,6 +631,97 @@ Modul rekapitulasi audit dan analisis demerit points terapis untuk evaluasi bula
 
 ---
 
+### I. Variabel KPI Departemen (`HRD > KPI Variable`)
+> [!NOTE]
+> Dialokasikan khusus untuk **Role 2**, **Role 5 (Finance Holding)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, dan **Role 14 (Manager Cabang)**.
+
+Modul ini digunakan untuk mengelola daftar variabel penilaian KPI bagi karyawan departemen non-TR/TB (`hrd_kpi_variable`):
+1. **Pengelompokan Kategori & Departemen**:
+   - **Master Kategori**: Menggunakan referensi kategori dari `hrd_report_tr_category`.
+   - **Departemen**: Dropdown diambil otomatis dari `ot_hrd_karyawan_info.departemen` yang dikelompokkan, dengan pengecualian departemen **`TR`** dan **`TB`**.
+2. **Data Variabel & Status**:
+   - Setiap variabel memiliki `nama_variable`, `deskripsi`, dan saklar status `active` sehingga variabel yang sudah tidak dipakai dapat dinonaktifkan tanpa merusak riwayat evaluasi lama.
+3. **Audit Trail Grid**:
+   - Tabel menampilkan kolom **Terakhir Diperbarui Oleh** (`update_by` dari `users_profile.full_name` / `email`) dan **Waktu Update** (`update_at`).
+
+---
+
+### J. Master Kesalahan KPI (`HRD > KPI Mstr. Faults`)
+> [!NOTE]
+> Dialokasikan khusus untuk **Role 2**, **Role 5 (Finance Holding)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, dan **Role 14 (Manager Cabang)**.
+
+Katalog acuan standar jenis kesalahan dan poin pengurang (*demerit points*) khusus karyawan non-TR/TB (`hrd_kpi_master_faults`):
+1. **Struktur Data Master**:
+   - Memiliki struktur kategori tingkat kesalahan (**Ringan**, **Sedang**, **Berat**), poin pengurang, urutan tampil, dan status aktif.
+2. **Audit Trail Grid**:
+   - Menampilkan kolom **Terakhir Diperbarui Oleh** (`update_by` dari `users_profile.full_name` / `email`) dan **Waktu Update** (`update_at`).
+
+---
+
+### K. Pencatatan Kesalahan Karyawan (`HRD > Employee Faults`)
+> [!NOTE]
+> Dialokasikan untuk **Role 2**, **Role 5 (Finance Holding)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, dan **Role 14 (Manager Cabang)**.
+
+Formulir pencatatan insiden kesalahan harian karyawan aktif non-TR/TB (`hrd_kpi_faults` & `view_hrd_kpi_faults`):
+1. **Aturan Dropdown Cabang & Pembatasan Akses**:
+   - **Dropdown Cabang / Outlet**: Memuat outlet dengan kondisi `active = true` **atau** `can_sto = true` (sehingga outlet berstatus STO tetap muncul meskipun `active = false`).
+   - **Role 6 & Role 14**: Pilihan cabang terkunci otomatis ke `user.kode_outlet`.
+   - **Role 6 (Admin Outlet)**: Daftar **Karyawan Aktif** dan log harian difilter tambahan hanya untuk karyawan dengan `ot_hrd_karyawan_info.isadmin = 'Y'`.
+2. **Alur Pencatatan**:
+   - Pilih tanggal kejadian, pilih **Karyawan Aktif** (non-TR/TB dari `ot_hrd_karyawan_info`), pilih jenis kesalahan dari `hrd_kpi_master_faults`, dan isi keterangan kronologi bila diperlukan.
+   - Tabel riwayat harian di bawah formulir menampilkan catatan kesalahan pada tanggal & cabang terpilih beserta aksi hapus jika terjadi kesalahan input.
+
+---
+
+### L. Evaluasi KPI Karyawan (`HRD > Employee KPI`)
+> [!NOTE]
+> Dialokasikan untuk **Role 2**, **Role 5 (Finance Holding)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, dan **Role 14 (Manager Cabang)**.
+
+Formulir evaluasi KPI berkala bagi karyawan aktif non-TR/TB (`hrd_report_kpi` & `hrd_report_kpi_detail`):
+1. **Pemilihan Cabang & Karyawan**:
+   - **Dropdown Cabang / Outlet**: Memuat outlet dengan kondisi `active = true` **atau** `can_sto = true`.
+   - **Role 6 & Role 14**: Cabang terkunci ke `user.kode_outlet`.
+   - **Role 6 (Admin Outlet)**: Daftar **Karyawan Aktif** disaring tambahan khusus untuk `ot_hrd_karyawan_info.isadmin = 'Y'`.
+2. **Integrasi Variabel Dinamis, Payroll & Faults**:
+   - Setelah karyawan dipilih, sistem otomatis memuat variabel aktif dari `hrd_kpi_variable` yang sesuai dengan **departemen** karyawan tersebut.
+   - Memuat 5 periode payroll terakhir dan rekap kehadiran dari `ot_hrd_karyawan_payroll_details.payroll_data`, akumulasi poin pengurang dari `hrd_kpi_faults` sesuai rentang periode payroll, serta riwayat 3 evaluasi KPI terakhir.
+   - Menyimpan skor per variabel, nilai total akhir, total pengurang, serta kesimpulan evaluator.
+
+---
+
+### M. Laporan Kesalahan Karyawan (`HRD > Rep. Employee Faults`)
+> [!NOTE]
+> Dialokasikan untuk **Role 2**, **Role 5 (Finance Holding)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, dan **Role 14 (Manager Cabang)**.
+
+Modul rekapitulasi insiden kesalahan dan poin pengurang KPI karyawan non-TR/TB dari `view_hrd_kpi_faults`:
+1. **Aturan Pembatasan Cabang & Karyawan**:
+   - **Role 6 & Role 14**: Pilihan cabang terkunci otomatis ke `user.kode_outlet`.
+   - **Role 6**: Data yang ditampilkan difilter tambahan khusus untuk karyawan `isadmin = 'Y'`.
+   - **Role 2, 5, 8, 13**: Dapat memilih `SEMUA OUTLET (NASIONAL)` atau cabang tertentu (`active = true` atau `can_sto = true`).
+2. **Fitur Laporan**:
+   - Menampilkan 5 kartu ringkasan (Total Insiden, Total Poin Pengurang, Kategori Ringan, Sedang, Berat), filter rentang tanggal (default 30 hari terakhir), filter kategori, pencarian cepat, **Ekspor CSV**, serta **Cetak Laporan A4** (`printReportA4`).
+
+---
+
+### N. Laporan Evaluasi KPI Karyawan (`HRD > Report Employee KPI`)
+> [!NOTE]
+> Dialokasikan untuk **Role 2**, **Role 5 (Finance Holding)**, **Role 6 (Admin Outlet)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, dan **Role 14 (Manager Cabang)**.
+
+Modul rekapitulasi hasil evaluasi KPI karyawan non-TR/TB dari `hrd_report_kpi` dan `hrd_report_kpi_detail`:
+1. **Aturan Pembatasan Cabang & Karyawan**:
+   - **Role 6 & Role 14**: Pilihan cabang terkunci otomatis ke `user.kode_outlet`.
+   - **Role 6**: Data yang ditampilkan difilter tambahan khusus untuk karyawan `isadmin = 'Y'`.
+   - Tombol pintasan **Buat Employee KPI** tersedia bagi role `[2, 5, 6, 8, 14]`.
+2. **Filter 3 Langkah & Kartu Ringkasan**:
+   - Menampilkan 4 kartu ringkasan (Total Evaluasi KPI, Rata-rata Nilai Total, Rata-rata Poin Pengurang, Kategori Baik/Sangat Baik $\ge 75$).
+   - Filter berurutan: **1. Cabang / Outlet**, **2. Periode Payroll**, dan **3. Pencarian Cepat**.
+3. **Aksi Per Baris, Modal Rincian & Cetak A4 Ganda**:
+   - **Lihat Rincian**: Membuka modal rincian lengkap berisi profil & foto karyawan (dapat diperbesar/*zoom*), rincian skor variabel KPI dikelompokkan per kategori, tabel kesalahan (`hrd_kpi_faults`) pada periode payroll tersebut, kesimpulan, dan catatan otomatis.
+   - **Cetak (Per Baris)** & **Cetak Lembar KPI (Di Modal)**: Mencetak lembar evaluasi KPI individual karyawan format A4 (`printEmployeeKpiEvaluationA4`).
+   - **Cetak Laporan A4** & **Ekspor CSV**: Mencetak rekapitulasi tabel utama format A4 (`printReportA4`) atau mengunduh data dalam format `.csv`.
+
+---
+
 ## 9. Resep & Proses Produksi (Production Module)
 
 ### A. Formula & Master Resep (`Produksi > Master Resep`)
@@ -707,9 +798,10 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
        4. **Kolom 4 (Disetujui / Manager Cabang)**: Garis tanda tangan kosong `(...................)`.
 2. **Laporan Nilai Stok (`Inventaris & Stok > Laporan Nilai Stok`)**:
    - Menghitung total valuasi aset gudang per cabang berdasarkan saldo kuantitas stok (*Qty on Hand*), harga beli, dan harga jual.
+   - **Akses Role 14 (Manager Cabang)**: Role 14 dapat membuka laporan ini dengan data yang otomatis difilter dan terkunci pada `kode_outlet` cabangnya sendiri.
    - **Pemberlakuan Privasi Harga Antar-Cabang**: Pada item yang diperoleh dari transfer logistik (STO) cabang lain, kolom *Harga Beli* otomatis disamakan dengan *Harga Jual* untuk melindungi kerahasiaan harga modal holding/cabang asal.
 3. **Laporan Kuantitas Stok (`Inventaris & Stok > Laporan Kuantitas Stok`)**:
-   - Memantau saldo fisik barang secara murni (tanpa nominal rupiah) untuk kebutuhan cek fisik cepat di rak gudang.
+   - Memantau saldo fisik barang secara murni (tanpa nominal rupiah) untuk kebutuhan cek fisik cepat di rak gudang. Submenu ini disembunyikan dari **Role 14**.
 4. **Laporan Pemakaian Internal (`Inventaris & Stok > Laporan Pemakaian Internal`)**:
    - Merekap seluruh barang yang dipakai untuk operasional, total biaya pengeluaran, perincian kategori pemakaian, dan staf penanggung jawab.
 5. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
