@@ -414,6 +414,7 @@ export async function getOpnameBatchNumbers(
     let query = supabase
       .from('stock_opname_headers')
       .select('document_number')
+      .in('status', ['PENDING_APPROVAL', 'COMPLETED'])
       .order('created_at', { ascending: false })
 
     if (outletCode && outletCode !== 'ALL') {

@@ -30,6 +30,39 @@ export interface HrdReportTrVariable {
   category?: HrdReportTrCategory;
 }
 
+export interface HrdKpiVariable {
+  uid: string;
+  category_id: string;
+  departemen: string;
+  nama_variable: string;
+  deskripsi?: string | null;
+  urutan: number;
+  active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  update_by?: string | null;
+  update_at: string;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
+  // Join
+  category?: HrdReportTrCategory;
+}
+
+export interface HrdKpiMasterFault {
+  uid: string;
+  nama_faults: string;
+  pengurang: number;
+  kategori: FaultCategory;
+  urutan: number;
+  active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  update_by?: string | null;
+  update_at: string;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
+}
+
 export interface HrdReportTr {
   uid: string;
   kode_report: string;
@@ -73,6 +106,7 @@ export interface HrdEmployeeSimple {
   departemen?: string | null;
   active?: string | null;
   foto_url?: string | null;
+  isadmin?: string | null;
 }
 
 export interface CreateHrdReportTrPayload {
@@ -166,6 +200,96 @@ export interface CreateHrdTrFaultPayload {
   keterangan?: string | null;
 }
 
+export interface HrdKpiFault {
+  uid: string;
+  tanggal: string;
+  kode_outlet: string;
+  kodekaryawan: string;
+  idkaryawan: number;
+  fault_id?: string | null;
+  nama_faults: string;
+  kategori: FaultCategory;
+  pengurang: number;
+  keterangan?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  update_by?: string | null;
+  update_at: string;
+  name_outlet?: string | null;
+  city?: string | null;
+  namakaryawan?: string | null;
+  departemen?: string | null;
+  isadmin?: string | null;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
+}
+
+export interface CreateHrdKpiFaultPayload {
+  tanggal?: string;
+  kode_outlet: string;
+  kodekaryawan: string;
+  idkaryawan: number;
+  fault_id?: string | null;
+  nama_faults: string;
+  kategori: FaultCategory;
+  pengurang: number;
+  keterangan?: string | null;
+}
+
+export interface HrdReportKpi {
+  uid: string;
+  kode_report: string;
+  tanggal_report: string;
+  kode_outlet: string;
+  kodekaryawan: string;
+  departemen?: string | null;
+  payrollperiode?: string | null;
+  total_pengurang?: number;
+  nilai_total: number;
+  kesimpulan?: string | null;
+  nilai_guest: number;
+  catatan_auto?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  update_by?: string | null;
+  update_at: string;
+  update_by_name?: string | null;
+  created_by_name?: string | null;
+  // Joins
+  master_outlet?: MasterOutlet | null;
+  karyawan_info?: HrdEmployeeSimple | null;
+  details?: HrdReportKpiDetail[];
+}
+
+export interface HrdReportKpiDetail {
+  uid: string;
+  report_id: string;
+  variable_id?: string | null;
+  nama_variable: string;
+  nama_kategori?: string | null;
+  nilai_variable: number;
+  catatan_variable?: string | null;
+  created_at: string;
+}
+
+export interface CreateHrdReportKpiPayload {
+  kode_outlet: string;
+  kodekaryawan: string;
+  departemen?: string | null;
+  tanggal_report?: string;
+  payrollperiode?: string | null;
+  total_pengurang?: number;
+  nilai_total?: number;
+  kesimpulan?: string | null;
+  items: {
+    variable_id: string;
+    nama_variable: string;
+    nama_kategori: string;
+    nilai_variable: number;
+    catatan_variable?: string | null;
+  }[];
+}
+
 export interface HrdKaryawanInfo {
   id: string;
   local_autonum?: number | null;
@@ -184,6 +308,7 @@ export interface HrdKaryawanInfo {
   namarek?: string | null;
   active: 'Y' | 'N' | string;
   foto_url?: string | null;
+  isadmin?: string | null;
   created_at?: string;
   updated_at?: string;
   created_by?: string | null;

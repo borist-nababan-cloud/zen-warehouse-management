@@ -1,7 +1,14 @@
 import { format } from 'date-fns'
 import { MasterOutlet } from '@/types/database'
 import { masterOutletService } from '@/services/masterOutletService'
-import { HrdReportTr, HrdReportTrDetail, HrdTrFault } from '@/types/hrd'
+import {
+    HrdReportTr,
+    HrdReportTrDetail,
+    HrdTrFault,
+    HrdReportKpi,
+    HrdReportKpiDetail,
+    HrdKpiFault,
+} from '@/types/hrd'
 
 export interface ReportPrintColumn {
     header: string
@@ -653,10 +660,40 @@ export interface TherapistEvaluationPrintOptions {
     periodDates?: { startDate: string; endDate: string } | null
 }
 
-/**
- * Print individual Therapist Evaluation sheet on standard Zen A4 layout
- */
-export async function printTherapistEvaluationA4(options: TherapistEvaluationPrintOptions): Promise<void> {
+export interface EmployeeKpiEvaluationPrintOptions {
+    report: HrdReportKpi
+    details: HrdReportKpiDetail[]
+    faults: HrdKpiFault[]
+    evaluatorName?: string | null
+    availableOutlets?: Partial<MasterOutlet>[]
+    periodDates?: { startDate: string; endDate: string } | null
+}
+
+interface EvaluationPrintLabels {
+    docTitlePrefix: string
+    toolbarLabel: string
+    headerTitle: string
+    headerSubtitle: string
+    sectionVarsTitle: string
+    sectionFaultsTitle: string
+    nilFaultsText: string
+    nilDeductionText: string
+    subjectSigTitle: string
+    footerText: string
+    deptFallback: string
+}
+
+async function printIndividualEvaluationSheetA4(
+    options: {
+        report: HrdReportTr | HrdReportKpi
+        details: (HrdReportTrDetail | HrdReportKpiDetail)[]
+        faults: (HrdTrFault | HrdKpiFault)[]
+        evaluatorName?: string | null
+        availableOutlets?: Partial<MasterOutlet>[]
+        periodDates?: { startDate: string; endDate: string } | null
+    },
+    labels: EvaluationPrintLabels
+): Promise<void> {
     const { report, details, faults, evaluatorName, availableOutlets, periodDates } = options
 
     const outletInfo = await resolveOutletHeaderData(
@@ -687,14 +724,19 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
         scoreColor = '#b91c1c'
     }
 
-    const therapistPhotoHtml = report.karyawan_info?.foto_url
+    const employeeDept =
+        ('departemen' in report ? report.departemen : undefined) ||
+        report.karyawan_info?.departemen ||
+        labels.deptFallback
+
+    const subjectPhotoHtml = report.karyawan_info?.foto_url
         ? `<img src="${report.karyawan_info.foto_url}" alt="${escapeHtml(report.karyawan_info?.namakaryawan || '')}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #889D35; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />`
         : `<div style="width: 64px; height: 64px; border-radius: 50%; background: #F8F5F1; border: 2px solid #D2C0A7; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #889D35;">
-            ${(report.karyawan_info?.namakaryawan || report.kodekaryawan || 'TR').substring(0, 2).toUpperCase()}
+            ${(report.karyawan_info?.namakaryawan || report.kodekaryawan || labels.deptFallback).substring(0, 2).toUpperCase()}
            </div>`
 
     // Group details by category
-    const groupedDetails: Record<string, HrdReportTrDetail[]> = {}
+    const groupedDetails: Record<string, (HrdReportTrDetail | HrdReportKpiDetail)[]> = {}
     details.forEach((det) => {
         const cat = det.nama_kategori || 'Variabel Penilaian'
         if (!groupedDetails[cat]) groupedDetails[cat] = []
@@ -768,7 +810,7 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
 <html lang="id">
 <head>
     <meta charset="UTF-8" />
-    <title>Lembar Evaluasi Terapis - ${escapeHtml(report.kode_report)}</title>
+    <title>${escapeHtml(labels.docTitlePrefix)} - ${escapeHtml(report.kode_report)}</title>
     <style>
         * {
             box-sizing: border-box;
@@ -1008,7 +1050,7 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
 </head>
 <body>
     <div class="toolbar">
-        <div class="toolbar-title">Pratinjau Lembar Evaluasi TR — ${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}</div>
+        <div class="toolbar-title">${escapeHtml(labels.toolbarLabel)} — ${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}</div>
         <div class="toolbar-actions">
             <button class="btn btn-print" onclick="window.print()">🖨️ Cetak Lembar Ini</button>
             <button class="btn btn-close" onclick="window.close()">Tutup</button>
@@ -1022,8 +1064,8 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
                     <div class="header-left">
                         <img src="${iconUrl}" alt="ZEN Icon" class="brand-icon" />
                         <div>
-                            <h1 class="report-title">LEMBAR EVALUASI & PENILAIAN TERAPIS</h1>
-                            <p class="report-subtitle">Dokumen Penilaian Kinerja & Audit Kepatuhan Standar SOP Terapis</p>
+                            <h1 class="report-title">${escapeHtml(labels.headerTitle)}</h1>
+                            <p class="report-subtitle">${escapeHtml(labels.headerSubtitle)}</p>
                         </div>
                     </div>
                     <div class="header-right">
@@ -1039,14 +1081,14 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
                 </div>
             </div>
 
-            <!-- Therapist Identity Card -->
+            <!-- Subject Identity Card -->
             <div class="therapist-card">
                 <div class="therapist-info">
-                    ${therapistPhotoHtml}
+                    ${subjectPhotoHtml}
                     <div>
                         <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}</div>
                         <div style="font-size: 10px; color: #475569; margin-top: 2px;">
-                            ID Karyawan: <strong>${escapeHtml(report.karyawan_info?.idkaryawan || '-')}</strong> | Kode: <strong>${escapeHtml(report.kodekaryawan)}</strong> | Dept: <strong>${escapeHtml(report.karyawan_info?.departemen || 'TR')}</strong>
+                            ID Karyawan: <strong>${escapeHtml(report.karyawan_info?.idkaryawan || '-')}</strong> | Kode: <strong>${escapeHtml(report.kodekaryawan)}</strong> | Dept: <strong>${escapeHtml(employeeDept)}</strong>
                         </div>
                         <div style="font-size: 10px; color: #475569; margin-top: 1px;">
                             Penempatan: <strong>[${escapeHtml(report.kode_outlet)}] ${escapeHtml(report.master_outlet?.name_outlet || '')}</strong>
@@ -1060,14 +1102,14 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
                     </div>
                     <div style="font-size: 9.5px; font-weight: 700; color: ${scoreColor}; margin-top: 1px;">${escapeHtml(predikatText)}</div>
                     <div style="font-size: 9px; color: ${report.total_pengurang ? '#b91c1c' : '#15803d'}; font-weight: 700; margin-top: 3px;">
-                        ${report.total_pengurang ? `Pengurang: -${report.total_pengurang} Poin` : 'Nihil Pengurang SOP'}
+                        ${report.total_pengurang ? `Pengurang: -${report.total_pengurang} Poin` : escapeHtml(labels.nilDeductionText)}
                     </div>
                 </div>
             </div>
 
             <!-- Section 1: Scored Variables -->
             <div class="section-title">
-                <span>1. Rincian Penilaian Variabel Evaluasi</span>
+                <span>${escapeHtml(labels.sectionVarsTitle)}</span>
                 <span style="font-size: 9.5px; font-weight: normal; color: #64748b;">Total ${details.length} Variabel</span>
             </div>
             <table class="data-table">
@@ -1085,7 +1127,7 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
 
             <!-- Section 2: Faults Record -->
             <div class="section-title">
-                <span>2. Catatan Pelanggaran SOP (TR Faults) Pada Periode Ini</span>
+                <span>${escapeHtml(labels.sectionFaultsTitle)}</span>
                 <span style="font-size: 9.5px; font-weight: normal; color: ${faults.length > 0 ? '#b91c1c' : '#15803d'};">
                     ${faults.length > 0 ? `${faults.length} Insiden Pelanggaran` : 'Nihil Pelanggaran'}
                 </span>
@@ -1107,7 +1149,7 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
                 </table>
             ` : `
                 <div style="padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 9.5px; font-weight: 600; margin-bottom: 10px;">
-                    ✓ Terapis ini tidak memiliki catatan kesalahan SOP pada periode evaluasi terpilih (Nihil Kesalahan).
+                    ✓ ${escapeHtml(labels.nilFaultsText)}
                 </div>
             `}
 
@@ -1120,7 +1162,7 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
             <!-- Signatures -->
             <div style="display: flex; justify-content: space-between; margin-top: 18px; margin-bottom: 8px; page-break-inside: avoid;">
                 <div style="width: 30%; text-align: center; font-size: 9.5px; color: #1e293b;">
-                    <div style="font-weight: 600; margin-bottom: 40px; text-transform: uppercase; font-size: 9px; color: #475569;">Terapis yang Dinilai</div>
+                    <div style="font-weight: 600; margin-bottom: 40px; text-transform: uppercase; font-size: 9px; color: #475569;">${escapeHtml(labels.subjectSigTitle)}</div>
                     <div style="font-weight: 700; border-bottom: 1px solid #0f172a; padding-bottom: 2px;">
                         ${escapeHtml(report.karyawan_info?.namakaryawan || report.kodekaryawan)}
                     </div>
@@ -1142,7 +1184,7 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
 
         <footer class="page-footer">
             <div>Dicetak pada: ${escapeHtml(printedAt)}</div>
-            <div>Dokumen Resmi Zen Family Spa & Reflexology — Lembar Evaluasi TR</div>
+            <div>${escapeHtml(labels.footerText)}</div>
         </footer>
     </section>
     <script>
@@ -1158,5 +1200,43 @@ export async function printTherapistEvaluationA4(options: TherapistEvaluationPri
     printWindow.document.open()
     printWindow.document.write(htmlDocument)
     printWindow.document.close()
+}
+
+/**
+ * Print individual Therapist Evaluation sheet on standard Zen A4 layout
+ */
+export async function printTherapistEvaluationA4(options: TherapistEvaluationPrintOptions): Promise<void> {
+    await printIndividualEvaluationSheetA4(options, {
+        docTitlePrefix: 'Lembar Evaluasi Terapis',
+        toolbarLabel: 'Pratinjau Lembar Evaluasi TR',
+        headerTitle: 'LEMBAR EVALUASI & PENILAIAN TERAPIS',
+        headerSubtitle: 'Dokumen Penilaian Kinerja & Audit Kepatuhan Standar SOP Terapis',
+        sectionVarsTitle: '1. Rincian Penilaian Variabel Evaluasi',
+        sectionFaultsTitle: '2. Catatan Pelanggaran SOP (TR Faults) Pada Periode Ini',
+        nilFaultsText: 'Terapis ini tidak memiliki catatan kesalahan SOP pada periode evaluasi terpilih (Nihil Kesalahan).',
+        nilDeductionText: 'Nihil Pengurang SOP',
+        subjectSigTitle: 'Terapis yang Dinilai',
+        footerText: 'Dokumen Resmi Zen Family Spa & Reflexology — Lembar Evaluasi TR',
+        deptFallback: 'TR',
+    })
+}
+
+/**
+ * Print individual Employee KPI Evaluation sheet on standard Zen A4 layout
+ */
+export async function printEmployeeKpiEvaluationA4(options: EmployeeKpiEvaluationPrintOptions): Promise<void> {
+    await printIndividualEvaluationSheetA4(options, {
+        docTitlePrefix: 'Lembar Evaluasi KPI Karyawan',
+        toolbarLabel: 'Pratinjau Lembar Evaluasi KPI',
+        headerTitle: 'LEMBAR EVALUASI KPI KARYAWAN',
+        headerSubtitle: 'Dokumen Penilaian Kinerja, Kedisiplinan & Pencapaian KPI Departemen',
+        sectionVarsTitle: '1. Rincian Penilaian Variabel KPI',
+        sectionFaultsTitle: '2. Catatan Pelanggaran SOP (Employee Faults) Pada Periode Ini',
+        nilFaultsText: 'Karyawan ini tidak memiliki catatan kesalahan (Employee Faults) pada periode evaluasi terpilih (Nihil Kesalahan).',
+        nilDeductionText: 'Nihil Pengurang Faults',
+        subjectSigTitle: 'Karyawan yang Dinilai',
+        footerText: 'Dokumen Resmi Zen Family Spa & Reflexology — Lembar Evaluasi KPI Karyawan',
+        deptFallback: '-',
+    })
 }
 

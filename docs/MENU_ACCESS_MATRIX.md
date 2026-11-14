@@ -2,7 +2,7 @@
 
 This document outlines the authoritative role-based access permissions for each menu item, group, and route in the **Zen Warehouse Management System (WHMS) & Backoffice** (`frontend\warehousemanagement`), synchronized with `src/components/layout/Sidebar.tsx` and `src/App.tsx`.
 
-*Last Updated: 4 November 2026*
+*Last Updated: 14 November 2026*
 
 ---
 
@@ -11,7 +11,7 @@ This document outlines the authoritative role-based access permissions for each 
 | Role ID | System Role Code | Indonesian Role Title | WHM Access Status | Scope & Capabilities |
 |:---:|:---|:---|:---:|:---|
 | **1** | `admin_holding` | Admin Holding | ✅ Active | Holding Headquarters Administrator (Cross-outlet procurement & finance oversight) |
-| **2** | `staff_holding` | Staff Holding | ✅ Active | Holding Operational Staff (Assists central inventory & receiving) |
+| **2** | `MASTER_HRD` | Master HRD | ✅ Active | Central HRD & User Management (Cross-outlet user management, Info Karyawan, TR Kategori, TR Variabel, Lap. Evaluasi, Master Faults, Report TR Faults, GR) |
 | **3** | `laundry_admin` | Admin Laundry | ✅ Active | Laundry Hub Administrator (Linen & laundry cycle management) |
 | **4** | `laundry_staff` | Staf Laundry | ✅ Active | Laundry Operational Staff (Laundry processing & tracking) |
 | **5** | `finance` | Finance Holding | ✅ Active | Global / Holding Finance (Multi-outlet reports, transaction categories, cash flow, audit) |
@@ -55,7 +55,7 @@ This document outlines the authoritative role-based access permissions for each 
 | Menu Item | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
 | **Dasbor Utama** | `/dashboard` | `Warehouse` | **3, 4, 5, 6, 7, 8, 10** (18) | Authenticated | Halaman beranda utama WHMS menampilkan metrik inventaris, ringkasan transaksi, dan indikator status stok. |
-| **Manajemen Pengguna** | `/users` | `Users` | **6, 8** | `[6, 8]` | Manajemen akun staf. Role 8 (Superuser) dapat mengelola seluruh outlet & mengubah role apa pun. Role 6 (Admin Outlet) terbatas pada cabang sendiri untuk persetujuan akun operasional (Role 12). |
+| **Manajemen Pengguna** | `/users` | `Users` | **2, 6, 8** | `[2, 6, 8]` | Manajemen akun staf. Role 8 (Superuser) & Role 2 (Master HRD) dapat mengelola seluruh outlet & mengubah role (Role 2 tidak dapat menetapkan/mengubah akun Role 8). Role 6 (Admin Outlet) terbatas pada cabang sendiri untuk persetujuan akun operasional (Role 12). |
 
 ---
 
@@ -65,10 +65,10 @@ This document outlines the authoritative role-based access permissions for each 
 |:---|:---|:---:|:---:|:---:|:---|
 | **Stock Opname** | `/inventory/stock-opname` | `ClipboardList` | **6, 7** | `[6, 7, 8]` | Pelaksanaan stock opname fisik gudang, pencatatan batch opname, dan penghitungan selisih. |
 | **Penyusutan / Pemusnahan** | `/inventory/shrinkage` | `AlertTriangle` | **6, 7** | `[6, 7, 8]` | Pencatatan barang rusak, tumpah, kadaluarsa, atau hilang dengan pilihan kategori penyusutan standar. |
-| **Laporan Nilai Stok** | `/inventory/report` | `TrendingUp` | **5, 6, 8, 10** | `[1, 5, 6, 8, 10]` | Laporan valuasi nominal rupiah persediaan stok. *(Catatan: Role 7 Staf Gudang dinonaktifkan dari menu ini).* |
+| **Laporan Nilai Stok** | `/inventory/report` | `TrendingUp` | **5, 6, 8, 10, 14** | `[1, 2, 5, 6, 8, 10, 14]` | Laporan valuasi nominal rupiah persediaan stok. *(Catatan: Role 7 Staf Gudang dinonaktifkan dari menu ini; Role 14 terkunci hanya untuk `kode_outlet` miliknya).* |
 | **Laporan Kuantitas Stok** | `/inventory/report-qty` | `Boxes` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Laporan kuantitas fisik persediaan barang gudang (satuan dasar/base UOM), saldo awal, masuk, keluar, dan saldo akhir. |
 | **Laporan Penyusutan** | `/inventory/report-shrinkage` | `AlertOctagon` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Riwayat dan audit penyusutan/pemusnahan barang per kategori, tanggal, dan cabang. |
-| **Laporan Selisih Opname** | `/inventory/report-opname-variance` | `Scale` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Laporan audit selisih opname vs data sistem (mendukung toggle "Tampilkan Hanya yang Berselisih"). |
+| **Laporan Selisih Opname** | `/inventory/report-opname-variance` | `Scale` | **5, 6, 7, 8, 10, 14** | `[1, 2, 5, 6, 7, 8, 10, 14]` | Laporan audit selisih opname vs data sistem (mendukung toggle "Tampilkan Hanya yang Berselisih"). *(Role 14 terkunci hanya untuk `kode_outlet` miliknya).* |
 | **Laporan Pemakaian Internal** | `/inventory/report-internal-usage` | `LogOut` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Laporan riwayat pemakaian barang operasional cabang (linen, minyak spa, amenities) lengkap dengan ekspor CSV. |
 | **Laporan Retur Internal** | `/inventory/report-internal-return` | `Undo2` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Laporan pengembalian barang operasional kembali ke gudang beserta kondisi barang (Baik/Rusak/Expired). |
 | **Pemakaian Internal** | `/inventory/internal-usage` | `LogOut` | **6, 7, 10** | `[6, 7, 8, 10]` | Formulir dan daftar pengeluaran barang untuk kebutuhan operasional harian cabang (`USG-YYYYMMDD-XXXX`). |
@@ -208,27 +208,33 @@ This document outlines the authoritative role-based access permissions for each 
 
 
 ### 3.13. HRD (Evaluasi Kinerja & Pelanggaran Terapis)
-**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), SUPERUSER (8), Supervisor / Direksi (13), Auditor (14), Evaluator Holding (15), HR / Evaluator TR (16), Resepsionis (19)
+**Grup Akses Sidebar:** Master HRD (2), Finance (5), Outlet Admin (6), SUPERUSER (8), Supervisor / Direksi (13), Auditor (14), Evaluator Holding (15), HR / Evaluator TR (16), Resepsionis (19)
 
 | Submenu | Path / Route | Icon | Sidebar Role IDs | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
-| **Info Karyawan** | `/hrd/karyawan-info` | `Users` | **5, 6, 8, 13, 14, 15** | `[5, 6, 8, 13, 14, 15]` | Manajemen informasi kepegawaian dan status keaktifan (`ot_hrd_karyawan_info`). Mendukung paginasi server-side (>100 staf per outlet), filter status aktif (default: `Y`), pencarian nama karyawan (`ilike`), pengunggahan dan kompresi foto resmi staf ke bucket Supabase Storage `employee-photos`, serta pengubahan status `active` (`Y` $\leftrightarrow$ `N`) dengan modal konfirmasi aman. **Khusus Role 6, 14, 15:** akses terkunci pada cabang tugasnya (`user.kode_outlet`). Role 5, 8, 13 dapat memilih seluruh cabang via dropdown outlet. |
-| **Kategori Evaluasi TR** | `/hrd/tr-kategori` | `FolderTree` | **8, 16** | `[8, 16]` | Master kategori evaluasi performa terapis (misal: Sikap & Keramahan, Standar Grooming, Kualitas Pijat/Treatment, Kebersihan Area Kerja). Dilengkapi urutan dan saklar aktif/nonaktif. |
-| **Variabel Evaluasi TR** | `/hrd/tr-variabel` | `ListChecks` | **8, 16** | `[8, 16]` | Master variabel indikator penilaian yang dikelompokkan per kategori master. Variabel aktif otomatis tampil saat evaluator mengisi form penilaian terapis. |
+| **Info Karyawan** | `/hrd/karyawan-info` | `Users` | **2, 5, 6, 8, 13, 14, 15** | `[2, 5, 6, 8, 13, 14, 15]` | Manajemen informasi kepegawaian dan status keaktifan (`ot_hrd_karyawan_info`). Mendukung paginasi server-side (>100 staf per outlet), filter status aktif (default: `Y`), pencarian nama karyawan (`ilike`), pengunggahan dan kompresi foto resmi staf ke bucket Supabase Storage `employee-photos`, serta pengubahan status `active` (`Y` $\leftrightarrow$ `N`) dengan modal konfirmasi aman. **Khusus Role 6, 14, 15:** akses terkunci pada cabang tugasnya (`user.kode_outlet`). Role 2, 5, 8, 13 dapat memilih seluruh cabang via dropdown outlet. |
+| **Kategori Evaluasi TR** | `/hrd/tr-kategori` | `FolderTree` | **2, 8, 16** | `[2, 8, 16]` | Master kategori evaluasi performa terapis (misal: Sikap & Keramahan, Standar Grooming, Kualitas Pijat/Treatment, Kebersihan Area Kerja). Dilengkapi urutan dan saklar aktif/nonaktif. |
+| **Variabel Evaluasi TR** | `/hrd/tr-variabel` | `ListChecks` | **2, 8, 16** | `[2, 8, 16]` | Master variabel indikator penilaian yang dikelompokkan per kategori master. Variabel aktif otomatis tampil saat evaluator mengisi form penilaian terapis. |
 | **Buat Evaluasi TR** | `/hrd/tr-buat-evaluasi` | `UserCheck` | **8, 15, 16** | `[8, 15, 16]` | Formulir evaluasi terapis (departemen `TR` / `TB` aktif). Alur kerja: Filter Outlet $\rightarrow$ Pilih Terapis $\rightarrow$ Tampilkan Foto Terapis (`ot_hrd_karyawan_info.foto_url`) $\rightarrow$ Intip 3 evaluasi terakhir $\rightarrow$ Skor variabel 1–10 (default 5) & catatan $\rightarrow$ Kalkulasi otomatis skor rata-rata $\rightarrow$ Catatan kesimpulan $\rightarrow$ Simpan. **Khusus Role 15:** dropdown outlet terkunci/difilter ketat hanya pada cabangnya sendiri (`user.kode_outlet`). Role 8 & 16 dapat memilih seluruh outlet. |
-| **Lap. Evaluasi** | `/hrd/tr-laporan` | `FileText` | **5, 6, 8, 13, 14, 15, 16** | `[5, 6, 8, 13, 14, 15, 16]` | Laporan rekapitulasi evaluasi terapis per periode payroll (`hrd_report_tr.payrollperiode`). **Seluruh role dapat melihat laporan seluruh cabang (tidak dibatasi kode outlet).** Alur: Langkah 1 Pilih Outlet (spesifik atau SEMUA OUTLET) $\rightarrow$ Langkah 2 Pilih Periode Payroll $\rightarrow$ Tampilkan data ke grid (termasuk foto terapis, kode & ID, pengurang, nilai total, kesimpulan, update by & at). Modal Lihat Rincian menyajikan header identitas terapis & foto resmi (`ot_hrd_karyawan_info.foto_url`), rincian nilai variabel (`hrd_report_tr_detail`), riwayat pelanggaran SOP (`hrd_tr_faults`), serta tombol cetak lembar evaluasi A4 dan cetak rekapitulasi laporan A4. |
-| **Master Faults** | `/hrd/master-faults` | `ShieldAlert` | **5, 8, 15, 16** | `[5, 8, 15, 16]` | Katalog standar jenis kesalahan dan demerit points terapis (kategori Ringan, Sedang, Berat). Grid menampilkan nama penginput terakhir (`users_profile.full_name`) dan timestamp update. Modal Tambah/Edit. |
+| **Lap. Evaluasi** | `/hrd/tr-laporan` | `FileText` | **2, 5, 6, 8, 13, 14, 15, 16** | `[2, 5, 6, 8, 13, 14, 15, 16]` | Laporan rekapitulasi evaluasi terapis per periode payroll (`hrd_report_tr.payrollperiode`). **Seluruh role dapat melihat laporan seluruh cabang (tidak dibatasi kode outlet).** Alur: Langkah 1 Pilih Outlet (spesifik atau SEMUA OUTLET) $\rightarrow$ Langkah 2 Pilih Periode Payroll $\rightarrow$ Tampilkan data ke grid (termasuk foto terapis, kode & ID, pengurang, nilai total, kesimpulan, update by & at). Modal Lihat Rincian menyajikan header identitas terapis & foto resmi (`ot_hrd_karyawan_info.foto_url`), rincian nilai variabel (`hrd_report_tr_detail`), riwayat pelanggaran SOP (`hrd_tr_faults`), serta tombol cetak lembar evaluasi A4 dan cetak rekapitulasi laporan A4. |
+| **Master Faults** | `/hrd/master-faults` | `ShieldAlert` | **2, 5, 8, 15, 16** | `[2, 5, 8, 15, 16]` | Katalog standar jenis kesalahan dan demerit points terapis (kategori Ringan, Sedang, Berat). Grid menampilkan nama penginput terakhir (`users_profile.full_name`) dan timestamp update. Modal Tambah/Edit. |
 | **TR Faults** | `/hrd/tr-faults` | `AlertCircle` | **5, 8, 14, 15, 16** | `[5, 8, 14, 15, 16]` | Formulir pencatatan insiden kesalahan terapis harian. Role yang berwenang: Finance (5), Superuser (8), Manager Cabang (14), Evaluator Cabang (15), dan HR Holding (16). **Khusus Role 14 & 15:** dropdown outlet difilter dan terkunci ketat hanya pada cabang miliknya (`user.kode_outlet`). Role 5, 8, 16 dapat memilih seluruh outlet. (Akses Role 19 / Resepsionis telah dicabut). |
-| **Report TR Faults** | `/hrd/report-tr-faults` | `FileWarning` | **5, 6, 8, 13, 14, 15, 16, 19** | `[5, 6, 8, 13, 14, 15, 16, 19]` | Laporan audit rekapitulasi pelanggaran terapis. Filter tanggal, kategori, dan cabang. **Khusus Role 6, 14, 15 & 19:** terkunci ketat pada cabang sendiri (`user.kode_outlet`). Role 5, 8, 13, 16 dapat memfilter seluruh outlet secara nasional. Dilengkapi kartu metrik, ekspor CSV, dan cetak. |
+| **Report TR Faults** | `/hrd/report-tr-faults` | `FileWarning` | **2, 5, 6, 8, 13, 14, 15, 16, 19** | `[2, 5, 6, 8, 13, 14, 15, 16, 19]` | Laporan audit rekapitulasi pelanggaran terapis. Filter tanggal, kategori, dan cabang. **Khusus Role 6, 14, 15 & 19:** terkunci ketat pada cabang sendiri (`user.kode_outlet`). Role 2, 5, 8, 13, 16 dapat memfilter seluruh outlet secara nasional. Dilengkapi kartu metrik, ekspor CSV, dan cetak. |
+| **KPI Variable** | `/hrd/kpi-variable` | `ListChecks` | **2, 5, 8, 13, 14** | `[2, 5, 8, 13, 14]` | Master variabel penilaian KPI per departemen selain `TR` dan `TB` (`hrd_kpi_variable`). Menggunakan master kategori dari `hrd_report_tr_category` serta daftar departemen unik dari `ot_hrd_karyawan_info.departemen` (tanpa `TR`/`TB`). Grid menampilkan status aktif, `update_by` (`users_profile.full_name` / `email`), dan `update_at`. |
+| **KPI Mstr. Faults** | `/hrd/kpi-master-faults` | `ShieldAlert` | **2, 5, 8, 13, 14** | `[2, 5, 8, 13, 14]` | Katalog standar jenis kesalahan dan poin pengurang KPI departemen non-TR/TB (`hrd_kpi_master_faults`, struktur identik dengan `hrd_master_faults`). Grid menampilkan status aktif/nonaktif, `update_by` (`users_profile.full_name` / `email`), dan `update_at`. |
+| **Employee Faults** | `/hrd/employee-faults` | `AlertCircle` | **2, 5, 6, 8, 14** | `[2, 5, 6, 8, 14]` | Formulir pencatatan insiden kesalahan harian karyawan aktif non-TR/TB (`hrd_kpi_faults` & `view_hrd_kpi_faults`, master dari `hrd_kpi_master_faults`). **Khusus Role 6 & 14:** outlet terkunci ke `user.kode_outlet`. **Khusus Role 6:** daftar karyawan aktif (`ot_hrd_karyawan_info`) dan log harian difilter tambahan hanya untuk `isadmin = 'Y'`. |
+| **Employee KPI** | `/hrd/employee-kpi` | `UserCheck` | **2, 5, 6, 8, 14** | `[2, 5, 6, 8, 14]` | Formulir evaluasi KPI berkala karyawan aktif non-TR/TB (`hrd_report_kpi` & `hrd_report_kpi_detail`). Memuat variabel dinamis dari `hrd_kpi_variable` sesuai `departemen` karyawan terpilih, rekap kehadiran 5 periode terakhir dari `ot_hrd_karyawan_payroll_details.payroll_data`, poin pengurang dari `hrd_kpi_faults`, serta 3 evaluasi KPI terakhir. **Khusus Role 6 & 14:** outlet terkunci ke `user.kode_outlet`. **Khusus Role 6:** karyawan difilter tambahan hanya untuk `isadmin = 'Y'`. |
+| **Rep. Employee Faults** | `/hrd/report-employee-faults` | `FileWarning` | **2, 5, 6, 8, 13, 14** | `[2, 5, 6, 8, 13, 14]` | Laporan rekapitulasi insiden kesalahan harian karyawan non-TR/TB dari `view_hrd_kpi_faults`, lengkap dengan ekspor CSV dan pratinjau cetak A4 (`printReportA4`). **Khusus Role 6 & 14:** outlet terkunci ke `user.kode_outlet`. **Khusus Role 6:** difilter tambahan hanya untuk karyawan `isadmin = 'Y'`. |
+| **Report Employee KPI** | `/hrd/report-employee-kpi` | `FileText` | **2, 5, 6, 8, 13, 14** | `[2, 5, 6, 8, 13, 14]` | Laporan hasil evaluasi KPI karyawan non-TR/TB dari `hrd_report_kpi` & `hrd_report_kpi_detail`, dilengkapi filter 3 langkah, pratinjau cetak A4 tabel utama (`printReportA4`), modal rincian variabel & kesalahan periode (`Lihat Rincian`), serta tombol aksi cetak individu langsung per baris (`Cetak` -> `printEmployeeKpiEvaluationA4`). **Khusus Role 6 & 14:** outlet terkunci ke `user.kode_outlet`. **Khusus Role 6:** difilter tambahan hanya untuk karyawan `isadmin = 'Y'`. |
 
 ---
 
 ## 4. Matriks Ringkas Akses Menu per Role
 
-| Modul / Menu Grup | 1 Admin Holding | 2 Staff Holding | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 13 Supervisor | 14 Auditor | 18 Web Admin | 19 Resepsionis |
+| Modul / Menu Grup | 1 Admin Holding | 2 Master HRD | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 13 Supervisor | 14 Auditor | 18 Web Admin | 19 Resepsionis |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Dasbor Utama** | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — |
-| **Manajemen Pengguna** | — | — | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | ✅ | — |
+| **Manajemen Pengguna** | — | ✅*(All)* | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | ✅ | — |
 | **Inventaris & Opname** | — | — | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — |
 | **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty Only)* | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | **Pemakaian/Retur Internal**| — | — | — | — | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — |
@@ -251,7 +257,7 @@ This document outlines the authoritative role-based access permissions for each 
 | **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | ✅ | — |
 | **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | ✅ | — |
 | **POS Dashboard (Live, Periodic, Master Target)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | — | — |
-| **HRD Evaluasi & Faults TR** | — | — | — | — | ✅*(All)* | ✅*(Laporan Cabang)* | — | ✅*(All)* | — | ✅*(Laporan)* | ✅*(Input & Laporan Cabang)* | — | ✅*(Laporan Cabang)* |
+| **HRD Evaluasi & Faults TR / KPI** | — | ✅*(All kecuali Buat Evaluasi & TR Faults)* | — | — | ✅*(All)* | ✅*(Laporan Cabang & Input/Laporan KPI Admin Cabang)* | — | ✅*(All)* | — | ✅*(Laporan & Master KPI)* | ✅*(Input, Laporan Cabang & Master/Transaksi KPI)* | — | ✅*(Laporan Cabang)* |
 
 ---
 

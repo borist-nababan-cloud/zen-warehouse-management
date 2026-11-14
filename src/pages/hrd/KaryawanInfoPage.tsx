@@ -46,7 +46,7 @@ export function KaryawanInfoPage() {
   const { user } = useAuthUser();
 
   // Multi-outlet roles (Roles 5, 8, 13 can view and switch outlets)
-  const canSelectOutlet = [5, 8, 13].includes(Number(user?.user_role));
+  const canSelectOutlet = [2, 5, 8, 13].includes(Number(user?.user_role));
   const userOutletCode = user?.kode_outlet || '';
 
   // Outlet State

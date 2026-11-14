@@ -781,7 +781,7 @@ export interface AuthUser {
 
 export const ROLE_LABELS: Record<RoleId, string> = {
   1: 'Admin Holding',
-  2: 'Staf Holding',
+  2: 'Master HRD',
   3: 'Admin Laundry',
   4: 'Staf Laundry',
   5: 'Finance Holding',
@@ -810,10 +810,10 @@ export const ROLE_LABELS: Record<RoleId, string> = {
  */
 export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'product', 'price-unit', 'supplier'],      // admin_holding
-  2: ['dashboard', 'inventory', 'purchase-orders'],                           // staff_holding
+  2: ['dashboard', 'inventory', 'purchase-orders', 'users', 'hrd'],           // MASTER_HRD
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'inventory', 'product', 'price-unit', 'supplier'],           // finance
+  5: ['dashboard', 'finance', 'inventory', 'product', 'price-unit', 'supplier', 'hrd'], // finance
   6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier', 'users'], // outlet_admin
   7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type'], // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
@@ -821,7 +821,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'], // Finance Outlet
   11: [],                                                                     // Pending ROLE_MENU_PERMISSION
   12: [],                                                                     // Pending ROLE_MENU_PERMISSION
-  13: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  13: ['hrd'],                                                                // Supervisor / Direksi (HRD & Report)
   14: ['dashboard', 'inventory', 'hrd'],                                      // MANAGER (Persetujuan Opname & HRD)
   15: [],                                                                     // Pending ROLE_MENU_PERMISSION
   16: [],                                                                     // Pending ROLE_MENU_PERMISSION
@@ -962,9 +962,12 @@ export interface ShrinkageReportItem {
 }
 
 export interface OpnameVarianceItem {
+  header_id?: string
   document_number: string
   opname_date: string
   kode_outlet: string
+  status?: StockOpnameStatus
+  barang_id?: number
   sku: string
   item_name: string
   system_qty: number

@@ -72,10 +72,16 @@ export function UserManagementPage() {
   const [unlinkingUser, setUnlinkingUser] = useState<ManageableUser | null>(null)
   const [selectedPendingRoles, setSelectedPendingRoles] = useState<Record<string, number>>({})
 
-  // Strict Permission Check: Only Role 8 (SUPERUSER) & Role 6 (outlet_admin)
+  // Strict Permission Check: Role 8 (SUPERUSER), Role 2 (MASTER_HRD), & Role 6 (outlet_admin)
   const isSuperuser = currentUser?.user_role === 8
+  const isMasterHrd = currentUser?.user_role === 2
+  const isMultiOutletAdmin = isSuperuser || isMasterHrd
   const isOutletAdmin = currentUser?.user_role === 6
-  const isAllowed = isSuperuser || isOutletAdmin
+  const isAllowed = isMultiOutletAdmin || isOutletAdmin
+
+  const assignableRoleOptions = useMemo(() => {
+    return roleOptions.filter((r) => isSuperuser || r.id !== 8)
+  }, [roleOptions, isSuperuser])
 
   // 1. Fetch available roles dynamically from public.role_user
   const fetchRoleOptions = async () => {
@@ -121,9 +127,9 @@ export function UserManagementPage() {
     }
   }, [authLoading, currentUser?.user_role])
 
-  // Handle Approve User (Only Role 8 can pass custom role; Role 6 always defaults to 12)
+  // Handle Approve User (Role 8 & Role 2 can pass custom role; Role 6 always defaults to 12)
   const handleApprove = async (userItem: ManageableUser) => {
-    const roleToAssign = isSuperuser ? (selectedPendingRoles[userItem.uid] || 12) : 12
+    const roleToAssign = isMultiOutletAdmin ? (selectedPendingRoles[userItem.uid] || 12) : 12
     setActionLoading(userItem.uid)
     setFeedback(null)
     try {
@@ -286,13 +292,13 @@ export function UserManagementPage() {
         if (statusFilter === 'unlinked' && u.approval_status !== 'UNLINKED') return false
       }
 
-      if (isSuperuser && outletFilter !== 'all' && u.kode_outlet !== outletFilter) {
+      if (isMultiOutletAdmin && outletFilter !== 'all' && u.kode_outlet !== outletFilter) {
         return false
       }
 
       return true
     })
-  }, [users, activeTab, searchQuery, statusFilter, outletFilter, isSuperuser])
+  }, [users, activeTab, searchQuery, statusFilter, outletFilter, isMultiOutletAdmin])
 
   if (authLoading) {
     return (
@@ -313,7 +319,7 @@ export function UserManagementPage() {
           </div>
           <h2 className="text-xl font-bold text-slate-800">Akses Ditolak</h2>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Modul Manajemen Pengguna hanya dapat diakses oleh <strong>Admin Gerai (Role 6)</strong> untuk gerai masing-masing atau <strong>Superuser (Role 8)</strong>.
+            Modul Manajemen Pengguna hanya dapat diakses oleh <strong>Admin Gerai (Role 6)</strong> untuk gerai masing-masing, <strong>Master HRD (Role 2)</strong>, atau <strong>Superuser (Role 8)</strong>.
           </p>
           <p className="text-xs text-slate-400">
             Peran Anda saat ini: Role {currentUser?.user_role}
@@ -341,14 +347,20 @@ export function UserManagementPage() {
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                     isSuperuser
                       ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : isMasterHrd
+                        ? 'bg-sky-100 text-sky-700 border border-sky-200'
+                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                   }`}
                 >
-                  {isSuperuser ? 'SUPERUSER (Role 8)' : `ADMIN GERAI (Outlet ${callerOutlet || currentUser?.kode_outlet})`}
+                  {isSuperuser
+                    ? 'SUPERUSER (Role 8)'
+                    : isMasterHrd
+                      ? 'MASTER HRD (Role 2)'
+                      : `ADMIN GERAI (Outlet ${callerOutlet || currentUser?.kode_outlet})`}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                {isSuperuser
+                {isMultiOutletAdmin
                   ? 'Wewenang penuh mengelola, menyetujui, mengubah role, dan melepas tautan kode karyawan dari seluruh gerai.'
                   : `Wewenang mengelola staf khusus gerai Anda (${callerOutlet || currentUser?.kode_outlet}).`}
               </p>
@@ -500,7 +512,7 @@ export function UserManagementPage() {
                 <option value="unlinked">Belum Taut Kode</option>
               </select>
 
-              {isSuperuser && outletOptions.length > 0 && (
+              {isMultiOutletAdmin && outletOptions.length > 0 && (
                 <select
                   value={outletFilter}
                   onChange={(e) => setOutletFilter(e.target.value)}
@@ -669,7 +681,7 @@ export function UserManagementPage() {
                       <div className="flex flex-wrap items-center gap-2 self-end lg:self-center w-full lg:w-auto justify-end pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                         {isPending ? (
                           <>
-                            {isSuperuser ? (
+                            {isMultiOutletAdmin ? (
                               <div className="flex items-center space-x-1">
                                 <span className="text-[11px] text-slate-500 hidden sm:inline">
                                   Beri Role:
@@ -685,8 +697,8 @@ export function UserManagementPage() {
                                   disabled={isActionRunning}
                                   className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-700 outline-none focus:border-primary"
                                 >
-                                  {roleOptions.length > 0 ? (
-                                    roleOptions.map((r) => (
+                                  {assignableRoleOptions.length > 0 ? (
+                                    assignableRoleOptions.map((r) => (
                                       <option key={r.id} value={r.id}>
                                         {r.id} - {r.role_name}
                                       </option>
@@ -729,8 +741,8 @@ export function UserManagementPage() {
                               <span>Tolak</span>
                             </button>
 
-                            {/* Superuser can also directly change role on pending user */}
-                            {isSuperuser && (
+                            {/* Superuser & Master HRD can also directly change role on pending user (except Role 8 target for Master HRD) */}
+                            {isMultiOutletAdmin && (isSuperuser || (u.user_role || u.role_user) !== 8) && (
                               <button
                                 onClick={() => {
                                   setEditingRoleUser(u)
@@ -746,8 +758,8 @@ export function UserManagementPage() {
                           </>
                         ) : (
                           <>
-                            {/* Superuser (Role 8): Always show Ubah Role button even without kode_karyawan */}
-                            {isSuperuser && (
+                            {/* Superuser (Role 8) & Master HRD (Role 2): Always show Ubah Role button even without kode_karyawan */}
+                            {isMultiOutletAdmin && (isSuperuser || (u.user_role || u.role_user) !== 8) && (
                               <button
                                 onClick={() => {
                                   setEditingRoleUser(u)
@@ -835,7 +847,7 @@ export function UserManagementPage() {
                   onChange={(e) => setNewSelectedRole(Number(e.target.value))}
                   className="w-full p-2.5 text-xs font-semibold rounded-xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-slate-50"
                 >
-                  {roleOptions.map((r) => (
+                  {assignableRoleOptions.map((r) => (
                     <option key={r.id} value={r.id}>
                       Role {r.id} - {r.role_name}
                     </option>

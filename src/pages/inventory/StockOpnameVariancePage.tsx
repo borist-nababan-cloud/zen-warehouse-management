@@ -22,7 +22,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from '@/components/ui/checkbox'
-import { Download, Printer, AlertTriangle, TrendingUp, TrendingDown, Scale, Search, Store } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Download, Printer, AlertTriangle, TrendingUp, TrendingDown, Scale, Search, Store, Clock, CheckCircle2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { MasterOutlet, OpnameVarianceItem } from '@/types/database'
 import { printReportA4 } from '@/utils/reportPrintUtils'
@@ -36,14 +37,14 @@ export default function StockOpnameVariancePage() {
         startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
         endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd')
     })
-    const [showOnlyDiscrepancies, setShowOnlyDiscrepancies] = useState(true)
+    const [showOnlyDiscrepancies, setShowOnlyDiscrepancies] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedBatch, setSelectedBatch] = useState<string>('ALL')
 
     // Outlet Logic
     const [selectedOutlet, setSelectedOutlet] = useState<string>('')
     const [availableOutlets, setAvailableOutlets] = useState<MasterOutlet[]>([])
-    const canSelectOutlet = [5, 8, 13, 14].includes(Number(user?.user_role))
+    const canSelectOutlet = [5, 8, 13].includes(Number(user?.user_role))
 
     useEffect(() => {
         if (!canSelectOutlet && user?.kode_outlet) {
@@ -105,6 +106,20 @@ export default function StockOpnameVariancePage() {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(amount)
+    }
+
+    // Helper: Format Quantity (fix JS floating-point precision & format decimals to 2 places)
+    const roundQty = (val: number) => Math.round(((Number(val) || 0) + Number.EPSILON) * 100) / 100
+
+    const formatQty = (val: number) => {
+        const rounded = roundQty(val)
+        return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(2)
+    }
+
+    const formatDiffQty = (val: number) => {
+        const rounded = roundQty(val)
+        const formatted = formatQty(rounded)
+        return rounded > 0 ? `+${formatted}` : formatted
     }
 
     // Export CSV
@@ -179,7 +194,7 @@ export default function StockOpnameVariancePage() {
               ]
 
         const rows = filteredData.map((item: OpnameVarianceItem) => {
-            const diffStr = item.difference > 0 ? `+${item.difference}` : `${item.difference}`
+            const diffStr = formatDiffQty(item.difference)
             const dateStr = format(new Date(item.opname_date), 'dd/MMM/yyyy')
             return showOutletCol
                 ? [
@@ -188,8 +203,8 @@ export default function StockOpnameVariancePage() {
                       item.document_number,
                       item.sku,
                       item.item_name,
-                      item.system_qty,
-                      item.actual_qty,
+                      formatQty(item.system_qty),
+                      formatQty(item.actual_qty),
                       diffStr,
                       formatCurrency(item.variance_value),
                   ]
@@ -198,15 +213,15 @@ export default function StockOpnameVariancePage() {
                       item.document_number,
                       item.sku,
                       item.item_name,
-                      item.system_qty,
-                      item.actual_qty,
+                      formatQty(item.system_qty),
+                      formatQty(item.actual_qty),
                       diffStr,
                       formatCurrency(item.variance_value),
                   ]
         })
 
-        const totalDiffQty = filteredData.reduce((sum: number, item: OpnameVarianceItem) => sum + (item.difference || 0), 0)
-        const totalDiffStr = totalDiffQty > 0 ? `+${totalDiffQty}` : `${totalDiffQty}`
+        const totalDiffQty = filteredData.reduce((sum: number, item: OpnameVarianceItem) => sum + (Number(item.difference) || 0), 0)
+        const totalDiffStr = formatDiffQty(totalDiffQty)
 
         const totalRow = showOutletCol
             ? ['', '', '', '', '', '', 'TOTAL BERSIH', totalDiffStr, formatCurrency(totalNetValue)]
@@ -333,7 +348,15 @@ export default function StockOpnameVariancePage() {
                             {/* Batch Number Filter */}
                             <div className="flex flex-col gap-2 w-full md:w-auto">
                                 <label className="text-xs font-semibold text-slate-500">No. Batch / Dokumen</label>
-                                <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                                <Select
+                                    value={selectedBatch}
+                                    onValueChange={(val) => {
+                                        setSelectedBatch(val)
+                                        if (val !== 'ALL') {
+                                            setShowOnlyDiscrepancies(false)
+                                        }
+                                    }}
+                                >
                                     <SelectTrigger className="w-[200px] bg-white">
                                         <SelectValue placeholder="Pilih Batch Dokumen" />
                                     </SelectTrigger>
@@ -430,6 +453,7 @@ export default function StockOpnameVariancePage() {
                                         <TableHead className="font-semibold text-slate-700">Outlet</TableHead>
                                     )}
                                     <TableHead className="font-semibold text-slate-700">No. Dokumen</TableHead>
+                                    <TableHead className="font-semibold text-slate-700">Status</TableHead>
                                     <TableHead className="font-semibold text-slate-700">SKU</TableHead>
                                     <TableHead className="font-semibold text-slate-700">Nama Barang</TableHead>
                                     <TableHead className="text-right font-semibold text-slate-700">Stok Sistem</TableHead>
@@ -441,19 +465,19 @@ export default function StockOpnameVariancePage() {
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center">
+                                        <TableCell colSpan={canSelectOutlet && selectedOutlet === 'ALL' ? 10 : 9} className="h-24 text-center">
                                             Memuat data selisih stock opname...
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={canSelectOutlet && selectedOutlet === 'ALL' ? 10 : 9} className="h-24 text-center text-muted-foreground">
                                             Tidak ada data yang sesuai dengan filter saat ini.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     filteredData.map((item: OpnameVarianceItem, index: number) => {
-                                        const diff = Number(item.difference) || 0
+                                        const diff = roundQty(item.difference)
                                         const isLoss = diff < 0
                                         const isGain = diff > 0
                                         const colorClass = isLoss ? 'text-red-600 font-bold' : isGain ? 'text-green-600 font-bold' : 'text-slate-500'
@@ -467,12 +491,25 @@ export default function StockOpnameVariancePage() {
                                                     <TableCell className="text-xs text-muted-foreground">{item.kode_outlet}</TableCell>
                                                 )}
                                                 <TableCell className="text-xs font-mono">{item.document_number}</TableCell>
+                                                <TableCell>
+                                                    {item.status === 'PENDING_APPROVAL' ? (
+                                                        <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-semibold whitespace-nowrap">
+                                                            <Clock className="w-3 h-3 mr-1 inline" /> Menunggu Persetujuan
+                                                        </Badge>
+                                                    ) : item.status === 'COMPLETED' ? (
+                                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold whitespace-nowrap">
+                                                            <CheckCircle2 className="w-3 h-3 mr-1 inline" /> Disetujui
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline">{item.status || '-'}</Badge>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="font-mono text-xs text-slate-500">{item.sku}</TableCell>
                                                 <TableCell className="font-medium text-sm">{item.item_name}</TableCell>
-                                                <TableCell className="text-right font-mono text-sm">{item.system_qty}</TableCell>
-                                                <TableCell className="text-right font-mono text-sm">{item.actual_qty}</TableCell>
+                                                <TableCell className="text-right font-mono text-sm">{formatQty(item.system_qty)}</TableCell>
+                                                <TableCell className="text-right font-mono text-sm">{formatQty(item.actual_qty)}</TableCell>
                                                 <TableCell className={`text-right font-mono text-sm ${colorClass}`}>
-                                                    {diff > 0 ? `+${diff}` : diff}
+                                                    {formatDiffQty(item.difference)}
                                                 </TableCell>
                                                 <TableCell className={`text-right font-mono text-sm bg-slate-50/50 ${colorClass}`}>
                                                     {formatCurrency(Number(item.variance_value) || 0)}

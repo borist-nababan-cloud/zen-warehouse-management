@@ -2,13 +2,262 @@ import { supabase } from '@/lib/supabase';
 import {
   HrdReportTrCategory,
   HrdReportTrVariable,
+  HrdKpiVariable,
   HrdReportTr,
+  HrdReportKpi,
   HrdEmployeeSimple,
   CreateHrdReportTrPayload,
+  CreateHrdReportKpiPayload,
   HrdPayrollDetailItem,
   HrdPayrollAttendance,
   HrdTrFault,
+  HrdKpiFault,
 } from '@/types/hrd';
+
+async function attachUserProfileNames<
+  T extends { created_by?: string | null; update_by?: string | null }
+>(data: T[]): Promise<(T & { update_by_name: string; created_by_name: string })[]> {
+  if (!data || data.length === 0) return [];
+
+  const userIds = Array.from(
+    new Set(
+      data
+        .flatMap((item) => [item.update_by, item.created_by])
+        .filter(Boolean) as string[]
+    )
+  );
+
+  const userMap = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from('users_profile')
+      .select('uid, full_name, email')
+      .in('uid', userIds);
+
+    if (users) {
+      users.forEach((u) => {
+        userMap.set(u.uid, u.full_name || u.email || 'Petugas');
+      });
+    }
+  }
+
+  return data.map((item) => ({
+    ...item,
+    update_by_name: item.update_by ? userMap.get(item.update_by) || 'Petugas' : 'Sistem',
+    created_by_name: item.created_by ? userMap.get(item.created_by) || 'Petugas' : 'Sistem',
+  }));
+}
+
+async function fetchRecentEvaluationsFromTable<T>(
+  table: 'hrd_report_tr' | 'hrd_report_kpi',
+  kodekaryawan: string,
+  limit: number = 3
+): Promise<T[]> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('uid, kode_report, tanggal_report, nilai_total, kesimpulan, created_at')
+    .eq('kodekaryawan', kodekaryawan)
+    .order('tanggal_report', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data || []) as T[];
+}
+
+async function fetchFaultsByDateRangeFromTable<T>(
+  table: 'hrd_tr_faults' | 'hrd_kpi_faults',
+  kodekaryawan: string,
+  startDate: string,
+  endDate: string
+): Promise<T[]> {
+  if (!kodekaryawan || !startDate || !endDate) return [];
+
+  const { data, error } = await supabase
+    .from(table)
+    .select('*')
+    .eq('kodekaryawan', kodekaryawan)
+    .gte('tanggal', startDate)
+    .lte('tanggal', endDate)
+    .order('tanggal', { ascending: false });
+
+  if (error) {
+    console.warn(`Error fetching faults from ${table} by date range:`, error);
+    return [];
+  }
+  return (data || []) as T[];
+}
+
+async function createEvaluationInTables<TResult>(
+  config: {
+    headerTable: 'hrd_report_tr' | 'hrd_report_kpi';
+    detailTable: 'hrd_report_tr_detail' | 'hrd_report_kpi_detail';
+    docPrefix: 'EV-TR' | 'EV-KPI';
+    departemen?: string | null;
+  },
+  payload: CreateHrdReportTrPayload | CreateHrdReportKpiPayload,
+  userId?: string
+): Promise<TResult> {
+  if (!payload.items || payload.items.length === 0) {
+    throw new Error('Daftar variabel penilaian tidak boleh kosong');
+  }
+
+  const totalScore = payload.items.reduce((acc, item) => acc + (Number(item.nilai_variable) || 0), 0);
+  const averageScore = Number((totalScore / payload.items.length).toFixed(2));
+
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  const kode_report = `${config.docPrefix}-${yy}${mm}${dd}-${rand}`;
+
+  const finalScore = payload.nilai_total !== undefined ? Number(payload.nilai_total) : averageScore;
+
+  const headerInsert: Record<string, unknown> = {
+    kode_report,
+    tanggal_report: payload.tanggal_report || now.toISOString().split('T')[0],
+    kode_outlet: payload.kode_outlet,
+    kodekaryawan: payload.kodekaryawan,
+    payrollperiode: payload.payrollperiode || null,
+    total_pengurang: Number(payload.total_pengurang) || 0,
+    nilai_total: finalScore,
+    kesimpulan: payload.kesimpulan?.trim() || null,
+    nilai_guest: 0,
+    catatan_auto: null,
+    created_by: userId || null,
+    update_by: userId || null,
+  };
+
+  if (config.headerTable === 'hrd_report_kpi') {
+    headerInsert.departemen = config.departemen || null;
+  }
+
+  const { data: header, error: headerError } = await supabase
+    .from(config.headerTable)
+    .insert(headerInsert)
+    .select()
+    .single();
+
+  if (headerError) throw headerError;
+
+  const detailRecords = payload.items.map((item) => ({
+    report_id: header.uid,
+    variable_id: item.variable_id,
+    nama_variable: item.nama_variable,
+    nama_kategori: item.nama_kategori,
+    nilai_variable: Number(item.nilai_variable) || 5,
+    catatan_variable: item.catatan_variable?.trim() || null,
+  }));
+
+  const { error: detailError } = await supabase
+    .from(config.detailTable)
+    .insert(detailRecords);
+
+  if (detailError) throw detailError;
+
+  return header as TResult;
+}
+
+async function fetchPayrollPeriodsFromTable(
+  table: 'hrd_report_tr' | 'hrd_report_kpi',
+  outletCode?: string
+): Promise<string[]> {
+  let query = supabase
+    .from(table)
+    .select('payrollperiode')
+    .not('payrollperiode', 'is', null)
+    .order('payrollperiode', { ascending: false });
+
+  if (outletCode && outletCode !== 'ALL') {
+    query = query.eq('kode_outlet', outletCode);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.warn(`Error fetching payroll periods from ${table}:`, error);
+    return [];
+  }
+
+  const uniquePeriods = Array.from(
+    new Set((data || []).map((r: any) => r.payrollperiode).filter(Boolean))
+  );
+  return uniquePeriods as string[];
+}
+
+interface EvaluationListFilters {
+  outletCode?: string;
+  payrollperiode?: string;
+  kodekaryawan?: string;
+  startDate?: string;
+  endDate?: string;
+  onlyAdmin?: boolean;
+}
+
+async function fetchEvaluationsListFromTable<T>(
+  headerTable: 'hrd_report_tr' | 'hrd_report_kpi',
+  detailTable: 'hrd_report_tr_detail' | 'hrd_report_kpi_detail',
+  filters?: EvaluationListFilters
+): Promise<T[]> {
+  let query = supabase
+    .from(headerTable)
+    .select(`
+      *,
+      master_outlet:master_outlet(kode_outlet, name_outlet, city, alamat, no_telp),
+      karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active, foto_url, isadmin),
+      details:${detailTable}(*)
+    `)
+    .order('tanggal_report', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (filters?.outletCode && filters.outletCode !== 'ALL') {
+    query = query.eq('kode_outlet', filters.outletCode);
+  }
+  if (filters?.payrollperiode && filters.payrollperiode !== 'ALL') {
+    query = query.eq('payrollperiode', filters.payrollperiode);
+  }
+  if (filters?.kodekaryawan && filters.kodekaryawan !== 'ALL') {
+    query = query.eq('kodekaryawan', filters.kodekaryawan);
+  }
+  if (filters?.startDate) {
+    query = query.gte('tanggal_report', filters.startDate);
+  }
+  if (filters?.endDate) {
+    query = query.lte('tanggal_report', filters.endDate);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  if (!data || data.length === 0) return [];
+
+  const filteredData = filters?.onlyAdmin
+    ? data.filter((item: any) => item.karyawan_info?.isadmin === 'Y')
+    : data;
+
+  if (filteredData.length === 0) return [];
+  return attachUserProfileNames(filteredData) as Promise<T[]>;
+}
+
+async function fetchEvaluationDetailFromTable<T>(
+  headerTable: 'hrd_report_tr' | 'hrd_report_kpi',
+  detailTable: 'hrd_report_tr_detail' | 'hrd_report_kpi_detail',
+  reportId: string
+): Promise<T> {
+  const { data, error } = await supabase
+    .from(headerTable)
+    .select(`
+      *,
+      master_outlet:master_outlet(kode_outlet, name_outlet, city, alamat, no_telp),
+      karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active, foto_url, isadmin),
+      details:${detailTable}(*)
+    `)
+    .eq('uid', reportId)
+    .single();
+
+  if (error) throw error;
+  const enriched = await attachUserProfileNames([data]);
+  return enriched[0] as T;
+}
 
 export const hrdEvaluationService = {
   // ==========================================
@@ -102,36 +351,7 @@ export const hrdEvaluationService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    if (!data || data.length === 0) return [];
-
-    // Resolve update_by_name from users_profile
-    const userIds = Array.from(
-      new Set(
-        data
-          .flatMap((item: any) => [item.update_by, item.created_by])
-          .filter(Boolean) as string[]
-      )
-    );
-
-    let userMap = new Map<string, string>();
-    if (userIds.length > 0) {
-      const { data: users } = await supabase
-        .from('users_profile')
-        .select('uid, full_name, email')
-        .in('uid', userIds);
-
-      if (users) {
-        users.forEach((u) => {
-          userMap.set(u.uid, u.full_name || u.email || 'Petugas');
-        });
-      }
-    }
-
-    return data.map((item: any) => ({
-      ...item,
-      update_by_name: item.update_by ? userMap.get(item.update_by) || 'Petugas' : 'Sistem',
-      created_by_name: item.created_by ? userMap.get(item.created_by) || 'Petugas' : 'Sistem',
-    })) as HrdReportTrVariable[];
+    return attachUserProfileNames(data || []) as Promise<HrdReportTrVariable[]>;
   },
 
   async createVariable(
@@ -195,12 +415,147 @@ export const hrdEvaluationService = {
   },
 
   // ==========================================
+  // 2B. KPI VARIABLES & NON-TR/TB DEPARTMENTS
+  // ==========================================
+  async getKpiDepartments(): Promise<string[]> {
+    const pageSize = 1000;
+    const deptMap = new Map<string, string>();
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('ot_hrd_karyawan_info')
+        .select('departemen')
+        .not('departemen', 'is', null)
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      const rows = data || [];
+      rows.forEach((row: { departemen: string | null }) => {
+        const clean = (row.departemen || '').trim();
+        const upper = clean.toUpperCase();
+        if (clean && upper !== 'TR' && upper !== 'TB' && !deptMap.has(upper)) {
+          deptMap.set(upper, clean);
+        }
+      });
+
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return Array.from(deptMap.values()).sort((a, b) => a.localeCompare(b));
+  },
+
+  async getKpiVariables(
+    categoryId?: string,
+    departemen?: string,
+    onlyActive: boolean = false
+  ): Promise<HrdKpiVariable[]> {
+    let query = supabase
+      .from('hrd_kpi_variable')
+      .select(`
+        *,
+        category:hrd_report_tr_category(*)
+      `)
+      .order('departemen', { ascending: true })
+      .order('urutan', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (categoryId && categoryId !== 'ALL') {
+      query = query.eq('category_id', categoryId);
+    }
+    if (departemen && departemen !== 'ALL') {
+      query = query.eq('departemen', departemen);
+    }
+    if (onlyActive) {
+      query = query.eq('active', true);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return attachUserProfileNames(data || []) as Promise<HrdKpiVariable[]>;
+  },
+
+  async createKpiVariable(
+    payload: {
+      category_id: string;
+      departemen: string;
+      nama_variable: string;
+      deskripsi?: string;
+      urutan?: number;
+      active?: boolean;
+    },
+    userId?: string
+  ): Promise<HrdKpiVariable> {
+    const { data, error } = await supabase
+      .from('hrd_kpi_variable')
+      .insert({
+        category_id: payload.category_id,
+        departemen: payload.departemen.trim(),
+        nama_variable: payload.nama_variable.trim(),
+        deskripsi: payload.deskripsi?.trim() || null,
+        urutan: payload.urutan || 0,
+        active: payload.active !== undefined ? payload.active : true,
+        created_by: userId || null,
+        update_by: userId || null,
+      })
+      .select(`
+        *,
+        category:hrd_report_tr_category(*)
+      `)
+      .single();
+
+    if (error) throw error;
+    return data as HrdKpiVariable;
+  },
+
+  async updateKpiVariable(
+    uid: string,
+    payload: Partial<{
+      category_id: string;
+      departemen: string;
+      nama_variable: string;
+      deskripsi: string | null;
+      urutan: number;
+      active: boolean;
+    }>,
+    userId?: string
+  ): Promise<HrdKpiVariable> {
+    const { data, error } = await supabase
+      .from('hrd_kpi_variable')
+      .update({
+        ...payload,
+        update_by: userId || null,
+        update_at: new Date().toISOString(),
+      })
+      .eq('uid', uid)
+      .select(`
+        *,
+        category:hrd_report_tr_category(*)
+      `)
+      .single();
+
+    if (error) throw error;
+    return data as HrdKpiVariable;
+  },
+
+  async deleteKpiVariable(uid: string): Promise<void> {
+    const { error } = await supabase
+      .from('hrd_kpi_variable')
+      .delete()
+      .eq('uid', uid);
+
+    if (error) throw error;
+  },
+
+  // ==========================================
   // 3. EMPLOYEE & THERAPIST LOOKUP
   // ==========================================
   async getTherapists(outletCode?: string): Promise<HrdEmployeeSimple[]> {
     let query = supabase
       .from('ot_hrd_karyawan_info')
-      .select('kodekaryawan, idkaryawan, namakaryawan, kode_outlet, departemen, active, foto_url')
+      .select('kodekaryawan, idkaryawan, namakaryawan, kode_outlet, departemen, active, foto_url, isadmin')
       .in('departemen', ['TR', 'TB'])
       .eq('active', 'Y')
       .order('namakaryawan', { ascending: true });
@@ -214,109 +569,80 @@ export const hrdEvaluationService = {
     return (data || []) as HrdEmployeeSimple[];
   },
 
+  async getKpiEmployees(outletCode?: string, onlyAdmin: boolean = false): Promise<HrdEmployeeSimple[]> {
+    let query = supabase
+      .from('ot_hrd_karyawan_info')
+      .select('kodekaryawan, idkaryawan, namakaryawan, kode_outlet, departemen, active, foto_url, isadmin')
+      .eq('active', 'Y')
+      .not('departemen', 'is', null)
+      .neq('departemen', 'TR')
+      .neq('departemen', 'TB')
+      .order('namakaryawan', { ascending: true });
+
+    if (outletCode && outletCode !== 'ALL') {
+      query = query.eq('kode_outlet', outletCode);
+    }
+    if (onlyAdmin) {
+      query = query.eq('isadmin', 'Y');
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return ((data || []) as HrdEmployeeSimple[]).filter((emp) => {
+      const dept = (emp.departemen || '').trim().toUpperCase();
+      return dept !== '' && dept !== 'TR' && dept !== 'TB';
+    });
+  },
+
   // ==========================================
   // 4. 3 RECENT EVALUATIONS
   // ==========================================
   async getRecentEvaluations(kodekaryawan: string, limit: number = 3): Promise<HrdReportTr[]> {
-    const { data, error } = await supabase
-      .from('hrd_report_tr')
-      .select('uid, kode_report, tanggal_report, nilai_total, kesimpulan, created_at')
-      .eq('kodekaryawan', kodekaryawan)
-      .order('tanggal_report', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    return fetchRecentEvaluationsFromTable<HrdReportTr>('hrd_report_tr', kodekaryawan, limit);
+  },
 
-    if (error) throw error;
-    return (data || []) as HrdReportTr[];
+  async getRecentKpiEvaluations(kodekaryawan: string, limit: number = 3): Promise<HrdReportKpi[]> {
+    return fetchRecentEvaluationsFromTable<HrdReportKpi>('hrd_report_kpi', kodekaryawan, limit);
   },
 
   // ==========================================
   // 5. CREATE EVALUATION
   // ==========================================
   async createEvaluation(payload: CreateHrdReportTrPayload, userId?: string): Promise<HrdReportTr> {
-    if (!payload.items || payload.items.length === 0) {
-      throw new Error('Daftar variabel penilaian tidak boleh kosong');
-    }
+    return createEvaluationInTables<HrdReportTr>(
+      {
+        headerTable: 'hrd_report_tr',
+        detailTable: 'hrd_report_tr_detail',
+        docPrefix: 'EV-TR',
+      },
+      payload,
+      userId
+    );
+  },
 
-    // 1. Calculate Average Score
-    const totalScore = payload.items.reduce((acc, item) => acc + (Number(item.nilai_variable) || 0), 0);
-    const averageScore = Number((totalScore / payload.items.length).toFixed(2));
-
-    // 2. Generate Doc Code: EV-TR-YYMMDD-XXXX
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    const kode_report = `EV-TR-${yy}${mm}${dd}-${rand}`;
-
-    // 3. Insert Header
-    const finalScore = payload.nilai_total !== undefined ? Number(payload.nilai_total) : averageScore;
-
-    const { data: header, error: headerError } = await supabase
-      .from('hrd_report_tr')
-      .insert({
-        kode_report,
-        tanggal_report: payload.tanggal_report || now.toISOString().split('T')[0],
-        kode_outlet: payload.kode_outlet,
-        kodekaryawan: payload.kodekaryawan,
-        payrollperiode: payload.payrollperiode || null,
-        total_pengurang: Number(payload.total_pengurang) || 0,
-        nilai_total: finalScore,
-        kesimpulan: payload.kesimpulan?.trim() || null,
-        nilai_guest: 0,
-        catatan_auto: null,
-        created_by: userId || null,
-        update_by: userId || null,
-      })
-      .select()
-      .single();
-
-    if (headerError) throw headerError;
-
-    // 4. Insert Detail Items
-    const detailRecords = payload.items.map((item) => ({
-      report_id: header.uid,
-      variable_id: item.variable_id,
-      nama_variable: item.nama_variable,
-      nama_kategori: item.nama_kategori,
-      nilai_variable: Number(item.nilai_variable) || 5,
-      catatan_variable: item.catatan_variable?.trim() || null,
-    }));
-
-    const { error: detailError } = await supabase
-      .from('hrd_report_tr_detail')
-      .insert(detailRecords);
-
-    if (detailError) throw detailError;
-
-    return header as HrdReportTr;
+  async createKpiEvaluation(payload: CreateHrdReportKpiPayload, userId?: string): Promise<HrdReportKpi> {
+    return createEvaluationInTables<HrdReportKpi>(
+      {
+        headerTable: 'hrd_report_kpi',
+        detailTable: 'hrd_report_kpi_detail',
+        docPrefix: 'EV-KPI',
+        departemen: payload.departemen || null,
+      },
+      payload,
+      userId
+    );
   },
 
   // ==========================================
   // 6. GET EVALUATIONS LIST & PERIODS (REPORT VIEW)
   // ==========================================
   async getPayrollPeriods(outletCode?: string): Promise<string[]> {
-    let query = supabase
-      .from('hrd_report_tr')
-      .select('payrollperiode')
-      .not('payrollperiode', 'is', null)
-      .order('payrollperiode', { ascending: false });
+    return fetchPayrollPeriodsFromTable('hrd_report_tr', outletCode);
+  },
 
-    if (outletCode && outletCode !== 'ALL') {
-      query = query.eq('kode_outlet', outletCode);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.warn('Error fetching payroll periods from hrd_report_tr:', error);
-      return [];
-    }
-
-    const uniquePeriods = Array.from(
-      new Set((data || []).map((r: any) => r.payrollperiode).filter(Boolean))
-    );
-    return uniquePeriods as string[];
+  async getKpiPayrollPeriods(outletCode?: string): Promise<string[]> {
+    return fetchPayrollPeriodsFromTable('hrd_report_kpi', outletCode);
   },
 
   async getEvaluationsList(filters?: {
@@ -326,104 +652,42 @@ export const hrdEvaluationService = {
     startDate?: string;
     endDate?: string;
   }): Promise<HrdReportTr[]> {
-    let query = supabase
-      .from('hrd_report_tr')
-      .select(`
-        *,
-        master_outlet:master_outlet(kode_outlet, name_outlet, city, alamat, no_telp),
-        karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active, foto_url),
-        details:hrd_report_tr_detail(*)
-      `)
-      .order('tanggal_report', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    if (filters?.outletCode && filters.outletCode !== 'ALL') {
-      query = query.eq('kode_outlet', filters.outletCode);
-    }
-    if (filters?.payrollperiode && filters.payrollperiode !== 'ALL') {
-      query = query.eq('payrollperiode', filters.payrollperiode);
-    }
-    if (filters?.kodekaryawan && filters.kodekaryawan !== 'ALL') {
-      query = query.eq('kodekaryawan', filters.kodekaryawan);
-    }
-    if (filters?.startDate) {
-      query = query.gte('tanggal_report', filters.startDate);
-    }
-    if (filters?.endDate) {
-      query = query.lte('tanggal_report', filters.endDate);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    if (!data || data.length === 0) return [];
-
-    // Resolve update_by and created_by names from users_profile
-    const userIds = Array.from(
-      new Set(
-        data
-          .flatMap((item: any) => [item.update_by, item.created_by])
-          .filter(Boolean) as string[]
-      )
+    return fetchEvaluationsListFromTable<HrdReportTr>(
+      'hrd_report_tr',
+      'hrd_report_tr_detail',
+      filters
     );
+  },
 
-    let userMap = new Map<string, string>();
-    if (userIds.length > 0) {
-      const { data: users } = await supabase
-        .from('users_profile')
-        .select('uid, full_name, email')
-        .in('uid', userIds);
-
-      if (users) {
-        users.forEach((u) => {
-          userMap.set(u.uid, u.full_name || u.email || 'Petugas');
-        });
-      }
-    }
-
-    return data.map((item: any) => ({
-      ...item,
-      update_by_name: item.update_by ? userMap.get(item.update_by) || 'Petugas' : (item.created_by ? userMap.get(item.created_by) || 'Petugas' : '-'),
-      created_by_name: item.created_by ? userMap.get(item.created_by) || 'Petugas' : 'Sistem',
-    })) as HrdReportTr[];
+  async getKpiEvaluationsList(filters?: {
+    outletCode?: string;
+    payrollperiode?: string;
+    kodekaryawan?: string;
+    startDate?: string;
+    endDate?: string;
+    onlyAdmin?: boolean;
+  }): Promise<HrdReportKpi[]> {
+    return fetchEvaluationsListFromTable<HrdReportKpi>(
+      'hrd_report_kpi',
+      'hrd_report_kpi_detail',
+      filters
+    );
   },
 
   async getEvaluationDetail(reportId: string): Promise<HrdReportTr> {
-    const { data, error } = await supabase
-      .from('hrd_report_tr')
-      .select(`
-        *,
-        master_outlet:master_outlet(kode_outlet, name_outlet, city, alamat, no_telp),
-        karyawan_info:ot_hrd_karyawan_info(kodekaryawan, namakaryawan, idkaryawan, departemen, active, foto_url),
-        details:hrd_report_tr_detail(*)
-      `)
-      .eq('uid', reportId)
-      .single();
+    return fetchEvaluationDetailFromTable<HrdReportTr>(
+      'hrd_report_tr',
+      'hrd_report_tr_detail',
+      reportId
+    );
+  },
 
-    if (error) throw error;
-
-    let updateByName = 'Petugas';
-    let createdByName = 'Sistem';
-
-    const userIds = [data.update_by, data.created_by].filter(Boolean) as string[];
-    if (userIds.length > 0) {
-      const { data: users } = await supabase
-        .from('users_profile')
-        .select('uid, full_name, email')
-        .in('uid', userIds);
-
-      if (users) {
-        const userMap = new Map<string, string>();
-        users.forEach((u) => userMap.set(u.uid, u.full_name || u.email || 'Petugas'));
-        if (data.update_by && userMap.has(data.update_by)) updateByName = userMap.get(data.update_by)!;
-        if (data.created_by && userMap.has(data.created_by)) createdByName = userMap.get(data.created_by)!;
-      }
-    }
-
-    return {
-      ...data,
-      update_by_name: updateByName,
-      created_by_name: createdByName,
-    } as HrdReportTr;
+  async getKpiEvaluationDetail(reportId: string): Promise<HrdReportKpi> {
+    return fetchEvaluationDetailFromTable<HrdReportKpi>(
+      'hrd_report_kpi',
+      'hrd_report_kpi_detail',
+      reportId
+    );
   },
 
   // ==========================================
@@ -507,21 +771,15 @@ export const hrdEvaluationService = {
     startDate: string,
     endDate: string
   ): Promise<HrdTrFault[]> {
-    if (!kodekaryawan || !startDate || !endDate) return [];
+    return fetchFaultsByDateRangeFromTable<HrdTrFault>('hrd_tr_faults', kodekaryawan, startDate, endDate);
+  },
 
-    const { data, error } = await supabase
-      .from('hrd_tr_faults')
-      .select('*')
-      .eq('kodekaryawan', kodekaryawan)
-      .gte('tanggal', startDate)
-      .lte('tanggal', endDate)
-      .order('tanggal', { ascending: false });
-
-    if (error) {
-      console.warn('Error fetching therapist faults by date range:', error);
-      return [];
-    }
-    return (data || []) as HrdTrFault[];
+  async getEmployeeKpiFaultsByDateRange(
+    kodekaryawan: string,
+    startDate: string,
+    endDate: string
+  ): Promise<HrdKpiFault[]> {
+    return fetchFaultsByDateRangeFromTable<HrdKpiFault>('hrd_kpi_faults', kodekaryawan, startDate, endDate);
   },
 };
 

@@ -38,8 +38,8 @@ export default function InventoryReportPage() {
     const [endDate, setEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
     const [statusFilter, setStatusFilter] = useState<string>('ALL')
 
-    // Check if user is Role 5, 8, 13, 14
-    const canSelectOutlet = [5, 8, 13, 14].includes(Number(user?.user_role))
+    // Check if user is Role 5, 8, 13
+    const canSelectOutlet = [5, 8, 13].includes(Number(user?.user_role))
 
     // Initialize Default Outlet
     useEffect(() => {

@@ -104,6 +104,12 @@ import { MasterFaultsPage } from '@/pages/hrd/MasterFaultsPage'
 import { TrFaultsPage } from '@/pages/hrd/TrFaultsPage'
 import { ReportTrFaultsPage } from '@/pages/hrd/ReportTrFaultsPage'
 import { KaryawanInfoPage } from '@/pages/hrd/KaryawanInfoPage'
+import { KpiVariablePage } from '@/pages/hrd/KpiVariablePage'
+import { KpiMasterFaultsPage } from '@/pages/hrd/KpiMasterFaultsPage'
+import { EmployeeFaultsPage } from '@/pages/hrd/EmployeeFaultsPage'
+import { EmployeeKpiPage } from '@/pages/hrd/EmployeeKpiPage'
+import { ReportEmployeeFaultsPage } from '@/pages/hrd/ReportEmployeeFaultsPage'
+import { ReportEmployeeKpiPage } from '@/pages/hrd/ReportEmployeeKpiPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 
 // ============================================
@@ -706,7 +712,7 @@ function App() {
           <Route
             path="/inventory/report"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 8, 10]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 8, 10, 14]}>
                 <InventoryReportPage />
               </ProtectedRoute>
             }
@@ -732,7 +738,7 @@ function App() {
           <Route
             path="/inventory/report-opname-variance"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10, 14]}>
                 <StockOpnameVariancePage />
               </ProtectedRoute>
             }
@@ -892,7 +898,7 @@ function App() {
           <Route
             path="/users"
             element={
-              <ProtectedRoute allowedRoles={[6, 8]}>
+              <ProtectedRoute allowedRoles={[2, 6, 8]}>
                 <UserManagementPage />
               </ProtectedRoute>
             }
@@ -975,7 +981,7 @@ function App() {
           <Route
             path="/hrd/karyawan-info"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 15]}>
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 13, 14, 15]}>
                 <KaryawanInfoPage />
               </ProtectedRoute>
             }
@@ -984,7 +990,7 @@ function App() {
           <Route
             path="/hrd/tr-kategori"
             element={
-              <ProtectedRoute allowedRoles={[8, 16]}>
+              <ProtectedRoute allowedRoles={[2, 8, 16]}>
                 <TrCategoryPage />
               </ProtectedRoute>
             }
@@ -992,7 +998,7 @@ function App() {
           <Route
             path="/hrd/tr-variabel"
             element={
-              <ProtectedRoute allowedRoles={[8, 16]}>
+              <ProtectedRoute allowedRoles={[2, 8, 16]}>
                 <TrVariablePage />
               </ProtectedRoute>
             }
@@ -1008,7 +1014,7 @@ function App() {
           <Route
             path="/hrd/tr-laporan"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 15, 16]}>
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 13, 14, 15, 16]}>
                 <TrReportListPage />
               </ProtectedRoute>
             }
@@ -1016,7 +1022,7 @@ function App() {
           <Route
             path="/hrd/master-faults"
             element={
-              <ProtectedRoute allowedRoles={[5, 8, 15, 16]}>
+              <ProtectedRoute allowedRoles={[2, 5, 8, 15, 16]}>
                 <MasterFaultsPage />
               </ProtectedRoute>
             }
@@ -1032,8 +1038,56 @@ function App() {
           <Route
             path="/hrd/report-tr-faults"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 15, 16, 19]}>
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 13, 14, 15, 16, 19]}>
                 <ReportTrFaultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/kpi-variable"
+            element={
+              <ProtectedRoute allowedRoles={[2, 5, 8, 13, 14]}>
+                <KpiVariablePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/kpi-master-faults"
+            element={
+              <ProtectedRoute allowedRoles={[2, 5, 8, 13, 14]}>
+                <KpiMasterFaultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/employee-faults"
+            element={
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 14]}>
+                <EmployeeFaultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/employee-kpi"
+            element={
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 14]}>
+                <EmployeeKpiPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/report-employee-faults"
+            element={
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 13, 14]}>
+                <ReportEmployeeFaultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hrd/report-employee-kpi"
+            element={
+              <ProtectedRoute allowedRoles={[2, 5, 6, 8, 13, 14]}>
+                <ReportEmployeeKpiPage />
               </ProtectedRoute>
             }
           />
