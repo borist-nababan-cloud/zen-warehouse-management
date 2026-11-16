@@ -39,6 +39,7 @@ import { createPurchaseOrder, getPurchaseOrderById, updatePurchaseOrderItems, cr
 import { useSuppliers } from '@/hooks/useSupplier'
 import { MasterBarang, PurchaseOrder } from '@/types/database'
 import { supabase } from '@/lib/supabase'
+import { DecimalPriceInput } from '@/components/ui/decimal-price-input'
 
 interface POItemRow {
     id: number // local temp id for React key (time based) OR real DB ID for edit
@@ -53,16 +54,15 @@ interface POItemRow {
     subtotal: number
 }
 
-// Indonesian Thousand Formatter Helpers
-const formatThousand = (val: number | undefined | null) => {
-    if (val === undefined || val === null || isNaN(val)) return '0'
-    return new Intl.NumberFormat('id-ID').format(val)
-}
+const roundCurrency = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100
 
-const parseThousand = (val: string) => {
-    const raw = val.replace(/\D/g, '')
-    return raw ? parseInt(raw, 10) : 0
-}
+const formatIdrCurrency = (val: number) =>
+    new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(val)
 
 export function PurchaseOrderCreatePage() {
     const navigate = useNavigate()
@@ -141,9 +141,9 @@ export function PurchaseOrderCreatePage() {
                     sku: i.master_barang?.sku || '',
                     qty: i.qty_ordered,
                     unit: i.uom_purchase,
-                    price: i.price_per_unit,
+                    price: roundCurrency(Number(i.price_per_unit || 0)),
                     conversion_rate: i.conversion_rate,
-                    subtotal: i.qty_ordered * i.price_per_unit
+                    subtotal: roundCurrency(Number(i.qty_ordered || 0) * Number(i.price_per_unit || 0))
                 }))
                 setItems(mappedItems)
             }
@@ -238,7 +238,7 @@ export function PurchaseOrderCreatePage() {
 
         let buyPrice = 0
         if (priceData) {
-            buyPrice = priceData.buy_price || 0
+            buyPrice = roundCurrency(Number(priceData.buy_price || 0))
         }
 
         setItems((prev) =>
@@ -252,7 +252,7 @@ export function PurchaseOrderCreatePage() {
                         unit: purchaseUom,
                         conversion_rate: convRate,
                         price: buyPrice,
-                        subtotal: item.qty * buyPrice,
+                        subtotal: roundCurrency(Number(item.qty || 0) * buyPrice),
                     }
                     : item
             )
@@ -268,7 +268,7 @@ export function PurchaseOrderCreatePage() {
 
                 // Auto-calc subtotal
                 if (field === 'qty' || field === 'price') {
-                    updated.subtotal = Number(updated.qty || 0) * Number(updated.price || 0)
+                    updated.subtotal = roundCurrency(Number(updated.qty || 0) * Number(updated.price || 0))
                 }
                 return updated
             })
@@ -276,7 +276,7 @@ export function PurchaseOrderCreatePage() {
     }
 
     const calculateGrandTotal = () => {
-        return items.reduce((sum, item) => sum + item.subtotal, 0)
+        return roundCurrency(items.reduce((sum, item) => sum + item.subtotal, 0))
     }
 
     const handleSubmit = async (status: 'DRAFT' | 'ISSUED') => {
@@ -553,17 +553,14 @@ export function PurchaseOrderCreatePage() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Input
-                                                type="text"
-                                                inputMode="numeric"
-                                                value={formatThousand(item.price)}
-                                                onChange={(e) => handleItemChange(item.id, 'price', parseThousand(e.target.value))}
-                                                className="h-9 text-right font-mono text-sm"
+                                            <DecimalPriceInput
+                                                value={item.price}
+                                                onChange={(val) => handleItemChange(item.id, 'price', val)}
                                                 disabled={isReadOnly}
                                             />
                                         </TableCell>
                                         <TableCell className="text-right font-medium font-mono text-sm">
-                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.subtotal)}
+                                            {formatIdrCurrency(item.subtotal)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button
@@ -586,7 +583,7 @@ export function PurchaseOrderCreatePage() {
                             <div className="text-right">
                                 <span className="text-muted-foreground mr-4 text-sm font-medium">Total Pesanan:</span>
                                 <span className="text-2xl font-bold text-primary font-mono">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(calculateGrandTotal())}
+                                    {formatIdrCurrency(calculateGrandTotal())}
                                 </span>
                             </div>
                         </div>
