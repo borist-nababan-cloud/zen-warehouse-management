@@ -231,7 +231,7 @@ async function fetchEvaluationsListFromTable<T>(
   if (!data || data.length === 0) return [];
 
   const filteredData = filters?.onlyAdmin
-    ? data.filter((item: any) => item.karyawan_info?.isadmin === 'Y')
+    ? data.filter((item: any) => String(item.karyawan_info?.isadmin || '').trim().toUpperCase() !== 'N')
     : data;
 
   if (filteredData.length === 0) return [];
@@ -583,7 +583,7 @@ export const hrdEvaluationService = {
       query = query.eq('kode_outlet', outletCode);
     }
     if (onlyAdmin) {
-      query = query.eq('isadmin', 'Y');
+      query = query.or('isadmin.neq.N,isadmin.is.null');
     }
 
     const { data, error } = await query;
@@ -591,7 +591,9 @@ export const hrdEvaluationService = {
 
     return ((data || []) as HrdEmployeeSimple[]).filter((emp) => {
       const dept = (emp.departemen || '').trim().toUpperCase();
-      return dept !== '' && dept !== 'TR' && dept !== 'TB';
+      if (dept === '' || dept === 'TR' || dept === 'TB') return false;
+      if (onlyAdmin && String(emp.isadmin || '').trim().toUpperCase() === 'N') return false;
+      return true;
     });
   },
 

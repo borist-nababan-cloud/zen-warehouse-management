@@ -344,7 +344,7 @@ export const ReportEmployeeKpiPage: React.FC = () => {
           selectedPeriod === 'ALL' ? 'Semua Periode Payroll' : `Periode: ${selectedPeriod}`,
         extraFilters: [
           ...(isOnlyAdminEmployee
-            ? [{ label: 'Filter Karyawan', value: 'Admin Cabang (isadmin = Y)' }]
+            ? [{ label: 'Filter Karyawan', value: 'Admin Cabang (isadmin ≠ N)' }]
             : []),
           ...(searchQuery.trim()
             ? [{ label: 'Pencarian', value: searchQuery.trim() }]
@@ -498,7 +498,7 @@ export const ReportEmployeeKpiPage: React.FC = () => {
               {isOnlyAdminEmployee && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
                   <UserCheck className="h-3.5 w-3.5" />
-                  Khusus Karyawan Admin Cabang (isadmin = Y)
+                  Khusus Karyawan Admin Cabang (isadmin ≠ N)
                 </span>
               )}
             </div>

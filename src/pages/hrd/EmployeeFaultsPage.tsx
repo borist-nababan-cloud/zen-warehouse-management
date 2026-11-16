@@ -285,7 +285,7 @@ export function EmployeeFaultsPage() {
               {isOnlyAdminEmployee && (
                 <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-3.5 py-2 rounded-xl text-xs font-medium">
                   <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Khusus Karyawan Admin (isadmin = Y)</span>
+                  <span>Khusus Karyawan Cabang (isadmin ≠ N)</span>
                 </div>
               )}
             </div>

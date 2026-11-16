@@ -158,12 +158,15 @@ async function fetchFaultsFromView<T>(view: FaultTxView, params: FaultQueryParam
     query = query.eq('kategori', params.kategori);
   }
   if (params.onlyAdmin) {
-    query = query.eq('isadmin', 'Y');
+    query = query.or('isadmin.neq.N,isadmin.is.null');
   }
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data || []) as T[];
+  const rows = (data || []) as T[];
+  return params.onlyAdmin
+    ? rows.filter((item: any) => String(item.isadmin || '').trim().toUpperCase() !== 'N')
+    : rows;
 }
 
 async function createFaultInTable<T>(
@@ -414,7 +417,7 @@ export const hrdFaultService = {
       .order('namakaryawan', { ascending: true });
 
     if (onlyAdmin) {
-      query = query.eq('isadmin', 'Y');
+      query = query.or('isadmin.neq.N,isadmin.is.null');
     }
 
     const { data, error } = await query;
@@ -422,7 +425,9 @@ export const hrdFaultService = {
 
     return ((data || []) as HrdEmployeeSimple[]).filter((emp) => {
       const dept = (emp.departemen || '').trim().toUpperCase();
-      return dept !== '' && dept !== 'TR' && dept !== 'TB';
+      if (dept === '' || dept === 'TR' || dept === 'TB') return false;
+      if (onlyAdmin && String(emp.isadmin || '').trim().toUpperCase() === 'N') return false;
+      return true;
     });
   },
 };
