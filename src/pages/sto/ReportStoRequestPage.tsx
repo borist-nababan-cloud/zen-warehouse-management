@@ -10,9 +10,11 @@ import {
     XCircle,
     ArrowRight,
     List,
-    Layers
+    Layers,
+    Printer
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -248,6 +250,118 @@ export function ReportStoRequestPage() {
         }
     }
 
+    const handlePrintReport = async () => {
+        const statusLabelMap: Record<string, string> = {
+            ALL: 'Semua Status',
+            SUBMITTED: 'Menunggu Diproses',
+            FULFILLED: 'Sudah Diproses STO',
+            CANCELLED: 'Dibatalkan',
+        }
+        const directionLabelMap: Record<string, string> = {
+            ALL: 'Semua Arah',
+            OUTGOING: 'Permintaan Keluar (Pemohon)',
+            INCOMING: 'Permintaan Masuk (Tujuan)',
+        }
+        const extraFilters: { label: string; value: string }[] = [
+            { label: 'Arah', value: directionLabelMap[direction] || direction },
+        ]
+        if (searchQuery.trim()) {
+            extraFilters.push({ label: 'Pencarian', value: searchQuery.trim() })
+        }
+
+        if (viewMode === 'HEADER') {
+            if (filteredHeaders.length === 0) {
+                toast.error('Tidak ada data untuk dicetak')
+                return
+            }
+            const totalQty = filteredHeaders.reduce((sum, h) => sum + Number(h.total_qty_requested || 0), 0)
+            await printReportA4({
+                title: 'Laporan Request Kirim Barang (Ringkasan)',
+                subtitle: 'Rekapitulasi dokumen permintaan pengiriman barang antar outlet beserta status pemenuhan STO.',
+                canSelectOutlet: canFilterOutlet,
+                selectedOutlet,
+                userOutletCode: user?.kode_outlet,
+                availableOutlets: outletOptions,
+                startDate,
+                endDate,
+                statusLabel: statusLabelMap[statusFilter] || statusFilter,
+                extraFilters,
+                summaryItems: [
+                    { label: 'Total Request', value: `${totalRequests} Dokumen` },
+                    { label: 'Menunggu', value: `${submittedCount}` },
+                    { label: 'Diproses STO', value: `${fulfilledCount}` },
+                    { label: 'Total Qty Diminta', value: totalQty.toLocaleString('id-ID') },
+                ],
+                columns: [
+                    { header: 'Tanggal', width: '75px' },
+                    { header: 'No. Request', width: '115px' },
+                    { header: 'Pemohon' },
+                    { header: 'Tujuan' },
+                    { header: 'Item', align: 'right', width: '40px' },
+                    { header: 'Total Qty', align: 'right', width: '65px' },
+                    { header: 'Status', width: '95px' },
+                    { header: 'No. STO', width: '105px' },
+                ],
+                rows: filteredHeaders.map((h) => [
+                    format(new Date(h.request_date), 'dd/MM/yyyy'),
+                    h.document_number,
+                    h.requesting_outlet_name || h.requesting_outlet,
+                    h.target_outlet_name || h.target_outlet,
+                    Number(h.total_items || 0).toLocaleString('id-ID'),
+                    Number(h.total_qty_requested || 0).toLocaleString('id-ID'),
+                    statusLabelMap[h.status] || h.status,
+                    h.linked_sto_number || '-',
+                ]),
+                totalRow: ['TOTAL', '', '', `${totalRequests} Dokumen`, '', totalQty.toLocaleString('id-ID'), '', ''],
+            })
+        } else {
+            if (filteredItems.length === 0) {
+                toast.error('Tidak ada data rincian barang untuk dicetak')
+                return
+            }
+            const totalQty = filteredItems.reduce((sum, i) => sum + Number(i.qty_requested || 0), 0)
+            await printReportA4({
+                title: 'Laporan Request Kirim Barang (Rincian Item)',
+                subtitle: 'Detail barang yang diminta per dokumen request antar outlet.',
+                canSelectOutlet: canFilterOutlet,
+                selectedOutlet,
+                userOutletCode: user?.kode_outlet,
+                availableOutlets: outletOptions,
+                startDate,
+                endDate,
+                statusLabel: statusLabelMap[statusFilter] || statusFilter,
+                extraFilters,
+                summaryItems: [
+                    { label: 'Total Baris Item', value: `${filteredItems.length} Item` },
+                    { label: 'Total Qty Diminta', value: totalQty.toLocaleString('id-ID') },
+                ],
+                columns: [
+                    { header: 'Tanggal', width: '70px' },
+                    { header: 'No. Request', width: '105px' },
+                    { header: 'Pemohon', width: '90px' },
+                    { header: 'Tujuan', width: '90px' },
+                    { header: 'SKU', width: '70px' },
+                    { header: 'Nama Barang' },
+                    { header: 'Qty', align: 'right', width: '50px' },
+                    { header: 'Satuan', width: '50px' },
+                    { header: 'Status', width: '85px' },
+                ],
+                rows: filteredItems.map((i) => [
+                    format(new Date(i.request_date), 'dd/MM/yyyy'),
+                    i.document_number,
+                    i.requesting_outlet_name || i.requesting_outlet,
+                    i.target_outlet_name || i.target_outlet,
+                    i.sku || '-',
+                    i.item_name || '-',
+                    Number(i.qty_requested || 0).toLocaleString('id-ID'),
+                    i.uom || '-',
+                    statusLabelMap[i.status] || i.status,
+                ]),
+                totalRow: ['TOTAL', '', '', '', '', `${filteredItems.length} Item`, totalQty.toLocaleString('id-ID'), '', ''],
+            })
+        }
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
@@ -262,15 +376,26 @@ export function ReportStoRequestPage() {
                             Laporan komprehensif dokumen permintaan pengiriman barang antar outlet beserta status pemenuhan STO.
                         </p>
                     </div>
-                    <Button
-                        variant="outline"
-                        onClick={handleExportCsv}
-                        disabled={viewMode === 'HEADER' ? filteredHeaders.length === 0 : filteredItems.length === 0}
-                        className="dark:bg-[#22221B] dark:border-[#38382E] dark:text-[#EBE6DF]"
-                    >
-                        <Download className="mr-2 h-4 w-4 text-[#889D35]" />
-                        Unduh CSV ({viewMode === 'HEADER' ? 'Ringkasan' : 'Rincian Item'})
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={isLoading || (viewMode === 'HEADER' ? filteredHeaders.length === 0 : filteredItems.length === 0)}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleExportCsv}
+                            disabled={viewMode === 'HEADER' ? filteredHeaders.length === 0 : filteredItems.length === 0}
+                            className="dark:bg-[#22221B] dark:border-[#38382E] dark:text-[#EBE6DF]"
+                        >
+                            <Download className="mr-2 h-4 w-4 text-[#889D35]" />
+                            Unduh CSV ({viewMode === 'HEADER' ? 'Ringkasan' : 'Rincian Item'})
+                        </Button>
+                    </div>
                 </div>
 
                 {/* KPI Summary Cards */}

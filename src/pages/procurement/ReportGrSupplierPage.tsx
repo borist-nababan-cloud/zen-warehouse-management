@@ -39,6 +39,7 @@ import { Loader2, Filter, Download, Printer, Image as ImageIcon, ExternalLink } 
 import { format } from 'date-fns'
 
 import { masterOutletService } from '@/services/masterOutletService'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export function ReportGrSupplierPage() {
     const { user } = useAuthUser()
@@ -156,6 +157,71 @@ export function ReportGrSupplierPage() {
         document.body.removeChild(link)
     }
 
+    const handlePrintReport = async () => {
+        if (!data || data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        const totalOrdered = data.reduce((sum, i) => sum + Number(i.qty_ordered || 0), 0)
+        const totalReceived = data.reduce((sum, i) => sum + Number(i.qty_already_received || 0), 0)
+        const totalRemaining = data.reduce((sum, i) => sum + (i.qty_remaining > 0 ? Number(i.qty_remaining) : 0), 0)
+
+        await printReportA4({
+            title: 'Laporan Penerimaan Supplier (GR)',
+            subtitle: 'Pantau riwayat penerimaan barang masuk terhadap Pesanan Pembelian (PO).',
+            canSelectOutlet: canSeeAllOutlets,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets: outlets,
+            startDate,
+            endDate,
+            statusLabel: 'Semua Status Penerimaan',
+            summaryItems: [
+                { label: 'Total Baris Item', value: `${data.length} Item` },
+                { label: 'Total Dipesan', value: totalOrdered.toLocaleString('id-ID') },
+                { label: 'Total Diterima', value: totalReceived.toLocaleString('id-ID') },
+                { label: 'Sisa Pesanan', value: totalRemaining.toLocaleString('id-ID') },
+            ],
+            columns: [
+                { header: 'Tanggal', width: '75px' },
+                { header: 'No. PO', width: '115px' },
+                { header: 'Outlet', width: '50px' },
+                { header: 'SKU', width: '75px' },
+                { header: 'Nama Barang' },
+                { header: 'Dipesan', align: 'right', width: '55px' },
+                { header: 'Diterima', align: 'right', width: '55px' },
+                { header: 'Sisa', align: 'right', width: '50px' },
+                { header: 'Status', width: '75px' },
+            ],
+            rows: data.map((item) => {
+                const status = item.qty_remaining <= 0 ? 'Terpenuhi' : item.qty_already_received > 0 ? 'Sebagian' : 'Dipesan'
+                return [
+                    item.po_created_at ? format(new Date(item.po_created_at), 'dd/MM/yyyy') : '-',
+                    item.document_number,
+                    item.kode_outlet,
+                    item.sku || '-',
+                    item.item_name || '-',
+                    Number(item.qty_ordered || 0).toLocaleString('id-ID'),
+                    Number(item.qty_already_received || 0).toLocaleString('id-ID'),
+                    (item.qty_remaining > 0 ? Number(item.qty_remaining) : 0).toLocaleString('id-ID'),
+                    status,
+                ]
+            }),
+            totalRow: [
+                'TOTAL',
+                '',
+                '',
+                '',
+                `${data.length} Item`,
+                totalOrdered.toLocaleString('id-ID'),
+                totalReceived.toLocaleString('id-ID'),
+                totalRemaining.toLocaleString('id-ID'),
+                '',
+            ],
+        })
+    }
+
     // Initial load
     useEffect(() => {
         if (user) {
@@ -172,6 +238,26 @@ export function ReportGrSupplierPage() {
                         <p className="text-muted-foreground">
                             Pantau riwayat penerimaan barang masuk terhadap Pesanan Pembelian (PO).
                         </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={handleExportCSV}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                            <Download className="h-4 w-4" />
+                            Ekspor CSV
+                        </Button>
                     </div>
                 </div>
 

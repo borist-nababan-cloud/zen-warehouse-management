@@ -28,9 +28,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { PackageCheck, Download, Loader2, Search } from 'lucide-react'
+import { PackageCheck, Download, Loader2, Search, Printer } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export function ReportStoReceiptItemsPage() {
     const { user } = useAuthUser()
@@ -106,15 +107,79 @@ export function ReportStoReceiptItemsPage() {
         document.body.removeChild(link);
     }
 
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        const totalQty = data.reduce((sum, item) => sum + Number(item.qty_received || 0), 0)
+
+        await printReportA4({
+            title: 'Daftar Item Penerimaan STO',
+            subtitle: 'Rincian kuantitas item barang yang diterima dari transaksi STO.',
+            canSelectOutlet: canFilterOutlet,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets: outletOptions,
+            startDate,
+            endDate,
+            statusLabel: 'Semua Penerimaan',
+            summaryItems: [
+                { label: 'Total Baris Item', value: `${data.length} Item` },
+                { label: 'Total Qty Diterima', value: totalQty.toLocaleString('id-ID') },
+            ],
+            columns: [
+                { header: 'Tgl Terima', width: '80px' },
+                { header: 'No. Penerimaan', width: '130px' },
+                { header: 'No. Order STO', width: '130px' },
+                { header: 'SKU', width: '85px' },
+                { header: 'Nama Barang' },
+                { header: 'Qty Diterima', align: 'right', width: '80px' },
+            ],
+            rows: data.map((item) => [
+                format(new Date(item.received_at), 'dd/MM/yyyy'),
+                item.document_number,
+                item.order_number,
+                item.sku || '-',
+                item.item_name || '-',
+                Number(item.qty_received || 0).toLocaleString('id-ID'),
+            ]),
+            totalRow: ['TOTAL', '', '', '', `${data.length} Item`, totalQty.toLocaleString('id-ID')],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Receipt Items Report</h1>
-                    <p className="text-muted-foreground flex items-center gap-2">
-                        <PackageCheck className="h-4 w-4" />
-                        Detailed list of items received.
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Receipt Items Report</h1>
+                        <p className="text-muted-foreground flex items-center gap-2">
+                            <PackageCheck className="h-4 w-4" />
+                            Detailed list of items received.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={handleExport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                            <Download className="h-4 w-4" />
+                            Ekspor CSV
+                        </Button>
+                    </div>
                 </div>
 
                 <Card className="border-pastel-blue/20 shadow-sm">

@@ -11,8 +11,12 @@ import {
     PackageX,
     DollarSign,
     FileText,
-    Store
+    Store,
+    Printer
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 import {
     Select,
     SelectContent,
@@ -24,7 +28,7 @@ import { masterOutletService } from '@/services/masterOutletService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
 export const OutstandingPoReportPage = () => {
     const { user } = useAuthUser()
@@ -104,14 +108,79 @@ export const OutstandingPoReportPage = () => {
         )
     }
 
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        await printReportA4({
+            title: 'Laporan PO Tertunda (Outstanding)',
+            subtitle: 'Pantau barang yang telah dipesan namun belum diterima sepenuhnya (Backorder).',
+            canSelectOutlet,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets,
+            startDate: dateRange.start,
+            endDate: dateRange.end,
+            statusLabel: 'Belum Diterima Penuh',
+            summaryItems: [
+                { label: 'Total Barang Tertunda', value: summary.totalItemsPending.toLocaleString('id-ID') },
+                { label: 'Nilai Barang Tertunda', value: formatCurrency(summary.pendingValue) },
+                { label: 'Total PO Terdampak', value: `${summary.uniquePos.size} Dokumen` },
+            ],
+            columns: [
+                { header: 'Tanggal', width: '75px' },
+                { header: 'No. PO', width: '115px' },
+                { header: 'Pemasok (Supplier)' },
+                { header: 'Nama Barang' },
+                { header: 'Dipesan', align: 'right', width: '55px' },
+                { header: 'Diterima', align: 'right', width: '55px' },
+                { header: 'Sisa', align: 'right', width: '55px' },
+                { header: 'Est. Nilai', align: 'right', width: '100px' },
+            ],
+            rows: data.map((row) => [
+                formatDate(row.po_created_at),
+                row.document_number,
+                row.supplier_name || '-',
+                row.item_name || '-',
+                Number(row.qty_ordered || 0).toLocaleString('id-ID'),
+                Number(row.qty_received || 0).toLocaleString('id-ID'),
+                Number(row.qty_remaining || 0).toLocaleString('id-ID'),
+                formatCurrency(Number(row.estimated_pending_value || 0)),
+            ]),
+            totalRow: [
+                'TOTAL',
+                '',
+                '',
+                `${data.length} Item`,
+                '',
+                '',
+                summary.totalItemsPending.toLocaleString('id-ID'),
+                formatCurrency(summary.pendingValue),
+            ],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Laporan PO Tertunda</h1>
-                    <p className="text-muted-foreground">
-                        Pantau barang yang telah dipesan namun belum diterima sepenuhnya (Backorder).
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Laporan PO Tertunda</h1>
+                        <p className="text-muted-foreground">
+                            Pantau barang yang telah dipesan namun belum diterima sepenuhnya (Backorder).
+                        </p>
+                    </div>
+                    <Button
+                        onClick={handlePrintReport}
+                        disabled={isLoading || data.length === 0}
+                        variant="outline"
+                        className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                    >
+                        <Printer className="h-4 w-4" />
+                        Cetak
+                    </Button>
                 </div>
 
                 {/* Filters */}

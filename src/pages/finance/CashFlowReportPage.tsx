@@ -23,7 +23,7 @@ export default function CashFlowReportPage() {
     const [selectedOutlet, setSelectedOutlet] = useState<string>('')
     const [availableOutlets, setAvailableOutlets] = useState<MasterOutlet[]>([])
 
-    const canSelectOutlet = [5, 8, 13, 14].includes(Number(user?.user_role))
+    const canSelectOutlet = [5, 8, 13].includes(Number(user?.user_role))
 
     useEffect(() => {
         if (!canSelectOutlet && user?.kode_outlet) {

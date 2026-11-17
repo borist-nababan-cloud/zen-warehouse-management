@@ -28,9 +28,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { FileText, Download, Loader2, Search } from 'lucide-react'
+import { FileText, Download, Loader2, Search, Printer } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export function ReportStoOrderPage() {
     const { user } = useAuthUser()
@@ -110,15 +111,81 @@ export function ReportStoOrderPage() {
         document.body.removeChild(link);
     }
 
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        const totalNilai = data.reduce((sum, item) => sum + Number(item.grand_total || 0), 0)
+
+        await printReportA4({
+            title: 'Laporan Order STO',
+            subtitle: 'Rekapitulasi dokumen Transfer Stok (STO) antar-cabang.',
+            canSelectOutlet: canFilterOutlet,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets: outletOptions,
+            startDate,
+            endDate,
+            statusLabel: 'Semua Status',
+            summaryItems: [
+                { label: 'Total Dokumen Order', value: `${data.length} Dokumen` },
+                { label: 'Total Nilai STO', value: formatCurrency(totalNilai) },
+            ],
+            columns: [
+                { header: 'Tanggal', width: '80px' },
+                { header: 'No. Dokumen', width: '130px' },
+                { header: 'Dari Outlet' },
+                { header: 'Ke Outlet' },
+                { header: 'Status Pengirim', width: '95px' },
+                { header: 'Status Penerima', width: '95px' },
+                { header: 'Total Nilai', align: 'right', width: '105px' },
+            ],
+            rows: data.map((item) => [
+                format(new Date(item.order_date), 'dd/MM/yyyy'),
+                item.document_number,
+                `${item.from_outlet} - ${item.from_outlet_name || ''}`.trim(),
+                `${item.to_outlet} - ${item.to_outlet_name || ''}`.trim(),
+                item.sender_status,
+                item.recipient_status,
+                formatCurrency(Number(item.grand_total || 0)),
+            ]),
+            totalRow: ['TOTAL', '', '', '', '', `${data.length} Dokumen`, formatCurrency(totalNilai)],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Orders Report</h1>
-                    <p className="text-muted-foreground flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        List of Stock Transfer Orders
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Orders Report</h1>
+                        <p className="text-muted-foreground flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            List of Stock Transfer Orders
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={handleExport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                            <Download className="h-4 w-4" />
+                            Ekspor CSV
+                        </Button>
+                    </div>
                 </div>
 
                 <Card className="border-pastel-blue/20 shadow-sm">

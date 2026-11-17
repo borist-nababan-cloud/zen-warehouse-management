@@ -38,6 +38,7 @@ import {
 import { Wallet, Download, Loader2, Search, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export function ReportStoReceiptPage() {
     const { user } = useAuthUser()
@@ -117,15 +118,79 @@ export function ReportStoReceiptPage() {
         document.body.removeChild(link);
     }
 
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        const totalNilai = data.reduce((sum, item) => sum + Number(item.grand_total || 0), 0)
+
+        await printReportA4({
+            title: 'Laporan Penerimaan STO',
+            subtitle: 'Rekapitulasi dokumen tanda terima barang STO yang telah selesai.',
+            canSelectOutlet: canFilterOutlet,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets: outletOptions,
+            startDate,
+            endDate,
+            statusLabel: 'Diterima (COMPLETED)',
+            summaryItems: [
+                { label: 'Total Dokumen Terima', value: `${data.length} Dokumen` },
+                { label: 'Total Nilai Penerimaan', value: formatCurrency(totalNilai) },
+            ],
+            columns: [
+                { header: 'Tgl Terima', width: '80px' },
+                { header: 'No. Penerimaan', width: '130px' },
+                { header: 'No. Order STO', width: '130px' },
+                { header: 'Dari Outlet' },
+                { header: 'Ke Outlet' },
+                { header: 'Nilai Order', align: 'right', width: '110px' },
+            ],
+            rows: data.map((item) => [
+                format(new Date(item.received_at), 'dd/MM/yyyy'),
+                item.document_number,
+                item.order_number,
+                `${item.from_outlet} ${item.from_outlet_name ? `- ${item.from_outlet_name}` : ''}`.trim(),
+                `${item.to_outlet} ${item.to_outlet_name ? `- ${item.to_outlet_name}` : ''}`.trim(),
+                formatCurrency(Number(item.grand_total || 0)),
+            ]),
+            totalRow: ['TOTAL', '', '', '', `${data.length} Dokumen`, formatCurrency(totalNilai)],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Receipts Report</h1>
-                    <p className="text-muted-foreground flex items-center gap-2">
-                        <Wallet className="h-4 w-4" />
-                        List of completed STO receipts.
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Receipts Report</h1>
+                        <p className="text-muted-foreground flex items-center gap-2">
+                            <Wallet className="h-4 w-4" />
+                            List of completed STO receipts.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={handleExport}
+                            disabled={isLoading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                            <Download className="h-4 w-4" />
+                            Ekspor CSV
+                        </Button>
+                    </div>
                 </div>
 
                 <Card className="border-pastel-blue/20 shadow-sm">
@@ -214,8 +279,8 @@ export function ReportStoReceiptPage() {
                                                 <TableCell>{format(new Date(item.received_at), 'dd/MM/yyyy')}</TableCell>
                                                 <TableCell className="font-medium text-blue-600">{item.document_number}</TableCell>
                                                 <TableCell className="text-muted-foreground text-xs">{item.order_number}</TableCell>
-                                                <TableCell>{item.from_outlet}</TableCell>
-                                                <TableCell>{item.to_outlet}</TableCell>
+                                                <TableCell>{item.from_outlet_name || item.from_outlet}</TableCell>
+                                                <TableCell>{item.to_outlet_name || item.to_outlet}</TableCell>
                                                 <TableCell className="text-right font-mono">
                                                     {formatCurrency(item.grand_total)}
                                                 </TableCell>

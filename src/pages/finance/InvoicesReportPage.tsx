@@ -55,13 +55,15 @@ export default function InvoicesReportPage() {
     const [outlets, setOutlets] = useState<MasterOutlet[]>([])
 
     // Roles who can see ALL outlets: 5, 8, 13, 14
-    const canSeeAllOutlets = [5, 8, 13, 14].includes(Number(user?.user_role))
+    const canSeeAllOutlets = [5, 8, 13].includes(Number(user?.user_role))
 
     useEffect(() => {
-        if (canSeeAllOutlets) {
-            masterOutletService.getAllWhOutlet().then(setOutlets).catch(console.error)
-        }
-    }, [canSeeAllOutlets])
+        masterOutletService.getAllWhOutlet().then(setOutlets).catch(console.error)
+    }, [])
+
+    const getOutletName = (kodeOutlet: string) => {
+        return outlets.find((o) => o.kode_outlet === kodeOutlet)?.name_outlet || kodeOutlet
+    }
 
     useEffect(() => {
         if (user) {
@@ -431,7 +433,7 @@ export default function InvoicesReportPage() {
                                             {formatDate(row.invoice_date)}
                                         </TableCell>
                                         <TableCell className="text-xs text-slate-500">
-                                            {row.kode_outlet}
+                                            {getOutletName(row.kode_outlet)}
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-slate-500">
                                             {row.invoice_doc}

@@ -42,6 +42,7 @@ import {
   AlertOctagon,
   Scale,
   Banknote,
+  CreditCard,
   List,
   Wallet,
   PackageCheck,
@@ -169,15 +170,15 @@ const navItems: NavItem[] = [
 const goodsReceiptGroup: NavGroup = {
   title: 'Penerimaan Barang (GR)',
   icon: FileText,
-  roleIds: [5, 6, 7, 8, 10],
+  roleIds: [5, 6, 7, 8, 10, 14],
   children: [
     { title: 'Pesanan Pembelian (PO)', path: '/procurement/purchase-orders', icon: FileText, roleIds: [6, 10] },
     { title: 'Penerimaan Supplier (GR)', path: '/procurement/goods-receipts', icon: Package, roleIds: [7] },
     { title: 'Faktur Pembelian (PO)', path: '/procurement/invoicing-po', icon: FileText, roleIds: [6, 10] },
     { title: 'Laporan PO Tertunda', path: '/procurement/report-outstanding-po', icon: AlertOctagon, roleIds: [5, 6, 8, 10] },
-    { title: 'Kinerja Pemasok', path: '/procurement/report-supplier-performance', icon: TrendingUp, roleIds: [5, 6, 8, 10] },
-    { title: 'Laporan Pesanan (PO)', path: '/procurement/report-po', icon: TrendingUp, roleIds: [5, 6, 8, 10] },
-    { title: 'Laporan Penerimaan Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [5, 6, 7, 8, 10] },
+    { title: 'Kinerja Pemasok', path: '/procurement/report-supplier-performance', icon: TrendingUp, roleIds: [5, 6, 8, 10, 14] },
+    { title: 'Laporan Pesanan (PO)', path: '/procurement/report-po', icon: TrendingUp, roleIds: [5, 6, 8, 10, 14] },
+    { title: 'Laporan Penerimaan Supplier', path: '/procurement/report-gr', icon: Activity, roleIds: [5, 6, 7, 8, 10, 14] },
   ]
 }
 
@@ -194,50 +195,79 @@ const goodsIssuedGroup: NavGroup = {
 const stockTransferGroup: NavGroup = {
   title: 'Transfer Stok (STO)',
   icon: Boxes,
-  roleIds: [5, 6, 7, 8, 10],
+  roleIds: [5, 6, 7, 8, 10, 14],
   children: [
-    { title: 'Request Kirim Barang', path: '/sto/requests', icon: ClipboardList, roleIds: [6, 10] },
-    { title: 'Kirim Barang Ke Outlet (STO)', path: '/sto', icon: FileText, roleIds: [6, 10] },
-    { title: 'Kotak Persetujuan STO', path: '/sto/approval', icon: Users, roleIds: [6, 10] },
-    { title: 'Pengiriman STO (Issue)', path: '/sto/issue', icon: Truck, roleIds: [7] },
-    { title: 'Penerimaan STO (Receipt)', path: '/sto/receipt', icon: Package, roleIds: [7] },
-    { title: 'Faktur STO', path: '/sto/invoicing', icon: DollarSign, roleIds: [6, 10] },
-    { title: 'Laporan Request Barang', path: '/sto/report-requests', icon: FileText, roleIds: [5, 6, 7, 8, 10] },
-    { title: 'Ringkasan Laporan STO', path: '/sto/report-summary', icon: Activity, roleIds: [6, 10] },
+    {
+      title: 'Penerimaan',
+      icon: PackageCheck,
+      roleIds: [5, 6, 7, 8, 10, 14],
+      children: [
+        { title: 'Request Kirim Barang', path: '/sto/requests', icon: ClipboardList, roleIds: [6, 10] },
+        { title: 'Kotak Persetujuan STO', path: '/sto/approval', icon: Users, roleIds: [6, 10] },
+        { title: 'Penerimaan STO (Receipt)', path: '/sto/receipt', icon: Package, roleIds: [7] },
+        { title: 'Faktur STO', path: '/sto/invoicing', icon: DollarSign, roleIds: [6, 10] },
+        { title: 'Laporan Request Barang', path: '/sto/report-requests', icon: FileText, roleIds: [5, 6, 7, 8, 10] },
+        { title: 'Laporan Item Order STO', path: '/sto/report-order-items/penerimaan', icon: List, roleIds: [5, 6, 7, 8, 10, 14] },
+        { title: 'Laporan Penerimaan STO', path: '/sto/report-receipt', icon: Wallet, roleIds: [5, 6, 8, 10, 14] },
+        { title: 'Daftar Item Penerimaan STO', path: '/sto/report-receipt-items', icon: PackageCheck, roleIds: [5, 6, 7, 8, 10, 14] },
+      ],
+    },
+    {
+      title: 'Pengiriman',
+      icon: Truck,
+      roleIds: [5, 6, 7, 8, 10, 14],
+      children: [
+        { title: 'Kirim Barang Ke Outlet (STO)', path: '/sto', icon: FileText, roleIds: [6, 10] },
+        { title: 'Pengiriman STO (Issue)', path: '/sto/issue', icon: Truck, roleIds: [7] },
+        { title: 'Laporan Item Order STO', path: '/sto/report-order-items/pengiriman', icon: List, roleIds: [5, 6, 7, 8, 10, 14] },
+      ],
+    },
+    { title: 'Ringkasan Laporan STO', path: '/sto/report-summary', icon: Activity, roleIds: [6, 10, 14] },
     { title: 'Laporan STO Dalam Transit', path: '/sto/report-transit', icon: Truck, roleIds: [6, 7, 10] },
     { title: 'Laporan Order STO', path: '/sto/report-order', icon: FileText, roleIds: [5, 6, 8, 10] },
-    { title: 'Laporan Item Order STO', path: '/sto/report-order-items', icon: List, roleIds: [5, 6, 7, 8, 10] },
-    { title: 'Laporan Penerimaan STO', path: '/sto/report-receipt', icon: Wallet, roleIds: [5, 6, 8, 10] },
-    { title: 'Daftar Item Penerimaan STO', path: '/sto/report-receipt-items', icon: PackageCheck, roleIds: [5, 6, 7, 8, 10] },
   ]
 }
 
 const productionGroup: NavGroup = {
   title: 'Produksi',
   icon: Factory,
-  roleIds: [5, 6, 7, 8, 10],
+  roleIds: [5, 6, 7, 8, 10, 14],
   children: [
     { title: 'Manajemen Resep', path: '/production/recipes', icon: BookOpen, roleIds: [6, 10] },
     { title: 'Proses Produksi', path: '/production/run', icon: ClipboardList, roleIds: [7] },
-    { title: 'Laporan Biaya & Hasil', path: '/production/cost-yield', icon: TrendingUp, roleIds: [5, 6, 8, 10] },
+    { title: 'Laporan Biaya & Hasil', path: '/production/cost-yield', icon: TrendingUp, roleIds: [5, 6, 8, 10, 14] },
   ]
 }
 
 const financeGroup: NavGroup = {
   title: 'Keuangan & Akuntansi',
   icon: Landmark,
-  roleIds: [5, 6, 7, 8, 10],
+  roleIds: [5, 6, 7, 8, 10, 14],
   children: [
+    {
+      title: 'Pembayaran (AP)',
+      icon: CreditCard,
+      roleIds: [5, 6, 8, 10, 14],
+      children: [
+        { title: 'Pembayaran Hutang Supplier', path: '/finance/paydown', icon: Truck, roleIds: [6, 10] },
+        { title: 'Pelunasan STO', path: '/finance/sto-paydown', icon: Boxes, roleIds: [6, 10] },
+        { title: 'Laporan Umur Hutang (AP)', path: '/finance/report-ap-aging', icon: Clock, roleIds: [5, 6, 8, 10, 14] },
+        { title: 'Laporan Faktur Pembelian', path: '/finance/invoices-report', icon: FileText, roleIds: [5, 6, 8, 10, 14] },
+      ],
+    },
+    {
+      title: 'Penerimaan (AR)',
+      icon: Wallet,
+      roleIds: [6, 8, 10, 14],
+      children: [
+        { title: 'Penyelesaian STO', path: '/finance/sto-settlement', icon: Wallet, roleIds: [6, 10] },
+        { title: 'Laporan Piutang STO', path: '/finance/sto-ar-report', icon: TrendingUp, roleIds: [6, 10, 14] },
+      ],
+    },
     { title: 'Daftar Rekening & Kas', path: '/finance/accounts', icon: DollarSign, roleIds: [6, 10] },
     { title: 'Transaksi Kas & Bank', path: '/finance/general-transactions', icon: Receipt, roleIds: [6, 10] },
     { title: 'Master Categori Transaksi', path: '/finance/categories', icon: Tag, roleIds: [5, 8] },
-    { title: 'Laporan Umur Hutang (AP)', path: '/finance/report-ap-aging', icon: Clock, roleIds: [5, 6, 8, 10] },
-    { title: 'Laporan Arus Kas', path: '/finance/report-cash-flow', icon: Banknote, roleIds: [5, 6, 8, 10] },
-    { title: 'Laporan Faktur Pembelian', path: '/finance/invoices-report', icon: FileText, roleIds: [5, 6, 8, 10] },
-    { title: 'Pembayaran Hutang Supplier', path: '/finance/paydown', icon: Truck, roleIds: [6, 10] },
-    { title: 'Pelunasan STO', path: '/finance/sto-paydown', icon: Boxes, roleIds: [6, 10] },
-    { title: 'Penyelesaian STO', path: '/finance/sto-settlement', icon: Wallet, roleIds: [6, 10] },
-    { title: 'Laporan Piutang STO', path: '/finance/sto-ar-report', icon: TrendingUp, roleIds: [6, 10] },
+    { title: 'Laporan Arus Kas', path: '/finance/report-cash-flow', icon: Banknote, roleIds: [5, 6, 8, 10, 14] },
   ]
 }
 
@@ -531,7 +561,22 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
     : []
 
   const isActivePath = (path: string) => {
+    if (path === '/sto') {
+      return location.pathname === '/sto' || location.pathname.startsWith('/sto/create')
+    }
     return location.pathname === path || location.pathname.startsWith(path + '/')
+  }
+
+  const hasActiveNavItem = (navItem: NavItem): boolean => {
+    if (navItem.path && isActivePath(navItem.path)) return true
+    if (navItem.children) return navItem.children.some(hasActiveNavItem)
+    return false
+  }
+
+  const canAccessNavItem = (navItem: NavItem): boolean => {
+    if (!user) return false
+    if (user.user_role === 8 || user.user_role === 18) return true
+    return navItem.roleIds.includes(user.user_role)
   }
 
   const toggleGroup = (title: string) => {
@@ -618,18 +663,20 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
             // Handle NavGroup (Master Data with submenus)
             if (isNavGroup(item)) {
               // Check if group has any visible children for current user
-              const visibleChildren = item.children.filter((child) =>
-                user?.user_role === 8 || (user && child.roleIds.includes(user.user_role))
-              )
+              const visibleChildren = item.children.filter((child) => {
+                if (!canAccessNavItem(child)) return false
+                if (child.children) {
+                  return child.children.some(canAccessNavItem)
+                }
+                return true
+              })
 
               if (visibleChildren.length === 0) {
                 return null
               }
 
-              const isOpen = openGroups[item.title] ?? item.defaultOpen ?? false
-              const hasActiveChild = item.children.some((child) =>
-                child.path ? isActivePath(child.path) : false
-              )
+              const hasActiveChild = item.children.some(hasActiveNavItem)
+              const isOpen = openGroups[item.title] ?? (hasActiveChild || item.defaultOpen) ?? false
 
               return (
                 <li key={item.title}>
@@ -660,12 +707,69 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     <ul className="ml-5 mt-1 space-y-1 pl-2 border-l border-zen-border/70">
                       {item.children.map((child) => {
                         const ChildIcon = child.icon
-                        const active = child.path ? isActivePath(child.path) : false
 
                         // CHECK CHILD ROLE PERMISSION
-                        if (user && user.user_role !== 8 && !child.roleIds.includes(user.user_role)) {
+                        if (!canAccessNavItem(child)) {
                           return null
                         }
+
+                        // Nested sub-group (e.g. Penerimaan / Pengiriman inside Transfer Stok (STO))
+                        if (child.children && child.children.length > 0) {
+                          const visibleSubChildren = child.children.filter(canAccessNavItem)
+                          if (visibleSubChildren.length === 0) return null
+
+                          const subGroupKey = `${item.title}::${child.title}`
+                          const subHasActive = visibleSubChildren.some(hasActiveNavItem)
+                          const subIsOpen = openGroups[subGroupKey] ?? (subHasActive || child.defaultOpen) ?? false
+
+                          return (
+                            <li key={child.title}>
+                              <button
+                                type="button"
+                                onClick={() => toggleGroup(subGroupKey)}
+                                className={cn(
+                                  'flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-xs transition-all',
+                                  'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
+                                  subHasActive && 'bg-zen-sand/20 text-zen-charcoal font-semibold'
+                                )}
+                              >
+                                <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                                <span className="flex-1 text-left font-medium">{child.title}</span>
+                                {subIsOpen ? (
+                                  <ChevronUp className="h-3.5 w-3.5 shrink-0 text-zen-charcoal/60" />
+                                ) : (
+                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zen-charcoal/60" />
+                                )}
+                              </button>
+
+                              {subIsOpen && (
+                                <ul className="ml-3.5 mt-1 space-y-1 pl-2 border-l border-zen-border/70">
+                                  {visibleSubChildren.map((subChild) => {
+                                    const SubIcon = subChild.icon
+                                    const subActive = subChild.path ? isActivePath(subChild.path) : false
+                                    return (
+                                      <li key={subChild.path || subChild.title}>
+                                        <Link
+                                          to={subChild.path || '#'}
+                                          className={cn(
+                                            'flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] transition-all',
+                                            'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/75',
+                                            subActive && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
+                                          )}
+                                        >
+                                          <SubIcon className="h-3 w-3 shrink-0" />
+                                          <span onClick={onNavigate}>{subChild.title}</span>
+                                        </Link>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              )}
+                            </li>
+                          )
+                        }
+
+                        const active = child.path ? isActivePath(child.path) : false
 
                         return (
                           <li key={child.title}>

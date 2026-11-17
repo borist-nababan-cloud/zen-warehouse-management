@@ -50,7 +50,7 @@ export default function StoPaydownPage() {
             const [outletsResult, accountsResult, allOutletsResult] = await Promise.all([
                 getUnpaidOutletsWithDebt(user.kode_outlet),
                 getFinancialAccounts(user.kode_outlet),
-                masterOutletService.getAllOutlets()
+                masterOutletService.getAllWhOutlet()
             ])
 
             if (outletsResult.data) setDebtOutlets(outletsResult.data)

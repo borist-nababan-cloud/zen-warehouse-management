@@ -39,6 +39,7 @@ import {
 import { Printer, FileText, Search, TrendingUp, Filter, Wallet, Store, Download, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export default function PoReportPage() {
     const { user } = useAuthUser()
@@ -176,14 +177,79 @@ export default function PoReportPage() {
 
     const totalValue = data.reduce((acc, curr) => acc + (curr.grand_total || 0), 0)
 
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        await printReportA4({
+            title: 'Laporan Pesanan Pembelian (PO)',
+            subtitle: 'Catatan historis seluruh Pesanan Pembelian (PO) beserta statusnya.',
+            canSelectOutlet,
+            selectedOutlet,
+            userOutletCode: user?.kode_outlet,
+            availableOutlets,
+            startDate,
+            endDate,
+            statusLabel: statusFilter === 'all' ? 'Semua Status' : statusFilter,
+            extraFilters: searchTerm ? [{ label: 'Pencarian', value: searchTerm }] : [],
+            summaryItems: [
+                { label: 'Total Dokumen PO', value: `${data.length} Dokumen` },
+                { label: 'Total Nilai PO', value: formatCurrency(totalValue) },
+            ],
+            columns: [
+                { header: 'Tanggal', width: '75px' },
+                { header: 'Outlet', width: '55px' },
+                { header: 'No. PO', width: '125px' },
+                { header: 'Pemasok (Supplier)' },
+                { header: 'Status', width: '85px' },
+                { header: 'Est. Kirim', width: '80px' },
+                { header: 'Total', align: 'right', width: '105px' },
+            ],
+            rows: data.map((row) => [
+                formatDate(row.po_date),
+                row.kode_outlet,
+                row.po_doc_number || row.document_number || '-',
+                row.supplier_name || '-',
+                row.status,
+                formatDate(row.expected_delivery_date),
+                formatCurrency(Number(row.grand_total || 0)),
+            ]),
+            totalRow: ['TOTAL', '', '', '', '', `${data.length} PO`, formatCurrency(totalValue)],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Laporan Pesanan Pembelian (PO)</h1>
-                    <p className="text-slate-500">
-                        Catatan historis seluruh Pesanan Pembelian (PO) beserta statusnya.
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Laporan Pesanan Pembelian (PO)</h1>
+                        <p className="text-slate-500">
+                            Catatan historis seluruh Pesanan Pembelian (PO) beserta statusnya.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={loading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={handleExportCsv}
+                            disabled={loading || data.length === 0}
+                            variant="outline"
+                            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                            <Download className="h-4 w-4" />
+                            Ekspor CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filters */}

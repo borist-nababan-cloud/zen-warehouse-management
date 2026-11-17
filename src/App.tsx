@@ -412,7 +412,7 @@ function App() {
           <Route
             path="/production/cost-yield"
             element={
-              <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8, 14]}>
                 <ProductionCostYieldPage />
               </ProtectedRoute>
             }
@@ -440,7 +440,7 @@ function App() {
           <Route
             path="/procurement/report-supplier-performance"
             element={
-              <ProtectedRoute allowedRoles={[1, 5, 6, 8, 10]}>
+              <ProtectedRoute allowedRoles={[1, 5, 6, 8, 10, 14]}>
                 <SupplierPerformanceReportPage />
               </ProtectedRoute>
             }
@@ -448,7 +448,7 @@ function App() {
           <Route
             path="/procurement/report-po"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10, 14]}>
                 <PoReportPage />
               </ProtectedRoute>
             }
@@ -456,7 +456,7 @@ function App() {
           <Route
             path="/procurement/report-gr"
             element={
-              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8]}>
+              <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 14]}>
                 <ReportGrSupplierPage />
               </ProtectedRoute>
             }
@@ -566,7 +566,7 @@ function App() {
           <Route
             path="/sto/report-summary"
             element={
-              <ProtectedRoute allowedRoles={[6, 10]}>
+              <ProtectedRoute allowedRoles={[6, 10, 14]}>
                 <ReportStoSummaryPage />
               </ProtectedRoute>
             }
@@ -590,15 +590,31 @@ function App() {
           <Route
             path="/sto/report-order-items"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
-                <ReportStoOrderItemsPage />
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10, 14]}>
+                <ReportStoOrderItemsPage direction="ALL" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-order-items/penerimaan"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10, 14]}>
+                <ReportStoOrderItemsPage direction="INCOMING" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-order-items/pengiriman"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10, 14]}>
+                <ReportStoOrderItemsPage direction="OUTGOING" />
               </ProtectedRoute>
             }
           />
           <Route
             path="/sto/report-receipt"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 8, 10]}>
+              <ProtectedRoute allowedRoles={[5, 6, 8, 10, 14]}>
                 <ReportStoReceiptPage />
               </ProtectedRoute>
             }
@@ -606,7 +622,7 @@ function App() {
           <Route
             path="/sto/report-receipt-items"
             element={
-              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10]}>
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 10, 14]}>
                 <ReportStoReceiptItemsPage />
               </ProtectedRoute>
             }
@@ -802,7 +818,7 @@ function App() {
           <Route
             path="/finance/report-cash-flow"
             element={
-              <ProtectedRoute allowedRoles={[3, 5, 6, 8]}>
+              <ProtectedRoute allowedRoles={[3, 5, 6, 8, 14]}>
                 <CashFlowReportPage />
               </ProtectedRoute>
             }
@@ -834,7 +850,7 @@ function App() {
           <Route
             path="/finance/report-ap-aging"
             element={
-              <ProtectedRoute allowedRoles={[1, 3, 6]}>
+              <ProtectedRoute allowedRoles={[1, 3, 6, 14]}>
                 <ApAgingReportPage />
               </ProtectedRoute>
             }
@@ -858,7 +874,7 @@ function App() {
           <Route
             path="/finance/sto-ar-report"
             element={
-              <ProtectedRoute allowedRoles={[6, 10]}>
+              <ProtectedRoute allowedRoles={[6, 10, 14]}>
                 <StoArReportPage />
               </ProtectedRoute>
             }
@@ -874,7 +890,7 @@ function App() {
           <Route
             path="/finance/invoices-report"
             element={
-              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
+              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8, 14]}>
                 <InvoicesReportPage />
               </ProtectedRoute>
             }
@@ -882,7 +898,7 @@ function App() {
           <Route
             path="/finance/invoices/print/:invoiceId"
             element={
-              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8]}>
+              <ProtectedRoute allowedRoles={[1, 3, 5, 6, 8, 14]}>
                 <PurchaseInvoicePrint />
               </ProtectedRoute>
             }

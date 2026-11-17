@@ -1030,8 +1030,13 @@ export interface StoOrderList {
 }
 
 export interface StoOrderItem {
+  id?: string
   order_date: string
   document_number: string
+  from_outlet?: string
+  from_outlet_name?: string
+  to_outlet?: string
+  to_outlet_name?: string
   sku: string
   item_name: string
   qty_requested: number

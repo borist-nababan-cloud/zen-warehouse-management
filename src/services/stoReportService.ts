@@ -99,21 +99,30 @@ export async function getStoOrdersReport(filters: StoReportFilters): Promise<Api
 }
 
 // 2. STO Order Items Report
-export async function getStoOrderItemsReport(filters: StoReportFilters): Promise<ApiResponse<StoOrderItem[]>> {
+export async function getStoOrderItemsReport(
+    filters: StoReportFilters & { direction?: 'ALL' | 'INCOMING' | 'OUTGOING' }
+): Promise<ApiResponse<StoOrderItem[]>> {
     try {
-        // Note: View might not have from/to columns directly if it's item level. 
-        // Assuming view_report_sto_order_items HAS from_outlet/to_outlet for filtering.
-        // If not, we'd need to join, but views usually denormalize this.
         let query = supabase.from('view_report_sto_order_items').select('*').order('order_date', { ascending: false })
 
         if (filters.startDate) query = query.gte('order_date', format(filters.startDate, 'yyyy-MM-dd'))
         if (filters.endDate) query = query.lte('order_date', format(filters.endDate, 'yyyy-MM-dd'))
-        
-        // Check if view has these columns. Assuming YES based on requirements.
-        // If the view doesn't have 'from_outlet', this will fail. 
-        // Docs say: "Filter data so users only see records related to their outlet".
-        // Use default columns from typical view structure.
-        query = applyOutletFilter(query, filters.userOutlet, filters.outlet)
+
+        if (filters.direction === 'INCOMING') {
+            if (filters.outlet && filters.outlet !== 'ALL') {
+                query = query.eq('to_outlet', filters.outlet)
+            } else if (!filters.outlet) {
+                query = query.eq('to_outlet', filters.userOutlet)
+            }
+        } else if (filters.direction === 'OUTGOING') {
+            if (filters.outlet && filters.outlet !== 'ALL') {
+                query = query.eq('from_outlet', filters.outlet)
+            } else if (!filters.outlet) {
+                query = query.eq('from_outlet', filters.userOutlet)
+            }
+        } else {
+            query = applyOutletFilter(query, filters.userOutlet, filters.outlet)
+        }
 
         const { data, error } = await query
         if (error) throw error

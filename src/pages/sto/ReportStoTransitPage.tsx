@@ -18,9 +18,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { AlertCircle, ArrowRight, Package } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { AlertCircle, ArrowRight, Package, Printer } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export function ReportStoTransitPage() {
     const { user } = useAuthUser()
@@ -43,15 +46,69 @@ export function ReportStoTransitPage() {
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
 
+    const handlePrintReport = async () => {
+        if (data.length === 0) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        const totalNilai = data.reduce((sum, item) => sum + Number(item.grand_total || 0), 0)
+        const delayedCount = data.filter((item) => item.days_in_transit > 3).length
+
+        await printReportA4({
+            title: 'Laporan STO Dalam Transit',
+            subtitle: 'Pelacakan pengiriman barang yang sedang dalam perjalanan antar outlet.',
+            canSelectOutlet: false,
+            selectedOutlet: user?.kode_outlet || '',
+            userOutletCode: user?.kode_outlet,
+            startDate: null,
+            endDate: null,
+            statusLabel: 'Dalam Perjalanan (IN_TRANSIT)',
+            summaryItems: [
+                { label: 'Total Pengiriman Transit', value: `${data.length} Dokumen` },
+                { label: 'Risiko Terlambat (>3 Hari)', value: `${delayedCount} Dokumen` },
+                { label: 'Total Nilai Transit', value: formatCurrency(totalNilai) },
+            ],
+            columns: [
+                { header: 'No. Dokumen', width: '130px' },
+                { header: 'Waktu Dikirim', width: '110px' },
+                { header: 'Dari Outlet' },
+                { header: 'Ke Outlet' },
+                { header: 'Lama Transit', align: 'center', width: '80px' },
+                { header: 'Nilai Transit', align: 'right', width: '110px' },
+            ],
+            rows: data.map((item) => [
+                item.document_number,
+                format(new Date(item.shipped_at), 'dd/MM/yyyy HH:mm'),
+                item.from_outlet_name || item.from_outlet || '-',
+                item.to_outlet_name || item.to_outlet || '-',
+                `${item.days_in_transit} Hari`,
+                formatCurrency(Number(item.grand_total || 0)),
+            ]),
+            totalRow: ['TOTAL', '', '', `${data.length} Dokumen`, '', formatCurrency(totalNilai)],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold font-serif tracking-tight text-zen-charcoal">Laporan STO Dalam Transit</h1>
-                    <p className="text-muted-foreground text-sm flex items-center gap-2">
-                        <Package className="h-4 w-4 text-zen-moss" />
-                        Pelacakan langsung pengiriman barang yang sedang dalam perjalanan antar outlet.
-                    </p>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold font-serif tracking-tight text-zen-charcoal">Laporan STO Dalam Transit</h1>
+                        <p className="text-muted-foreground text-sm flex items-center gap-2">
+                            <Package className="h-4 w-4 text-zen-moss" />
+                            Pelacakan langsung pengiriman barang yang sedang dalam perjalanan antar outlet.
+                        </p>
+                    </div>
+                    <Button
+                        onClick={handlePrintReport}
+                        disabled={isLoading || data.length === 0}
+                        variant="outline"
+                        className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                    >
+                        <Printer className="h-4 w-4" />
+                        Cetak
+                    </Button>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

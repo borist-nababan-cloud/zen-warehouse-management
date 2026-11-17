@@ -11,8 +11,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Download, DollarSign, Clock, AlertCircle } from 'lucide-react'
+import { Download, DollarSign, Clock, AlertCircle, Printer } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
+import { printReportA4 } from '@/utils/reportPrintUtils'
 
 export default function ApAgingReportPage() {
     const { user } = useAuthUser()
@@ -68,6 +70,58 @@ export default function ApAgingReportPage() {
         document.body.removeChild(link)
     }
 
+    const handlePrintReport = async () => {
+        if (!agingData.length) {
+            toast.error('Tidak ada data untuk dicetak')
+            return
+        }
+
+        const totalCurrent = agingData.reduce((s, i) => s + (i.bucket_current || 0), 0)
+        const total1_30 = agingData.reduce((s, i) => s + (i.bucket_1_30 || 0), 0)
+        const total31_60 = agingData.reduce((s, i) => s + (i.bucket_31_60 || 0), 0)
+        const total60Plus = agingData.reduce((s, i) => s + (i.bucket_60_plus || 0), 0)
+
+        await printReportA4({
+            title: 'Laporan Umur Hutang (AP Aging)',
+            subtitle: 'Rincian kewajiban hutang jatuh tempo berdasarkan kreditur.',
+            canSelectOutlet: false,
+            selectedOutlet: user?.kode_outlet || '',
+            userOutletCode: user?.kode_outlet,
+            startDate: null,
+            endDate: null,
+            statusLabel: 'Hutang Berjalan',
+            summaryItems: [
+                { label: 'Total Hutang', value: formatCurrency(totalDebt) },
+                { label: 'Belum Jatuh Tempo', value: formatCurrency(healthyDebt) },
+                { label: 'Jatuh Tempo (Overdue)', value: formatCurrency(overdueDebt) },
+            ],
+            columns: [
+                { header: 'Nama Kreditur' },
+                { header: 'Total Hutang', align: 'right', width: '105px' },
+                { header: 'Belum JT', align: 'right', width: '90px' },
+                { header: '1-30 Hari', align: 'right', width: '90px' },
+                { header: '31-60 Hari', align: 'right', width: '90px' },
+                { header: '> 60 Hari', align: 'right', width: '90px' },
+            ],
+            rows: agingData.map((item) => [
+                item.creditor_name || '-',
+                formatCurrency(item.total_outstanding || 0),
+                formatCurrency(item.bucket_current || 0),
+                formatCurrency(item.bucket_1_30 || 0),
+                formatCurrency(item.bucket_31_60 || 0),
+                formatCurrency(item.bucket_60_plus || 0),
+            ]),
+            totalRow: [
+                `TOTAL (${agingData.length} Kreditur)`,
+                formatCurrency(totalDebt),
+                formatCurrency(totalCurrent),
+                formatCurrency(total1_30),
+                formatCurrency(total31_60),
+                formatCurrency(total60Plus),
+            ],
+        })
+    }
+
     return (
         <DashboardLayout>
             <div className="space-y-6 pb-20 p-6">
@@ -77,14 +131,26 @@ export default function ApAgingReportPage() {
                         <h1 className="text-2xl font-bold tracking-tight text-gray-900">AP Aging Report</h1>
                         <p className="text-muted-foreground">Detailed breakdown of overdue debts by creditor.</p>
                     </div>
-                    <Button
-                        onClick={handleExport}
-                        variant="outline"
-                        className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                    >
-                        <Download className="mr-2 h-4 w-4" />
-                        Export CSV
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handlePrintReport}
+                            disabled={isLoading || agingData.length === 0}
+                            variant="outline"
+                            className="gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Cetak
+                        </Button>
+                        <Button
+                            onClick={handleExport}
+                            disabled={isLoading || agingData.length === 0}
+                            variant="outline"
+                            className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                        >
+                            <Download className="mr-2 h-4 w-4" />
+                            Export CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}

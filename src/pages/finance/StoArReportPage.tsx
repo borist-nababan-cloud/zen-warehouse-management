@@ -39,7 +39,7 @@ export default function StoArReportPage() {
     const [selectedOutlet, setSelectedOutlet] = useState<string>('')
     const [availableOutlets, setAvailableOutlets] = useState<MasterOutlet[]>([])
 
-    const canSelectOutlet = [5, 8, 13, 14].includes(Number(user?.user_role))
+    const canSelectOutlet = [5, 8, 13].includes(Number(user?.user_role))
 
     // Filters - Default to Start of Previous Month to catch recent history
     const [startDate, setStartDate] = useState<string>(() => {
