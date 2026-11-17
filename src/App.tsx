@@ -89,6 +89,8 @@ import StoSettlementPage from '@/pages/finance/StoSettlementPage'
 import StoArReportPage from '@/pages/finance/StoArReportPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
+import { TutorialPage } from '@/pages/TutorialPage'
+import { PWAInstallBanner } from '@/components/PWAInstallBanner'
 import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
 import { GalleryPage } from '@/pages/web/GalleryPage'
 import { ServicesMenuPage } from '@/pages/web/ServicesMenuPage'
@@ -920,6 +922,16 @@ function App() {
             }
           />
 
+          {/* Tutorial Aplikasi (User Guide) */}
+          <Route
+            path="/tutorial"
+            element={
+              <ProtectedRoute>
+                <TutorialPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Change Password Page */}
           <Route
             path="/change-password"
@@ -1138,8 +1150,9 @@ function App() {
           />
         </Routes>
 
-        {/* Toast Notifications */}
+        {/* Toast Notifications & PWA Install Banner */}
         <Toaster position="top-right" richColors />
+        <PWAInstallBanner />
       </BrowserRouter>
     </QueryClientProvider >
   )

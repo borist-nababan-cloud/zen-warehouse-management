@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthUser } from '@/hooks/useAuth'
+import { usePWAInstall } from '@/hooks/usePWAInstall'
 import { cn } from '@/lib/utils'
 import {
   Warehouse,
@@ -43,6 +44,7 @@ import {
   Scale,
   Banknote,
   CreditCard,
+  Download,
   List,
   Wallet,
   PackageCheck,
@@ -547,6 +549,8 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const { user } = useAuthUser()
   const signOut = useSignOut()
   const { isDark, toggleTheme } = useTheme()
+  const { isInstalled, isInstallable, isIOSSafari, promptInstall } = usePWAInstall()
+  const [showInstallHelp, setShowInstallHelp] = useState(false)
 
   const navbarTitle = import.meta.env.VITE_NAVBAR_TITLE || 'WMS'
 
@@ -847,13 +851,45 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                 {user.outlet.name_outlet}
               </p>
             )}
+            {!isInstalled && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (isInstallable) {
+                    const accepted = await promptInstall()
+                    if (!accepted) setShowInstallHelp(true)
+                  } else {
+                    setShowInstallHelp(true)
+                  }
+                }}
+                className="w-full mt-2 min-h-7 h-auto py-1.5 px-2.5 text-[11px] leading-tight border-zen-matcha/50 bg-zen-matcha/10 hover:bg-zen-matcha/20 text-zen-moss font-semibold whitespace-normal text-left justify-start"
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5 shrink-0 text-zen-matcha" />
+                <span>Install Aplikasi ini Pada Perangkat Anda</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
                 if (onNavigate) onNavigate()
               }}
-              className="w-full mt-2 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
+              className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
+              asChild
+            >
+              <Link to="/tutorial">
+                <BookOpen className="mr-1.5 h-3 w-3 text-zen-moss" />
+                Tutorial Aplikasi
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (onNavigate) onNavigate()
+              }}
+              className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
               asChild
             >
               <Link to="/change-password">
@@ -907,6 +943,35 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           {!isCollapsed && <span>Keluar Akun</span>}
         </Button>
       </div>
+
+      {showInstallHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:hidden">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-zen-stone border border-zen-sand/50 p-5 shadow-xl space-y-3">
+            <h3 className="font-bold text-sm text-zen-charcoal dark:text-zen-linen">
+              Pasang Zen WHMS ke Perangkat
+            </h3>
+            {isIOSSafari ? (
+              <ol className="space-y-2 text-xs text-zen-charcoal dark:text-zen-linen/90 list-decimal pl-4">
+                <li>Ketuk ikon <strong>Bagikan (Share)</strong> di bilah Safari.</li>
+                <li>Pilih <strong>Tambah ke Layar Utama (Add to Home Screen)</strong>.</li>
+                <li>Ketuk <strong>Tambah</strong> di pojok kanan atas.</li>
+              </ol>
+            ) : (
+              <ol className="space-y-2 text-xs text-zen-charcoal dark:text-zen-linen/90 list-decimal pl-4">
+                <li>Pastikan tidak membuka dalam mode <em>Incognito / Tamu</em>.</li>
+                <li>Pada <strong>Chrome / Edge Desktop</strong>: klik ikon <strong>Instal</strong> di sisi kanan bilah alamat URL, atau buka menu <strong>⋮ / ⋯ → Simpan &amp; bagikan → Instal Zen Warehouse Management</strong>.</li>
+                <li>Pada <strong>Android Chrome</strong>: ketuk menu <strong>⋮ → Instal aplikasi / Tambahkan ke layar utama</strong>.</li>
+              </ol>
+            )}
+            <Button
+              onClick={() => setShowInstallHelp(false)}
+              className="w-full bg-zen-matcha hover:bg-zen-moss text-white text-xs h-8"
+            >
+              Mengerti
+            </Button>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

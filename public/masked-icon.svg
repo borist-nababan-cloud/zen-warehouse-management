@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#889D35" stroke-width="44" stroke-linecap="round" stroke-dasharray="1200 200" transform="rotate(-30 256 256)" />
+  <text x="256" y="240" font-family="system-ui, -apple-system, sans-serif" font-size="88" font-weight="900" fill="#2C2C2A" text-anchor="middle" letter-spacing="4">ZEN</text>
+  <text x="256" y="295" font-family="system-ui, -apple-system, sans-serif" font-size="34" font-weight="600" fill="#5F6B38" text-anchor="middle" letter-spacing="1">INTERNAL</text>
+</svg>

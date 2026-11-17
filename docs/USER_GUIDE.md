@@ -39,9 +39,41 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 * **Ganti Mode Gelap (Zen Dark Mode)**:
   - Klik tombol **Ganti Mode Gelap** di bagian bawah sidebar untuk mengaktifkan tema malam (*River Stone Palette*) yang nyaman di mata untuk shift malam.
   - Klik kembali untuk beralih ke mode terang (*Zen Linen*). Pilihan tema tersimpan otomatis di perangkat Anda.
+* **Tutorial Aplikasi (Panduan Pengguna)**:
+  - Tersedia di bagian bawah sidebar (tepat di atas **Ubah Kata Sandi**) untuk seluruh pengguna.
+  - Membuka panduan operasional WHMS terbaru langsung di dalam aplikasi lengkap dengan **Daftar Isi**, **Pencarian Topik**, dan tombol **Cetak Panduan**.
 * **Ubah Kata Sandi**:
   - Tersedia di sidebar bawah untuk pengguna email & kata sandi.
   - *Catatan:* Pengguna yang masuk via Google OAuth akan mendapatkan notifikasi bahwa kata sandi dikelola langsung melalui akun Google masing-masing.
+
+---
+
+### D. Memasang Aplikasi ke Perangkat (PWA / Install to Device)
+WHMS mendukung teknologi **Progressive Web App (PWA)** sehingga dapat dipasang langsung ke layar utama HP, tablet gudang, maupun komputer kasir seperti aplikasi *native* (tanpa perlu mengunduh dari Play Store/App Store):
+
+1. **Melalui Banner Otomatis di Aplikasi:**
+   - Saat membuka WHMS pertama kali di browser yang mendukung, akan muncul kartu **"Pasang Zen WHMS"** di pojok kiri bawah layar.
+   - Klik tombol **Pasang Aplikasi**, lalu konfirmasi **Install / Pasang**.
+
+2. **Perangkat Android (Google Chrome / Edge):**
+   - Buka tautan resmi WHMS di **Google Chrome**.
+   - Jika banner belum muncul, ketuk ikon menu titik tiga (`⋮`) di pojok kanan atas browser.
+   - Pilih **Tambahkan ke layar utama (Add to Home screen)** atau **Instal aplikasi (Install app)**, lalu ketuk **Instal**.
+   - Ikon **Zen WHMS** akan muncul di layar utama Android Anda dan terbuka dalam mode layar penuh (*standalone*).
+
+3. **Perangkat iPhone / iPad (Safari iOS):**
+   - Buka tautan resmi WHMS menggunakan peramban **Safari**.
+   - Ketuk tombol **Bagikan (Share)** (ikon kotak dengan panah ke atas) di bilah navigasi Safari (atau klik **Pasang Aplikasi** pada banner untuk melihat panduan visual).
+   - Gulir ke bawah dan pilih **Tambah ke Layar Utama (Add to Home Screen)**.
+   - Ketuk **Tambah (Add)** di pojok kanan atas.
+
+4. **Komputer / Laptop Windows & macOS (Google Chrome / Microsoft Edge):**
+   - Buka tautan resmi WHMS di **Chrome** atau **Edge**.
+   - Klik ikon **Instal (komputer dengan tanda panah / `+`)** di sisi kanan bilah alamat URL browser, atau buka menu browser (`⋮` / `...`) $\rightarrow$ **Simpan dan bagikan / Apps** $\rightarrow$ **Instal Zen Warehouse Management**.
+   - Aplikasi akan terpasang sebagai jendela aplikasi mandiri dan memiliki pintasan di Desktop / Start Menu.
+
+> [!NOTE]
+> **Koneksi Internet & Pembaruan Otomatis:** Fitur PWA di WHMS mempercepat pemuatan antarmuka aplikasi, namun **koneksi internet tetap diperlukan** saat mencatat transaksi stok, Stock Opname, atau keuangan agar data selalu tersinkronisasi *real-time* dengan server pusat. Setiap pembaruan sistem akan otomatis terpasang saat aplikasi dibuka kembali.
 
 ---
 

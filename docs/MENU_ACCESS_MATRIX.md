@@ -230,6 +230,15 @@ This document outlines the authoritative role-based access permissions for each 
 
 ---
 
+### 3.14. Utilitas Pengguna & Bantuan (Account & Tutorial)
+**Grup Akses Sidebar (Bawah Sidebar):** Seluruh Role Terautentikasi
+| Menu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
+|:---|:---|:---:|:---:|:---:|:---|
+| **Tutorial Aplikasi** | `/tutorial` | `BookOpen` | **Semua Role** | `<ProtectedRoute>` | Pratinjau interaktif panduan pengguna resmi (`docs/USER_GUIDE.md`) dengan Daftar Isi, pencarian cepat, dan cetak panduan (tombol berada di atas `Ubah Kata Sandi`). |
+| **Ubah Kata Sandi** | `/change-password` | `Lock` | **Semua Role** | `<ProtectedRoute>` | Penggantian kata sandi akun email/password (pengguna Google OAuth mendapat notifikasi informasi). |
+
+---
+
 ## 4. Matriks Ringkas Akses Menu per Role
 
 | Modul / Menu Grup | 1 Admin Holding | 2 Master HRD | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 13 Supervisor | 14 Auditor | 18 Web Admin | 19 Resepsionis |
