@@ -35,7 +35,7 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 ---
 
 ### C. Antarmuka Utama & Zen Dark Mode
-* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dasbor Utama*, *Inventaris & Stok*, *Penerimaan Barang (GR)*, *Pengeluaran Barang (GI)*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
+* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dasbor Utama*, *Inventaris & Stok*, *Penerimaan Barang (GR)*, *Pengeluaran Barang (GI)*, *Jual Customer*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
 * **Ganti Mode Gelap (Zen Dark Mode)**:
   - Klik tombol **Ganti Mode Gelap** di bagian bawah sidebar untuk mengaktifkan tema malam (*River Stone Palette*) yang nyaman di mata untuk shift malam.
   - Klik kembali untuk beralih ke mode terang (*Zen Linen*). Pilihan tema tersimpan otomatis di perangkat Anda.
@@ -158,6 +158,26 @@ Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, 
    - Tersedia tombol pratinjau (*live preview*), ganti foto, dan hapus foto.
 4. **Saklar Alih Aktif / Nonaktif (`is_active`):**
    - Admin web dapat mengaktifkan atau menonaktifkan fasilitas tertentu dari tampilan website publik kapan saja secara instan tanpa menghapus rekaman data.
+
+---
+
+### G. Master Customer B2B (`Master Data > Customer`)
+> [!NOTE]
+> Hak akses menu **Master Data > Customer**:
+> - **Role 6 (Admin Outlet)**: Dapat melakukan CRUD data customer yang **terkunci ketat hanya pada cabang miliknya sendiri** (`kode_outlet`).
+> - **Role 5 (Finance), Role 8 (Superuser), & Role 13 (Supervisor / Direksi)**: Dapat membuka dan memfilter data customer untuk **seluruh outlet** (`Semua Outlet` atau cabang tertentu).
+
+Menu ini digunakan untuk mengelola daftar pelanggan B2B (instansi, hotel, mitra korporasi, atau reseller) yang melakukan pembelian barang langsung dari gerai Zen Family Spa:
+1. **Identitas Customer Perusahaan**:
+   - **Gerai / Outlet**: Untuk Role 5, 8, dan 13 saat menambah data baru, pilih outlet pemilik data customer (Role 6 otomatis terikat ke cabangnya sendiri).
+   - **Nama Customer / Perusahaan** (*wajib diisi*), **Alamat Lengkap**, **Kota**, **No. Telepon Perusahaan**, dan **Email Perusahaan**.
+2. **Informasi PIC (*Person In Charge*)**:
+   - Menyimpan kontak penanggung jawab langsung di pihak customer: **Nama PIC (`pic_name`)**, **No. HP / WA PIC (`pic_phone`)**, dan **Email PIC (`pic_mail`)**.
+   - Informasi PIC akan otomatis ikut tercetak pada dokumen **Surat Jalan (A5)** dan **Faktur Penjualan (A5)**.
+3. **Informasi Rekening Bank (Opsional)**:
+   - Pilih **Bank**, **Nomor Rekening**, dan **Nama Pemilik Rekening** untuk pencatatan profil pembayaran/rekening mitra customer.
+4. **Pencarian & Filter**:
+   - Cari data customer secara instan berdasarkan nama customer, kota, nama PIC, nomor HP PIC, atau email PIC.
 
 ---
 
@@ -431,6 +451,68 @@ Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purc
    - Pada kolom **Actions** (tepat di sebelah ikon **Cetak / Print**), klik ikon **Foto (`Lihat Foto Bukti STO`)** untuk membuka dialog perbandingan visual berdampingan (*Side-by-Side*):
      1. **Foto Pengiriman (Sender)** dari Outlet Pengirim.
      2. **Foto Penerimaan (Receiver)** dari Outlet Penerima.
+
+---
+
+## 6B. Penjualan B2B Customer (`Jual Customer`)
+
+Selain melayani tamu member di kasir POS, cabang juga dapat melayani transaksi penjualan barang **B2B ke Customer** (*Business-to-Business*). Secara alur kerja, transaksi ini merupakan kebalikan dari pengadaan barang dari pemasok (PO $\rightarrow$ GR $\rightarrow$ Faktur $\rightarrow$ Pelunasan), dengan pembagian tugas dan penguncian peran (*strict role*) sebagai berikut:
+
+### A. Pesanan Penjualan (`Jual Customer > Pesanan Penjualan`)
+> [!IMPORTANT]
+> Menu ini **dikunci murni hanya untuk Role 6 (Admin Outlet)** pada cabangnya sendiri (`kode_outlet`).
+1. Buka menu **Jual Customer > Pesanan Penjualan**, lalu klik **+ Buat Pesanan Penjualan**.
+2. **Informasi Dokumen Pesanan**:
+   - Nomor dokumen **`SO-{KODE_OUTLET}-{YYMM}-{XXXX}`** dihasilkan otomatis oleh sistem.
+   - Pilih **Customer (Pelanggan B2B)** dari daftar `master_customer` cabang Anda.
+   - Tentukan **Tanggal Pesanan**, **Perkiraan Tanggal Kirim**, dan **Ongkos Kirim (Rp)** (mendukung format ribuan `.` dan 2 desimal `,`).
+3. **Menambah Barang & Validasi Stok Aktual**:
+   - Klik **Tambah Barang**, lalu pilih produk pada dropdown **Pilih Barang / Produk**.
+   - Dropdown secara lengkap menampilkan seluruh barang yang tercatat pada saldo inventaris cabang Anda (mengikuti data stok pada *Laporan Kuantitas Stok* / *Laporan Nilai Stok*, termasuk barang hasil transfer STO dari cabang/holding lain) beserta **Stok Aktual** dan satuannya.
+   - **Validasi Ketat Kuantitas Pesanan**: Sistem selalu membandingkan `Jumlah Pesanan` dengan **Stok Aktual** di gerai Anda. Apabila jumlah pesanan melebihi stok aktual (atau stok aktual `0`), sistem menampilkan peringatan dan melarang penerbitan pesanan.
+   - **Harga Jual per Satuan**: Sistem otomatis mengisi harga default dari **`barang_prices.sell_price`**. Admin outlet dapat mengubah/menyesuaikan harga jual tersebut secara langsung untuk transaksi ini menggunakan format ribuan dan 2 desimal (`#.#,#0`).
+4. Klik **Simpan Draf (`DRAFT`)** untuk menyimpan sementara, atau **Terbitkan Pesanan (`ISSUED`)** agar siap diproses pengirimannya oleh staf gudang.
+
+---
+
+### B. Pengiriman Barang (Issue) & Surat Jalan A5 (`Jual Customer > Pengiriman Barang (Issue)`)
+> [!IMPORTANT]
+> Menu ini **dikunci murni hanya untuk Role 7 (Staf Gudang Outlet)** pada cabangnya sendiri (`kode_outlet`).
+1. Buka menu **Jual Customer > Pengiriman Barang (Issue)**.
+2. Pada bagian **Antrean Siap Kirim**, sistem menampilkan seluruh **Pesanan Penjualan** berstatus `ISSUED`. Klik **Proses Pengiriman**.
+3. Verifikasi **Qty Dikirim** untuk setiap item (minimal 1 barang $> 0$, tidak melebihi jumlah pesanan maupun stok aktual gudang). Jika suatu barang kosong di gudang, kuantitasnya dapat diisi `0`.
+4. Tambahkan **Catatan Pengiriman** dan unggah **Foto Bukti Pengiriman Barang** (opsional — kamera atau file galeri).
+5. Klik **Konfirmasi & Cetak Surat Jalan (A5)**:
+   - Sistem membuat dokumen pengiriman **`SJ-{KODE_OUTLET}-{YYMM}-{XXXX}`**, memperbarui status Pesanan Penjualan menjadi `SHIPPED`, dan **otomatis memotong saldo stok `inventory_balance`** gerai pengirim melalui trigger database.
+   - **Cetakan Surat Jalan Ukuran A5 (Setengah A4)**:
+     - Hanya menampilkan daftar barang dan **Kuantitas (Qty) + Satuan** (tanpa menampilkan nominal harga/rupiah).
+     - Mencantumkan 3 kolom tanda tangan kosong dengan garis `"_____________"`: **Penerima**, **Pengirim**, dan **Mengetahui**.
+     - Di bagian paling bawah dokumen tertera nama pencetak resmi: **`Dicetak oleh: {users_profile.full_name}`**.
+6. Staf gudang juga dapat mencetak ulang Surat Jalan kapan saja melalui tabel **Riwayat Surat Jalan & Cetak Ulang** di halaman yang sama.
+
+---
+
+### C. Faktur Penjualan & Cetakan A5 (`Jual Customer > Faktur Penjualan`)
+> [!IMPORTANT]
+> Menu ini **dikunci murni hanya untuk Role 6 (Admin Outlet)** pada cabangnya sendiri (`kode_outlet`).
+1. Buka menu **Jual Customer > Faktur Penjualan**.
+2. Pada tabel **Siap Diterbitkan Faktur**, pilih Pesanan Penjualan berstatus `SHIPPED` dan klik **Buat Faktur Penjualan**.
+3. **Hitung Ulang Aktual (*Re-count*) dari Pengiriman**:
+   - Sistem otomatis menarik rincian barang dari **Pengiriman Barang (Issue)** dan menghitung ulang **Subtotal Barang Aktual** berdasarkan **`Qty Kirim Aktual` $\times$ `Harga Jual Satuan`** (membandingkan kolom Qty SO vs Qty Kirim Aktual).
+4. **Diskon, Pajak (PPN) & Ongkos Kirim**:
+   - Masukkan **Diskon (Rp)** apabila ada potongan harga untuk customer.
+   - **Checkbox Pajak (PPN)**: Centang kotak **"Kenakan Pajak (PPN) & Tampilkan pada Cetakan Faktur"** jika transaksi dikenakan pajak. Nilai tarif pajak default adalah **`11%`** dan **dapat diubah** sesuai kebutuhan (misal `11%`, `12%`, dll.).
+   - Sesuaikan **Ongkos Kirim (Rp)** jika diperlukan (nilai awal diambil otomatis dari Pesanan Penjualan).
+   - **Rumus Perhitungan Otomatis**:
+     $$\text{DPP Setelah Diskon} = \max(0, \text{Subtotal Barang Aktual} - \text{Diskon})$$
+     $$\text{Pajak} = \text{Jika Pajak Dicentang} \rightarrow \text{DPP Setelah Diskon} \times \frac{\text{Tarif Pajak \%}}{100}$$
+     $$\text{Grand Total} = \text{DPP Setelah Diskon} + \text{Pajak} + \text{Ongkos Kirim}$$
+5. Isi **Tanggal Faktur**, **Tanggal Jatuh Tempo**, dan **Catatan** (opsional), lalu klik **Terbitkan & Cetak Faktur (A5)**.
+6. **Cetakan Faktur Penjualan Ukuran A5 (Setengah A4)**:
+   - Menampilkan rincian item terkirim aktual, harga satuan, subtotal, diskon, ongkos kirim, dan grand total.
+   - **Baris Pajak (PPN) hanya ditampilkan pada cetakan apabila checkbox Pajak dicentang**.
+   - Mencantumkan 2 kolom tanda tangan kosong dengan garis `"_____________"`: **Dibuat Oleh** dan **Mengetahui**.
+   - Di bagian paling bawah dokumen tertera: **`Dicetak oleh: {users_profile.full_name}`**.
 
 ---
 
@@ -791,7 +873,7 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
 
 Menu **Keuangan & Akuntansi** kini dikelompokkan berdasarkan alur hutang dan piutang agar pengelolaan keuangan cabang lebih terstruktur:
 - **Sub-grup `Pembayaran (AP)`**: `Pembayaran Hutang Supplier`, `Pelunasan STO`, `Laporan Umur Hutang (AP)`, dan `Laporan Faktur Pembelian`.
-- **Sub-grup `Penerimaan (AR)`**: `Penyelesaian STO` dan `Laporan Piutang STO`.
+- **Sub-grup `Penerimaan (AR)`**: `Penyelesaian STO`, `Laporan Piutang STO`, dan `Pelunasan Customer`.
 - **Menu Utama `Keuangan & Akuntansi`**: `Daftar Rekening & Kas`, `Transaksi Kas & Bank`, `Master Categori Transaksi`, dan `Laporan Arus Kas`.
 
 ### A. Transaksi Kas Masuk & Kas Keluar
@@ -818,6 +900,22 @@ Menu **Keuangan & Akuntansi** kini dikelompokkan berdasarkan alur hutang dan piu
 2. Halaman ini memuat daftar klaim dana transfer barang yang dikirimkan ke outlet lain dengan status `WAITING CLAIM`.
 3. Klik **Konfirmasi Penerimaan Dana**, pilih rekening deposit penerima, dan verifikasi nominal.
 4. Klik **Konfirmasi**. Status transaksi tuntas (*COMPLETED*) dan saldo kas/bank bertambah.
+
+---
+
+### D. Pelunasan Piutang Customer (`Keuangan & Akuntansi > Penerimaan (AR) > Pelunasan Customer`)
+> [!IMPORTANT]
+> Menu ini **dikunci murni hanya untuk Role 6 (Admin Outlet)** pada cabangnya sendiri (`kode_outlet`).
+1. Buka menu **Keuangan & Akuntansi > Penerimaan (AR) > Pelunasan Customer**.
+2. Halaman menampilkan daftar **Faktur Penjualan Customer (`cst_invoices`)** yang berstatus **`UNPAID`** serta tab riwayat faktur yang sudah **`PAID`**.
+3. Klik **Konfirmasi Pelunasan** pada faktur yang telah dibayar oleh customer.
+4. Pada dialog konfirmasi:
+   - Pilih **Masuk ke Kas/Bank** (`master_financial_accounts` milik cabang Anda).
+   - Tentukan **Tanggal Diterima** dan tambahkan **Catatan** (misal: nomor bukti transfer bank) bila perlu.
+5. Klik **Konfirmasi Pelunasan**. Sistem mengeksekusi RPC `confirm_cst_payment_receipt` secara atomik:
+   - Mengubah status Faktur Penjualan dan Pesanan Penjualan terkait menjadi **`PAID`**.
+   - Menyimpan bukti penerimaan ke `cst_payments_in`.
+   - Mencatat transaksi kas masuk (`IN`) ke `finance_general_transactions` sehingga saldo kas/bank bertambah otomatis dan langsung muncul di **Laporan Arus Kas**.
 
 ---
 
@@ -858,6 +956,14 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
    - **Akses Role 14 (Manager Cabang)**: Role 14 dapat membuka 13 menu laporan lintas modul (**Kinerja Pemasok**, **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier**, **Laporan Item Order STO [Penerimaan & Pengiriman]**, **Laporan Penerimaan STO**, **Daftar Item Penerimaan STO**, **Ringkasan Laporan STO**, **Laporan Biaya & Hasil Produksi**, **Laporan Umur Hutang (AP)**, **Laporan Faktur Pembelian**, **Laporan Piutang STO**, dan **Laporan Arus Kas**) dengan data yang **selalu terkunci pada `kode_outlet` cabangnya sendiri**.
 8. **Laporan Biaya & Hasil Produksi (`Produksi > Laporan Biaya & Hasil`)**:
    - Evaluasi efisiensi racikan, persentase rendemen hasil (*yield percentage*), dan varians biaya produksi.
+9. **Laporan Penjualan & Pengiriman B2B Customer (`Jual Customer`)**:
+   - **Hak Akses Laporan**: **Role 6 & Role 7** terkunci pada data cabangnya sendiri (`kode_outlet`), sedangkan **Role 5, Role 8, & Role 13** dapat membuka data untuk **semua outlet** atau memilih outlet tertentu.
+   - **Lap. Pengiriman Barang (`Jual Customer > Lap. Pengiriman Barang`)**:
+     - Menyajikan rincian item pengiriman barang kepada customer dengan filter **Rentang Tanggal** dan kotak pencarian **Nama Customer (`master_customer.name`)**.
+     - **Hanya menampilkan Kuantitas (Qty)** barang pesan vs barang dikirim beserta satuan (tanpa informasi harga). Dilengkapi tombol **Cetak (A4)** dan **Ekspor CSV**.
+   - **Lap. Penjualan (`Jual Customer > Lap. Penjualan`)**:
+     - Menyajikan rekapitulasi **Pesanan Penjualan** lengkap dengan filter **Rentang Tanggal**, **Status** (termasuk status **`PAID`**), dan pencarian **Nama Customer (`master_customer.name`)**.
+     - Dilengkapi tombol aksi langsung di setiap baris untuk **Cetak Ulang Surat Jalan (A5)** dan **Cetak Ulang Faktur Penjualan (A5)**, serta tombol **Cetak (A4)** dan **Ekspor CSV**.
 
 ---
 

@@ -2,7 +2,7 @@
 
 This document outlines the authoritative role-based access permissions for each menu item, group, and route in the **Zen Warehouse Management System (WHMS) & Backoffice** (`frontend\warehousemanagement`), synchronized with `src/components/layout/Sidebar.tsx` and `src/App.tsx`.
 
-*Last Updated: 14 November 2026*
+*Last Updated: 18 November 2026*
 
 ---
 
@@ -140,6 +140,7 @@ This document outlines the authoritative role-based access permissions for each 
 | **Pembayaran (AP) ▸ Laporan Faktur Pembelian** | `/finance/invoices-report` | `FileText` | **5, 6, 8, 10, 14** | `[1, 3, 5, 6, 8, 14]` | Laporan daftar faktur pembelian supplier dan status pelunasannya (Role 14 terkunci pada `kode_outlet` sendiri). |
 | **Penerimaan (AR) ▸ Penyelesaian STO** | `/finance/sto-settlement` | `Wallet` | **6, 10** | `[6, 10, 8]` | Konfirmasi penerimaan pembayaran STO dan pencatatan kas masuk via RPC database. |
 | **Penerimaan (AR) ▸ Laporan Piutang STO** | `/finance/sto-ar-report` | `TrendingUp` | **6, 10, 14** | `[6, 10, 14]` | Laporan saldo piutang dan hutang antar-cabang (Role 14 terkunci pada `kode_outlet` sendiri). |
+| **Penerimaan (AR) ▸ Pelunasan Customer** | `/finance/customer-settlement` | `Banknote` | **6** *(Strict)* | `[6]` *(Strict)* | Konfirmasi pelunasan Faktur Penjualan Customer B2B (`cst_invoices`), mengubah status menjadi `PAID`, dan mencatat kas masuk ke rekening outlet via `confirm_cst_payment_receipt` (terkunci murni untuk Role 6 pada cabang sendiri). |
 | **Daftar Rekening & Kas** | `/finance/accounts` | `DollarSign` | **6, 10** | `[1, 3, 6, 8]` | Pengelolaan bagan akun rekening bank dan kas kecil operasional cabang. |
 | **Transaksi Kas & Bank** | `/finance/general-transactions` | `Receipt` | **6, 10** | `[1, 3, 6, 8]` | Pencatatan penerimaan (IN) dan pengeluaran (OUT) kas operasional cabang. |
 | **Master Categori Transaksi** | `/finance/categories` | `Tag` | **5, 8** | `[5, 8]` | Master kategori keuangan kas/bank (**Kebijakan No-Delete**: hanya toggle aktif/nonaktif). |
@@ -168,6 +169,19 @@ This document outlines the authoritative role-based access permissions for each 
 | **Master Produk** | `/product` | `Tag` | **6, 10** | `[1, 5, 6, 8]` | Manajemen katalog barang, toggle linen binatu (`is_laundry`), dan upload foto produk (tanpa kamera / file browse). |
 | **Harga & Satuan** | `/price-unit` | `DollarSign` | **6, 10** | `[1, 5, 6, 8]` | Pengaturan satuan konversi (UOM base & purchase) serta harga beli dan jual format Rupiah. |
 | **Pemasok (Supplier)** | `/supplier` | `Truck` | **6, 10** | `[1, 5, 6, 8]` | Pengelolaan data vendor dan pemasok pengadaan barang gudang. |
+| **Customer** | `/customer` | `Users` | **5, 6, 8, 13** | `[5, 6, 8, 13]` | Pengelolaan data pelanggan B2B (`master_customer`) lengkap dengan informasi PIC (`pic_name`, `pic_phone`, `pic_mail`). Role 6 terkunci pada `kode_outlet` sendiri; Role 5, 8, 13 dapat membuka seluruh outlet. |
+
+---
+
+### 3.9B. Jual Customer (Penjualan B2B Customer)
+**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), Warehouse Staff (7), SUPERUSER (8), Supervisor / Direksi (13)
+| Submenu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
+|:---|:---|:---:|:---:|:---:|:---|
+| **Pesanan Penjualan** | `/customer-sales/orders` | `FileText` | **6** *(Strict)* | `[6]` *(Strict)* | Pembuatan dan pengelolaan Pesanan Penjualan B2B (`cst_sales_orders`), validasi stok aktual gerai (`inventory_balance`), harga jual (`barang_prices.sell_price`) dapat diedit format ribuan & 2 desimal, serta ongkos kirim. Terkunci murni untuk Role 6 pada `kode_outlet` sendiri. |
+| **Pengiriman Barang (Issue)** | `/customer-sales/shipments` | `Truck` | **7** *(Strict)* | `[7]` *(Strict)* | Pengeluaran barang fisik merujuk Pesanan Penjualan (memotong stok otomatis via trigger `trigger_cst_shipment_deduct`) dan cetak **Surat Jalan A5** (hanya Qty, 3 tanda tangan kosong, `Dicetak oleh` di bawah). Terkunci murni untuk Role 7 pada `kode_outlet` sendiri. |
+| **Faktur Penjualan** | `/customer-sales/invoicing` | `Receipt` | **6** *(Strict)* | `[6]` *(Strict)* | Menghitung ulang nilai berdasarkan kuantitas pengiriman aktual, input Diskon, checkbox Pajak (default 11%, dapat diubah), Ongkos Kirim, serta cetak **Faktur Penjualan A5** (pajak tampil hanya jika dicentang, 2 tanda tangan kosong, `Dicetak oleh`). Terkunci murni untuk Role 6 pada `kode_outlet` sendiri. |
+| **Lap. Pengiriman Barang** | `/customer-sales/report-shipments` | `PackageCheck` | **5, 6, 7, 8, 13** | `[5, 6, 7, 8, 13]` | Laporan rincian item pengiriman barang (hanya menampilkan Qty tanpa harga), filter rentang tanggal, dan pencarian nama customer. Role 6 & 7 terkunci pada `kode_outlet` sendiri; Role 5, 8, 13 dapat membuka semua outlet. |
+| **Lap. Penjualan** | `/customer-sales/report-sales` | `TrendingUp` | **5, 6, 7, 8, 13** | `[5, 6, 7, 8, 13]` | Laporan Pesanan Penjualan dengan filter rentang tanggal, status (termasuk `PAID`), pencarian nama customer, serta tombol cetak ulang **Surat Jalan (A5)** dan **Faktur Penjualan (A5)**. Role 6 & 7 terkunci pada `kode_outlet` sendiri; Role 5, 8, 13 dapat membuka semua outlet. |
 
 ---
 
@@ -263,6 +277,10 @@ This document outlines the authoritative role-based access permissions for each 
 | **Master Kategori Gudang**| — | — | — | — | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
 | **Master Produk & Harga** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
 | **Pemasok (Supplier)** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
+| **Customer (B2B)** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | ✅*(All)* | — | — | — |
+| **Jual Customer (SO, Faktur, AR)** | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — |
+| **Jual Customer (Issue Barang)** | — | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — |
+| **Lap. Jual & Kirim Customer** | — | — | — | — | ✅*(All)* | ✅*(Own)* | ✅*(Own)* | ✅*(All)* | — | ✅*(All)* | — | — | — |
 | **CRM Inbox Outlet** | — | — | — | — | ✅ | ✅ | — | ✅ | — | ✅ | — | — | ✅ |
 | **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | ✅ | — |
 | **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | ✅ | — |

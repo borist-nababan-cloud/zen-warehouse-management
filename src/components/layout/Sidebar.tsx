@@ -86,6 +86,7 @@ interface NavItem {
   path?: string
   icon: React.ElementType
   roleIds: RoleId[]  // Changed from 'roles' to 'roleIds'
+  strictRoles?: boolean // When true, Role 8/18 do not auto-bypass roleIds check
   badge?: string
   children?: NavItem[]  // For nested menu items
   defaultOpen?: boolean // For accordion groups
@@ -264,6 +265,7 @@ const financeGroup: NavGroup = {
       children: [
         { title: 'Penyelesaian STO', path: '/finance/sto-settlement', icon: Wallet, roleIds: [6, 10] },
         { title: 'Laporan Piutang STO', path: '/finance/sto-ar-report', icon: TrendingUp, roleIds: [6, 10, 14] },
+        { title: 'Pelunasan Customer', path: '/finance/customer-settlement', icon: Banknote, roleIds: [6], strictRoles: true },
       ],
     },
     { title: 'Daftar Rekening & Kas', path: '/finance/accounts', icon: DollarSign, roleIds: [6, 10] },
@@ -296,11 +298,24 @@ const laundryGroup: NavGroup = {
 /**
  * Master Data Navigation Groups
  */
+const customerSalesGroup: NavGroup = {
+  title: 'Jual Customer',
+  icon: Receipt,
+  roleIds: [5, 6, 7, 8, 13],
+  children: [
+    { title: 'Pesanan Penjualan', path: '/customer-sales/orders', icon: FileText, roleIds: [6], strictRoles: true },
+    { title: 'Pengiriman Barang (Issue)', path: '/customer-sales/shipments', icon: Truck, roleIds: [7], strictRoles: true },
+    { title: 'Faktur Penjualan', path: '/customer-sales/invoicing', icon: Receipt, roleIds: [6], strictRoles: true },
+    { title: 'Lap. Pengiriman Barang', path: '/customer-sales/report-shipments', icon: PackageCheck, roleIds: [5, 6, 7, 8, 13] },
+    { title: 'Lap. Penjualan', path: '/customer-sales/report-sales', icon: TrendingUp, roleIds: [5, 6, 7, 8, 13] },
+  ]
+}
+
 const masterDataGroups: NavGroup[] = [
   {
     title: 'Master Data',
     icon: Boxes,
-    roleIds: [5, 6, 7, 8, 10],
+    roleIds: [5, 6, 7, 8, 10, 13],
     defaultOpen: false,
     children: [
       {
@@ -344,6 +359,12 @@ const masterDataGroups: NavGroup[] = [
         path: '/supplier',
         icon: Truck,
         roleIds: [6, 10],
+      },
+      {
+        title: 'Customer',
+        path: '/customer',
+        icon: Users,
+        roleIds: [5, 6, 8, 13],
       },
     ],
   },
@@ -519,6 +540,7 @@ const allNavItems: (NavItem | NavGroup)[] = [
   ...navItems,
   goodsReceiptGroup,
   goodsIssuedGroup,
+  customerSalesGroup,
   stockTransferGroup,
   productionGroup,
   financeGroup,
@@ -579,7 +601,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
   const canAccessNavItem = (navItem: NavItem): boolean => {
     if (!user) return false
-    if (user.user_role === 8 || user.user_role === 18) return true
+    if (!navItem.strictRoles && (user.user_role === 8 || user.user_role === 18)) return true
     return navItem.roleIds.includes(user.user_role)
   }
 

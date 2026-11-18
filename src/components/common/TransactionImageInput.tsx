@@ -81,7 +81,7 @@ export async function compressImageIfNeeded(file: File): Promise<File> {
  */
 export async function uploadTransactionImage(
     file: File,
-    folder: 'sto-shipments' | 'sto-receipts' | 'goods-receipts',
+    folder: 'sto-shipments' | 'sto-receipts' | 'goods-receipts' | 'cst-shipments',
     outletCode: string
 ): Promise<string> {
     const processedFile = await compressImageIfNeeded(file)

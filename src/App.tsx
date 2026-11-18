@@ -29,6 +29,14 @@ import { OutletInfoPage } from './pages/master/OutletInfoPage'
 import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
 import { ShrinkageCategoriesPage } from './pages/master/ShrinkageCategoriesPage'
 import { SupplierPage } from '@/pages/master/SupplierPage'
+import { CustomerPage } from '@/pages/master/CustomerPage'
+import { CustomerSalesOrderListPage } from '@/pages/customer-sales/CustomerSalesOrderListPage'
+import { CustomerSalesOrderCreatePage } from '@/pages/customer-sales/CustomerSalesOrderCreatePage'
+import { CustomerGoodsIssuePage } from '@/pages/customer-sales/CustomerGoodsIssuePage'
+import { CustomerInvoicingPage } from '@/pages/customer-sales/CustomerInvoicingPage'
+import { ReportCustomerShipmentsPage } from '@/pages/customer-sales/ReportCustomerShipmentsPage'
+import { ReportCustomerSalesPage } from '@/pages/customer-sales/ReportCustomerSalesPage'
+import { CustomerSettlementPage } from '@/pages/finance/CustomerSettlementPage'
 import { UserManagementPage } from '@/pages/UserManagementPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
@@ -321,6 +329,76 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 5, 6, 8]}>
                 <SupplierPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Customer Page - Master Data */}
+          <Route
+            path="/customer"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13]}>
+                <CustomerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================================
+              B2B CUSTOMER SALES MODULE (Jual Customer)
+             ========================================= */}
+          <Route
+            path="/customer-sales/orders"
+            element={
+              <ProtectedRoute allowedRoles={[6]} strictRoles={true}>
+                <CustomerSalesOrderListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-sales/orders/create"
+            element={
+              <ProtectedRoute allowedRoles={[6]} strictRoles={true}>
+                <CustomerSalesOrderCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-sales/orders/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={[6]} strictRoles={true}>
+                <CustomerSalesOrderCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-sales/shipments"
+            element={
+              <ProtectedRoute allowedRoles={[7]} strictRoles={true}>
+                <CustomerGoodsIssuePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-sales/invoicing"
+            element={
+              <ProtectedRoute allowedRoles={[6]} strictRoles={true}>
+                <CustomerInvoicingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-sales/report-shipments"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 13]}>
+                <ReportCustomerShipmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-sales/report-sales"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 13]}>
+                <ReportCustomerSalesPage />
               </ProtectedRoute>
             }
           />
@@ -870,6 +948,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[6, 10]}>
                 <StoSettlementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/customer-settlement"
+            element={
+              <ProtectedRoute allowedRoles={[6]} strictRoles={true}>
+                <CustomerSettlementPage />
               </ProtectedRoute>
             }
           />

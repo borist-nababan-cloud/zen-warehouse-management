@@ -813,15 +813,15 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   2: ['dashboard', 'inventory', 'purchase-orders', 'users', 'hrd'],           // MASTER_HRD
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'inventory', 'product', 'price-unit', 'supplier', 'hrd'], // finance
-  6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier', 'users'], // outlet_admin
-  7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type'], // warehouse_staff
+  5: ['dashboard', 'finance', 'inventory', 'product', 'price-unit', 'supplier', 'hrd', 'customer', 'customer-sales'], // finance
+  6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier', 'users', 'customer', 'customer-sales'], // outlet_admin
+  7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type', 'customer-sales'], // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - blocked from login
   10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'], // Finance Outlet
   11: [],                                                                     // Pending ROLE_MENU_PERMISSION
   12: [],                                                                     // Pending ROLE_MENU_PERMISSION
-  13: ['hrd'],                                                                // Supervisor / Direksi (HRD & Report)
+  13: ['hrd', 'customer', 'customer-sales'],                                  // Supervisor / Direksi (HRD & Report)
   14: ['dashboard', 'inventory', 'hrd'],                                      // MANAGER (Persetujuan Opname & HRD)
   15: [],                                                                     // Pending ROLE_MENU_PERMISSION
   16: [],                                                                     // Pending ROLE_MENU_PERMISSION
@@ -1257,5 +1257,148 @@ export interface ViewReportInternalReturn {
   unit_cost_estimate: number
   total_value_recovered: number
   header_notes: string | null
+}
+
+// ============================================
+// B2B CUSTOMER SALES MODULE
+// ============================================
+
+export interface MasterCustomer {
+  kode_customer: string
+  kode_outlet: string
+  name: string
+  address: string | null
+  city: string | null
+  phone: string | null
+  email: string | null
+  pic_name: string | null
+  pic_phone: string | null
+  pic_mail: string | null
+  kode_bank: string | null
+  no_rekening: string | null
+  nama_rekening: string | null
+  created_at: string
+  created_by?: string | null
+  update_at?: string
+  update_by?: string | null
+}
+
+export interface MasterCustomerWithRelations extends MasterCustomer {
+  master_bank: MasterBank | null
+  master_outlet: MasterOutlet | null
+}
+
+export type CstSalesOrderStatus =
+  | 'DRAFT'
+  | 'ISSUED'
+  | 'SHIPPED'
+  | 'INVOICED'
+  | 'PAID'
+  | 'CANCELLED'
+
+export interface CstSalesOrderItem {
+  id: string
+  so_id: string
+  barang_id: number
+  qty_ordered: number
+  uom: string
+  price_per_unit: number
+  subtotal: number
+  created_at?: string
+  master_barang?: MasterBarang | null
+}
+
+export interface CstShipmentItem {
+  id: string
+  shipment_id: string
+  so_item_id: string
+  barang_id: number
+  qty_shipped: number
+  created_at?: string
+  master_barang?: MasterBarang | null
+  cst_sales_order_items?: CstSalesOrderItem | null
+}
+
+export interface CstShipment {
+  id: string
+  document_number: string
+  so_id: string
+  kode_outlet: string
+  kode_customer: string
+  shipment_date: string
+  shipped_by?: string | null
+  image_url?: string | null
+  notes?: string | null
+  created_at?: string
+  master_customer?: MasterCustomer | null
+  master_outlet?: MasterOutlet | null
+  cst_sales_orders?: CstSalesOrder | null
+  cst_shipment_items?: CstShipmentItem[]
+}
+
+export interface CstInvoice {
+  id: string
+  document_number: string
+  so_id: string
+  shipment_id?: string | null
+  kode_outlet: string
+  kode_customer: string
+  invoice_date: string
+  due_date?: string | null
+  subtotal_items: number
+  discount_amount: number
+  use_tax: boolean
+  tax_percent: number
+  tax_amount: number
+  shipping_cost: number
+  grand_total: number
+  payment_status: 'UNPAID' | 'PAID'
+  paid_at?: string | null
+  paid_account_id?: string | null
+  notes?: string | null
+  created_by?: string | null
+  created_at?: string
+  master_customer?: MasterCustomer | null
+  master_outlet?: MasterOutlet | null
+  cst_sales_orders?: CstSalesOrder | null
+  cst_shipments?: CstShipment | null
+}
+
+export interface CstSalesOrder {
+  id: string
+  document_number: string
+  kode_outlet: string
+  kode_customer: string
+  order_date: string
+  expected_delivery_date?: string | null
+  shipping_cost: number
+  total_items_amount: number
+  total_amount: number
+  status: CstSalesOrderStatus
+  notes?: string | null
+  created_by?: string | null
+  created_at?: string
+  update_by?: string | null
+  update_at?: string
+  master_customer?: MasterCustomer | null
+  master_outlet?: MasterOutlet | null
+  cst_sales_order_items?: CstSalesOrderItem[]
+  cst_shipments?: CstShipment[]
+  cst_invoices?: CstInvoice[]
+}
+
+export interface CstPaymentIn {
+  id: string
+  document_number: string
+  cst_invoice_id: string
+  so_id: string
+  kode_outlet: string
+  kode_customer: string
+  financial_account_id: string
+  amount: number
+  received_date: string
+  notes?: string | null
+  created_by?: string | null
+  created_at?: string
 }
 

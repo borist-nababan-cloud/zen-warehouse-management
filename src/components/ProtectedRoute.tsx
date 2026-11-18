@@ -23,6 +23,8 @@ interface ProtectedRouteProps {
   children: ReactNode
   /** Role IDs that are allowed to access this route. If undefined, any authenticated user can access. */
   allowedRoles?: RoleId[]
+  /** When true, strictly enforces allowedRoles without SUPERUSER/WEB_ADMIN auto-bypass */
+  strictRoles?: boolean
   /** Redirect path for unauthorized users. Defaults to '/login' */
   redirectTo?: string
 }
@@ -55,6 +57,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({
   children,
   allowedRoles,
+  strictRoles = false,
   redirectTo = '/login',
 }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuthUser()
@@ -78,8 +81,8 @@ export function ProtectedRoute({
 
   // Check role-based access
   if (allowedRoles && user) {
-    // SUPERUSER (8) and WEB_ADMIN (18) bypass all role checks
-    if (user.user_role === 8 || user.user_role === 18) {
+    // SUPERUSER (8) and WEB_ADMIN (18) bypass all role checks unless strictRoles is true
+    if (!strictRoles && (user.user_role === 8 || user.user_role === 18)) {
       return <>{children}</>
     }
 
