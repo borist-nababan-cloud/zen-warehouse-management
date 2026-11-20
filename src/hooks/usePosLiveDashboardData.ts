@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   MasterOutlet,
@@ -87,6 +87,12 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState<number>(30);
 
+  const isMountedRef = useRef<boolean>(true);
+  const isFetchingRef = useRef<boolean>(false);
+  const requestIdRef = useRef<number>(0);
+  const countdownRef = useRef<number>(30);
+  const fetchDataRef = useRef<() => Promise<void>>(async () => {});
+
   const initialOpDate = getAutoWIBOperationalDate();
   const [selectedDate, setSelectedDate] = useState<string>(initialOpDate.dateStr);
   const [isOvernightWindow, setIsOvernightWindow] = useState<boolean>(initialOpDate.isOvernight);
@@ -125,6 +131,10 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
   }, []);
 
   const fetchData = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
+    isFetchingRef.current = true;
+    let queryTimer: ReturnType<typeof setTimeout> | undefined;
+
     try {
       setLoading(true);
       setError(null);
@@ -133,18 +143,7 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
       const [y, m, d] = localDateStr.split('-').map(Number);
       const yymmdd = `${String(y).slice(-2)}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
 
-      const [
-        outletsRes,
-        masterTransRes,
-        detailsRes,
-        paymentDetailsRes,
-        rejectsRes,
-        gcPaymentsRes,
-        roomsRes,
-        absenRes,
-        karyawanRes,
-        targetsRes,
-      ] = await Promise.all([
+      const queriesPromise = Promise.all([
         supabase
           .from('master_outlet')
           .select('kode_outlet, name_outlet, alamat, no_telp, city, province, active')
@@ -200,6 +199,38 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
           .eq('year', y),
       ]);
 
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        queryTimer = setTimeout(() => {
+          reject(
+            new Error(
+              'Waktu muat data habis (timeout). Periksa koneksi internet lalu tekan Coba Lagi.'
+            )
+          );
+        }, 20_000);
+      });
+
+      const [
+        outletsRes,
+        masterTransRes,
+        detailsRes,
+        paymentDetailsRes,
+        rejectsRes,
+        gcPaymentsRes,
+        roomsRes,
+        absenRes,
+        karyawanRes,
+        targetsRes,
+      ] = await Promise.race([queriesPromise, timeoutPromise]).finally(() => {
+        if (queryTimer !== undefined) {
+          clearTimeout(queryTimer);
+          queryTimer = undefined;
+        }
+      });
+
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       if (outletsRes.error) throw new Error(`Outlets Error: ${outletsRes.error.message}`);
       if (masterTransRes.error) throw new Error(`Trans Master Error: ${masterTransRes.error.message}`);
       if (detailsRes.error) throw new Error(`Trans Detail Error: ${detailsRes.error.message}`);
@@ -234,6 +265,9 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
           .from('ot_pos_trans_payment_details')
           .select('id_payment, kode_outlet, namapromo, refpromo, vpromo, refdisc, vdisc, total, vredeem, refgift, vgift, vcash, payment1, bank1, refpayment1, vpayment1, payment2, bank2, refpayment2, vpayment2, rcpt, created_at')
           .in('id_payment', masterPayIds);
+        if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
+          return;
+        }
         if (extraPayments && extraPayments.length > 0) {
           for (const p of (extraPayments as PosPaymentDetails[])) {
             paymentMap.set(p.id_payment, p);
@@ -749,6 +783,10 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count);
 
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       setSummary({
         totalSales: globalTotalSales,
         totalTargetSales: globalTargetSales,
@@ -816,30 +854,75 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
       setAllActiveOutlets(rawOutlets);
       setLastUpdated(new Date());
     } catch (err: any) {
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return;
+      }
       console.error('POS Live Dashboard Data Fetch Error:', err);
       setError(err.message || 'Gagal memuat data POS Live Dashboard');
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestIdRef.current) {
+        isFetchingRef.current = false;
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+      }
     }
   }, [selectedDate, selectedOutletCode]);
 
+  fetchDataRef.current = fetchData;
+
   useEffect(() => {
-    fetchData();
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    countdownRef.current = 30;
+    setCountdown(30);
+    void fetchData();
   }, [fetchData]);
 
-  // 30s Countdown Timer
+  // 30s Countdown Timer (pauses when hidden, never triggers side-effects inside state updater)
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          fetchData();
-          return 30;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      const next = countdownRef.current - 1;
+      if (next <= 0) {
+        countdownRef.current = 30;
+        setCountdown(30);
+        if (!isFetchingRef.current) {
+          void fetchDataRef.current();
         }
-        return prev - 1;
-      });
+      } else {
+        countdownRef.current = next;
+        setCountdown(next);
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isFetchingRef.current) {
+        countdownRef.current = 30;
+        setCountdown(30);
+        void fetchDataRef.current();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const refresh = useCallback(() => {
+    countdownRef.current = 30;
+    setCountdown(30);
+    return fetchData();
   }, [fetchData]);
 
   return {
@@ -853,7 +936,7 @@ export function usePosLiveDashboardData(selectedOutletCode: string = 'ALL') {
     rejectionReasons,
     allActiveOutlets,
     countdown,
-    refresh: fetchData,
+    refresh,
     selectedDate,
     setSelectedDate,
     isOvernightWindow,

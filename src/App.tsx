@@ -121,6 +121,7 @@ import { EmployeeKpiPage } from '@/pages/hrd/EmployeeKpiPage'
 import { ReportEmployeeFaultsPage } from '@/pages/hrd/ReportEmployeeFaultsPage'
 import { ReportEmployeeKpiPage } from '@/pages/hrd/ReportEmployeeKpiPage'
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
+import { useAuthStateSync } from '@/hooks/useAuth'
 
 // ============================================
 // TANSTACK QUERY CONFIGURATION
@@ -156,9 +157,15 @@ const queryClient = new QueryClient({
 // APP COMPONENT
 // ============================================
 
+function AuthSessionSync() {
+  useAuthStateSync()
+  return null
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthSessionSync />
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}

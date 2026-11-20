@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
         devOptions: {
           enabled: true,
         },
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg', 'Logo150x150.png'],
+        includeAssets: [],
         manifest: {
           name: appName,
           short_name: 'Zen WHMS',
@@ -58,13 +58,12 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-              handler: 'NetworkOnly',
-            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

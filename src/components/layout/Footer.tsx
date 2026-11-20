@@ -4,7 +4,7 @@ export function Footer() {
     const currentYear = new Date().getFullYear()
 
     return (
-        <footer className="border-t border-zen-border bg-white/40 py-3.5 px-6 text-center text-xs text-zen-charcoal/60">
+        <footer className="shrink-0 border-t border-zen-border bg-white/40 py-3.5 px-6 text-center text-xs text-zen-charcoal/60">
             <p>
                 &copy; {currentYear} {companyName}. Hak Cipta Dilindungi. v{appVersion}
             </p>

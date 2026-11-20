@@ -7,6 +7,7 @@
  * UPDATED: Now uses RoleId (1-9) system instead of text-based roles
  */
 
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   signIn,
@@ -33,28 +34,46 @@ export const authQueryKeys = {
  * Hook to get the current authenticated user
  * Uses TanStack Query for caching and automatic refetching
  */
-export function useAuthUser() {
+export function useAuthStateSync() {
   const queryClient = useQueryClient()
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION') return
+
+      if (event === 'SIGNED_OUT') {
+        queryClient.setQueryData(authQueryKeys.user, null)
+        return
+      }
+
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED'
+      ) {
+        // Defer outside GoTrueClient's internal auth lock to prevent re-entrant deadlocks
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+        }, 0)
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [queryClient])
+}
+
+/**
+ * Hook to get the current authenticated user
+ * Uses TanStack Query for caching and automatic refetching
+ */
+export function useAuthUser() {
   const query = useQuery({
     queryKey: authQueryKeys.user,
     queryFn: getCurrentUser,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
-  })
-
-  // Set up auth state listener
-  // This ensures the UI updates when auth state changes
-  useQuery({
-    queryKey: authQueryKeys.session,
-    queryFn: async () => {
-      const unsubscribe = onAuthStateChange((_event, _session) => {
-        // Invalidate user query on auth state change
-        queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
-      })
-
-      return unsubscribe
-    },
   })
 
   return {
@@ -76,9 +95,11 @@ export function useSignIn() {
 
   return useMutation({
     mutationFn: (credentials: LoginFormData) => signIn(credentials),
-    onSuccess: () => {
-      // Invalidate user query to refetch after login
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+    onSuccess: (result) => {
+      if (result.isSuccess && result.data?.user) {
+        queryClient.setQueryData(authQueryKeys.user, result.data.user)
+        queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+      }
     },
   })
 }

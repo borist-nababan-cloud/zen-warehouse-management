@@ -560,12 +560,14 @@ const allNavItems: (NavItem | NavGroup)[] = [
 interface SidebarProps {
   className?: string
   onNavigate?: () => void
+  isMobile?: boolean
 }
 
 import { Footer } from './Footer'
 
-export function Sidebar({ className, onNavigate }: SidebarProps) {
+export function Sidebar({ className, onNavigate, isMobile = false }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const collapsed = isMobile ? false : isCollapsed
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const location = useLocation()
   const { user } = useAuthUser()
@@ -626,17 +628,309 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
     return 'children' in item
   }
 
+  const navContent = (
+    <ul className="space-y-1">
+      {availableItems.map((item) => {
+        const Icon = item.icon
+
+        // Handle NavGroup (Master Data with submenus)
+        if (isNavGroup(item)) {
+          // Check if group has any visible children for current user
+          const visibleChildren = item.children.filter((child) => {
+            if (!canAccessNavItem(child)) return false
+            if (child.children) {
+              return child.children.some(canAccessNavItem)
+            }
+            return true
+          })
+
+          if (visibleChildren.length === 0) {
+            return null
+          }
+
+          const hasActiveChild = item.children.some(hasActiveNavItem)
+          const isOpen = openGroups[item.title] ?? (hasActiveChild || item.defaultOpen) ?? false
+
+          return (
+            <li key={item.title}>
+              {/* Group Header */}
+              <button
+                onClick={() => toggleGroup(item.title)}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all',
+                  'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
+                  hasActiveChild && 'bg-zen-sand/20 text-zen-charcoal font-semibold border-l-2 border-zen-matcha'
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left font-medium">{item.title}</span>
+                    {isOpen ? (
+                      <ChevronUp className="h-4 w-4 shrink-0 text-zen-charcoal/60" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 shrink-0 text-zen-charcoal/60" />
+                    )}
+                  </>
+                )}
+              </button>
+
+              {/* Group Children */}
+              {!collapsed && isOpen && (
+                <ul className="ml-5 mt-1 space-y-1 pl-2 border-l border-zen-border/70">
+                  {item.children.map((child) => {
+                    const ChildIcon = child.icon
+
+                    // CHECK CHILD ROLE PERMISSION
+                    if (!canAccessNavItem(child)) {
+                      return null
+                    }
+
+                    // Nested sub-group (e.g. Penerimaan / Pengiriman inside Transfer Stok (STO))
+                    if (child.children && child.children.length > 0) {
+                      const visibleSubChildren = child.children.filter(canAccessNavItem)
+                      if (visibleSubChildren.length === 0) return null
+
+                      const subGroupKey = `${item.title}::${child.title}`
+                      const subHasActive = visibleSubChildren.some(hasActiveNavItem)
+                      const subIsOpen = openGroups[subGroupKey] ?? (subHasActive || child.defaultOpen) ?? false
+
+                      return (
+                        <li key={child.title}>
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(subGroupKey)}
+                            className={cn(
+                              'flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-xs transition-all',
+                              'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
+                              subHasActive && 'bg-zen-sand/20 text-zen-charcoal font-semibold'
+                            )}
+                          >
+                            <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                            <span className="flex-1 text-left font-medium">{child.title}</span>
+                            {subIsOpen ? (
+                              <ChevronUp className="h-3.5 w-3.5 shrink-0 text-zen-charcoal/60" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zen-charcoal/60" />
+                            )}
+                          </button>
+
+                          {subIsOpen && (
+                            <ul className="ml-3.5 mt-1 space-y-1 pl-2 border-l border-zen-border/70">
+                              {visibleSubChildren.map((subChild) => {
+                                const SubIcon = subChild.icon
+                                const subActive = subChild.path ? isActivePath(subChild.path) : false
+                                return (
+                                  <li key={subChild.path || subChild.title}>
+                                    <Link
+                                      to={subChild.path || '#'}
+                                      onClick={onNavigate}
+                                      className={cn(
+                                        'flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] transition-all',
+                                        'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/75',
+                                        subActive && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
+                                      )}
+                                    >
+                                      <SubIcon className="h-3 w-3 shrink-0" />
+                                      <span>{subChild.title}</span>
+                                    </Link>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      )
+                    }
+
+                    const active = child.path ? isActivePath(child.path) : false
+
+                    return (
+                      <li key={child.title}>
+                        <Link
+                          to={child.path || '#'}
+                          onClick={onNavigate}
+                          className={cn(
+                            'flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-xs transition-all',
+                            'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/75',
+                            active && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
+                          )}
+                        >
+                          <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span>{child.title}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </li>
+          )
+        }
+
+        // Handle regular NavItem
+        const active = item.path ? isActivePath(item.path) : false
+
+        return (
+          <li key={item.path}>
+            <Link
+              to={item.path || '#'}
+              onClick={onNavigate}
+              className={cn(
+                'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all',
+                'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
+                active && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
+              )}
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1">{item.title}</span>
+                  {item.badge && (
+                    <span className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                      active ? "bg-white/20 text-white" : "bg-zen-matcha/15 text-zen-moss"
+                    )}>
+                      {item.badge}
+                    </span>
+                  )}
+                </>
+              )}
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
+
+  const userFooterContent = (
+    <>
+      {!collapsed && user && (
+        <div className="mb-2.5 space-y-1 text-xs">
+          <p className="font-semibold text-zen-charcoal truncate">{user.email}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-block px-2 py-0.5 text-[10px] font-semibold bg-zen-matcha/15 text-zen-moss rounded-full">
+              {ROLE_LABELS[user.user_role]}
+            </span>
+            {user.kode_outlet && (
+              <span className="inline-block px-1.5 py-0.5 text-[10px] text-zen-charcoal/60 bg-zen-sand/20 rounded">
+                Gerai: {user.kode_outlet}
+              </span>
+            )}
+          </div>
+          {user.outlet && (
+            <p className="text-zen-charcoal/60 text-[11px] truncate">
+              {user.outlet.name_outlet}
+            </p>
+          )}
+          {!isInstalled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (isInstallable) {
+                  const accepted = await promptInstall()
+                  if (!accepted) setShowInstallHelp(true)
+                } else {
+                  setShowInstallHelp(true)
+                }
+              }}
+              className="w-full mt-2 min-h-7 h-auto py-1.5 px-2.5 text-[11px] leading-tight border-zen-matcha/50 bg-zen-matcha/10 hover:bg-zen-matcha/20 text-zen-moss font-semibold whitespace-normal text-left justify-start"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5 shrink-0 text-zen-matcha" />
+              <span>Install Aplikasi ini Pada Perangkat Anda</span>
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (onNavigate) onNavigate()
+            }}
+            className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
+            asChild
+          >
+            <Link to="/tutorial">
+              <BookOpen className="mr-1.5 h-3 w-3 text-zen-moss" />
+              Tutorial Aplikasi
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (onNavigate) onNavigate()
+            }}
+            className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
+            asChild
+          >
+            <Link to="/change-password">
+              <Lock className="mr-1.5 h-3 w-3 text-zen-moss" />
+              Ubah Kata Sandi
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleTheme}
+            className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal dark:hover:bg-zen-stone/40"
+          >
+            {isDark ? (
+              <>
+                <Sun className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
+                Ganti Mode Terang
+              </>
+            ) : (
+              <>
+                <Moon className="mr-1.5 h-3.5 w-3.5 text-zen-moss" />
+                Ganti Mode Gelap
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      {collapsed && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          title={isDark ? 'Ganti Mode Terang' : 'Ganti Mode Gelap'}
+          className="w-full mb-1 text-zen-charcoal/80 hover:bg-zen-sand/20 justify-center"
+        >
+          {isDark ? (
+            <Sun className="h-4 w-4 text-amber-500" />
+          ) : (
+            <Moon className="h-4 w-4 text-zen-moss" />
+          )}
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size={collapsed ? 'icon' : 'default'}
+        onClick={handleSignOut}
+        disabled={signOut.isPending}
+        className={cn('w-full gap-2 text-zen-charcoal/80 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs', collapsed && 'justify-center')}
+      >
+        <LogOut className="h-4 w-4" />
+        {!collapsed && <span>Keluar Akun</span>}
+      </Button>
+    </>
+  )
+
   return (
     <aside
       className={cn(
-        'flex flex-col border-r border-zen-border bg-white dark:bg-zen-stone transition-all duration-300 shadow-xs',
-        isCollapsed ? 'w-16' : 'w-64',
+        'flex flex-col h-full max-h-full overflow-hidden border-r border-zen-border bg-white dark:bg-zen-stone transition-all duration-300 shadow-xs',
+        collapsed ? 'w-16' : 'w-64',
         className
       )}
     >
       {/* Logo/Brand */}
-      <div className="flex h-16 items-center justify-between border-b border-zen-border/80 px-4 bg-white dark:bg-zen-stone">
-        {!isCollapsed ? (
+      <div className={cn(
+        'flex h-16 shrink-0 items-center justify-between border-b border-zen-border/80 px-4 bg-white dark:bg-zen-stone',
+        isMobile && 'pr-12'
+      )}>
+        {!collapsed ? (
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-9 h-9 rounded-xl bg-zen-matcha flex items-center justify-center shadow-xs overflow-hidden p-1 shrink-0">
               <img
@@ -666,305 +960,41 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
             />
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={cn('h-8 w-8 text-zen-charcoal/70 hover:text-zen-charcoal hover:bg-zen-sand/20', isCollapsed && 'mx-auto mt-2')}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
-        <ul className="space-y-1">
-          {availableItems.map((item) => {
-            const Icon = item.icon
-
-            // Handle NavGroup (Master Data with submenus)
-            if (isNavGroup(item)) {
-              // Check if group has any visible children for current user
-              const visibleChildren = item.children.filter((child) => {
-                if (!canAccessNavItem(child)) return false
-                if (child.children) {
-                  return child.children.some(canAccessNavItem)
-                }
-                return true
-              })
-
-              if (visibleChildren.length === 0) {
-                return null
-              }
-
-              const hasActiveChild = item.children.some(hasActiveNavItem)
-              const isOpen = openGroups[item.title] ?? (hasActiveChild || item.defaultOpen) ?? false
-
-              return (
-                <li key={item.title}>
-                  {/* Group Header */}
-                  <button
-                    onClick={() => toggleGroup(item.title)}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all',
-                      'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
-                      hasActiveChild && 'bg-zen-sand/20 text-zen-charcoal font-semibold border-l-2 border-zen-matcha'
-                    )}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    {!isCollapsed && (
-                      <>
-                        <span className="flex-1 text-left font-medium">{item.title}</span>
-                        {isOpen ? (
-                          <ChevronUp className="h-4 w-4 shrink-0 text-zen-charcoal/60" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 shrink-0 text-zen-charcoal/60" />
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  {/* Group Children */}
-                  {!isCollapsed && isOpen && (
-                    <ul className="ml-5 mt-1 space-y-1 pl-2 border-l border-zen-border/70">
-                      {item.children.map((child) => {
-                        const ChildIcon = child.icon
-
-                        // CHECK CHILD ROLE PERMISSION
-                        if (!canAccessNavItem(child)) {
-                          return null
-                        }
-
-                        // Nested sub-group (e.g. Penerimaan / Pengiriman inside Transfer Stok (STO))
-                        if (child.children && child.children.length > 0) {
-                          const visibleSubChildren = child.children.filter(canAccessNavItem)
-                          if (visibleSubChildren.length === 0) return null
-
-                          const subGroupKey = `${item.title}::${child.title}`
-                          const subHasActive = visibleSubChildren.some(hasActiveNavItem)
-                          const subIsOpen = openGroups[subGroupKey] ?? (subHasActive || child.defaultOpen) ?? false
-
-                          return (
-                            <li key={child.title}>
-                              <button
-                                type="button"
-                                onClick={() => toggleGroup(subGroupKey)}
-                                className={cn(
-                                  'flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-xs transition-all',
-                                  'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
-                                  subHasActive && 'bg-zen-sand/20 text-zen-charcoal font-semibold'
-                                )}
-                              >
-                                <ChildIcon className="h-3.5 w-3.5 shrink-0" />
-                                <span className="flex-1 text-left font-medium">{child.title}</span>
-                                {subIsOpen ? (
-                                  <ChevronUp className="h-3.5 w-3.5 shrink-0 text-zen-charcoal/60" />
-                                ) : (
-                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zen-charcoal/60" />
-                                )}
-                              </button>
-
-                              {subIsOpen && (
-                                <ul className="ml-3.5 mt-1 space-y-1 pl-2 border-l border-zen-border/70">
-                                  {visibleSubChildren.map((subChild) => {
-                                    const SubIcon = subChild.icon
-                                    const subActive = subChild.path ? isActivePath(subChild.path) : false
-                                    return (
-                                      <li key={subChild.path || subChild.title}>
-                                        <Link
-                                          to={subChild.path || '#'}
-                                          className={cn(
-                                            'flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] transition-all',
-                                            'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/75',
-                                            subActive && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
-                                          )}
-                                        >
-                                          <SubIcon className="h-3 w-3 shrink-0" />
-                                          <span onClick={onNavigate}>{subChild.title}</span>
-                                        </Link>
-                                      </li>
-                                    )
-                                  })}
-                                </ul>
-                              )}
-                            </li>
-                          )
-                        }
-
-                        const active = child.path ? isActivePath(child.path) : false
-
-                        return (
-                          <li key={child.title}>
-                            <Link
-                              to={child.path || '#'}
-                              className={cn(
-                                'flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-xs transition-all',
-                                'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/75',
-                                active && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
-                              )}
-                            >
-                              <ChildIcon className="h-3.5 w-3.5 shrink-0" />
-                              <span onClick={onNavigate}>{child.title}</span>
-                            </Link>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </li>
-              )
-            }
-
-            // Handle regular NavItem
-            const active = item.path ? isActivePath(item.path) : false
-
-            return (
-              <li key={item.path}>
-                <Link
-                  to={item.path || '#'}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all',
-                    'hover:bg-zen-matcha/10 hover:text-zen-moss text-zen-charcoal/80',
-                    active && 'bg-zen-matcha text-white font-medium shadow-xs hover:bg-zen-matcha/90 hover:text-white'
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {!isCollapsed && (
-                    <>
-                      <span className="flex-1" onClick={onNavigate}>{item.title}</span>
-                      {item.badge && (
-                        <span className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                          active ? "bg-white/20 text-white" : "bg-zen-matcha/15 text-zen-moss"
-                        )}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
-
-      {/* User Info & Sign Out */}
-      <div className="border-t border-zen-border/70 p-3 bg-zen-linen/60">
-        {!isCollapsed && user && (
-          <div className="mb-2.5 space-y-1 text-xs">
-            <p className="font-semibold text-zen-charcoal truncate">{user.email}</p>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-block px-2 py-0.5 text-[10px] font-semibold bg-zen-matcha/15 text-zen-moss rounded-full">
-                {ROLE_LABELS[user.user_role]}
-              </span>
-              {user.kode_outlet && (
-                <span className="inline-block px-1.5 py-0.5 text-[10px] text-zen-charcoal/60 bg-zen-sand/20 rounded">
-                  Gerai: {user.kode_outlet}
-                </span>
-              )}
-            </div>
-            {user.outlet && (
-              <p className="text-zen-charcoal/60 text-[11px] truncate">
-                {user.outlet.name_outlet}
-              </p>
-            )}
-            {!isInstalled && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (isInstallable) {
-                    const accepted = await promptInstall()
-                    if (!accepted) setShowInstallHelp(true)
-                  } else {
-                    setShowInstallHelp(true)
-                  }
-                }}
-                className="w-full mt-2 min-h-7 h-auto py-1.5 px-2.5 text-[11px] leading-tight border-zen-matcha/50 bg-zen-matcha/10 hover:bg-zen-matcha/20 text-zen-moss font-semibold whitespace-normal text-left justify-start"
-              >
-                <Download className="mr-1.5 h-3.5 w-3.5 shrink-0 text-zen-matcha" />
-                <span>Install Aplikasi ini Pada Perangkat Anda</span>
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (onNavigate) onNavigate()
-              }}
-              className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
-              asChild
-            >
-              <Link to="/tutorial">
-                <BookOpen className="mr-1.5 h-3 w-3 text-zen-moss" />
-                Tutorial Aplikasi
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (onNavigate) onNavigate()
-              }}
-              className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal"
-              asChild
-            >
-              <Link to="/change-password">
-                <Lock className="mr-1.5 h-3 w-3 text-zen-moss" />
-                Ubah Kata Sandi
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleTheme}
-              className="w-full mt-1.5 h-7 text-xs border-zen-border hover:bg-zen-sand/20 text-zen-charcoal dark:hover:bg-zen-stone/40"
-            >
-              {isDark ? (
-                <>
-                  <Sun className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
-                  Ganti Mode Terang
-                </>
-              ) : (
-                <>
-                  <Moon className="mr-1.5 h-3.5 w-3.5 text-zen-moss" />
-                  Ganti Mode Gelap
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-        {isCollapsed && (
+        {!isMobile && (
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleTheme}
-            title={isDark ? 'Ganti Mode Terang' : 'Ganti Mode Gelap'}
-            className="w-full mb-1 text-zen-charcoal/80 hover:bg-zen-sand/20 justify-center"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn('h-8 w-8 text-zen-charcoal/70 hover:text-zen-charcoal hover:bg-zen-sand/20', collapsed && 'mx-auto mt-2')}
           >
-            {isDark ? (
-              <Sun className="h-4 w-4 text-amber-500" />
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
             ) : (
-              <Moon className="h-4 w-4 text-zen-moss" />
+              <ChevronLeft className="h-4 w-4" />
             )}
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size={isCollapsed ? 'icon' : 'default'}
-          onClick={handleSignOut}
-          disabled={signOut.isPending}
-          className={cn('w-full gap-2 text-zen-charcoal/80 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs', isCollapsed && 'justify-center')}
-        >
-          <LogOut className="h-4 w-4" />
-          {!isCollapsed && <span>Keluar Akun</span>}
-        </Button>
       </div>
+
+      {isMobile ? (
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y flex flex-col">
+          <nav className="flex-1 p-2">
+            {navContent}
+          </nav>
+          <div className="mt-auto shrink-0 border-t border-zen-border/70 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-zen-linen/60">
+            {userFooterContent}
+          </div>
+        </div>
+      ) : (
+        <>
+          <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2">
+            {navContent}
+          </nav>
+          <div className="shrink-0 max-h-[45%] overflow-y-auto border-t border-zen-border/70 p-3 bg-zen-linen/60">
+            {userFooterContent}
+          </div>
+        </>
+      )}
 
       {showInstallHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:hidden">
@@ -1014,12 +1044,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zen-linen">
+    <div className="flex h-dvh overflow-hidden bg-zen-linen">
       {/* Desktop Sidebar */}
       <Sidebar className="hidden md:flex" />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         {/* Staging Top Banner */}
         {isStaging && (
           <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-white px-4 py-1.5 text-xs font-semibold flex items-center justify-center gap-2 shadow-xs shrink-0 select-none z-20 border-b border-amber-700/30">
@@ -1031,7 +1061,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
 
         {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b border-zen-border bg-white/80 dark:bg-zen-stone/80 backdrop-blur-md px-4 md:px-6 shadow-xs">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-zen-border bg-white/80 dark:bg-zen-stone/80 backdrop-blur-md px-4 md:px-6 shadow-xs">
           <div className="flex items-center gap-4">
             {/* Mobile Sidebar Trigger */}
             <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
@@ -1041,8 +1071,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72 border-r border-zen-border">
-                <Sidebar onNavigate={() => setIsMobileOpen(false)} className="w-full border-r-0" />
+              <SheetContent
+                side="left"
+                className="p-0 gap-0 w-72 max-w-[85vw] h-dvh max-h-dvh flex flex-col overflow-hidden border-r border-zen-border"
+              >
+                <Sidebar
+                  isMobile
+                  onNavigate={() => setIsMobileOpen(false)}
+                  className="w-full h-full border-r-0"
+                />
               </SheetContent>
             </Sheet>
 
