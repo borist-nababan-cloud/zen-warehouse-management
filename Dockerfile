@@ -12,8 +12,8 @@ WORKDIR /app
 # Copy package manifests
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies (force devDependencies even when Coolify passes NODE_ENV=production at build time)
+RUN NODE_ENV=development npm install --include=dev && NODE_ENV=development npm install --no-save @rollup/rollup-linux-x64-musl
 
 # Build Arguments (injected by Coolify during build)
 ARG VITE_SUPABASE_URL
@@ -23,6 +23,7 @@ ARG VITE_APP_VERSION="1.0.0"
 ARG VITE_COMPANY_NAME="Zen Family Spa & Reflexology"
 ARG VITE_NAVBAR_TITLE="ZEN WAREHOUSE"
 ARG VITE_APP_MODE="PROD"
+ARG VITE_VAPID_PUBLIC_KEY=""
 
 # Expose build arguments as environment variables for Vite bundle compilation
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
@@ -32,6 +33,7 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 ENV VITE_COMPANY_NAME=$VITE_COMPANY_NAME
 ENV VITE_NAVBAR_TITLE=$VITE_NAVBAR_TITLE
 ENV VITE_APP_MODE=$VITE_APP_MODE
+ENV VITE_VAPID_PUBLIC_KEY=$VITE_VAPID_PUBLIC_KEY
 
 # Copy source code
 COPY . .

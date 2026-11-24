@@ -38,6 +38,7 @@ import { ReportCustomerShipmentsPage } from '@/pages/customer-sales/ReportCustom
 import { ReportCustomerSalesPage } from '@/pages/customer-sales/ReportCustomerSalesPage'
 import { CustomerSettlementPage } from '@/pages/finance/CustomerSettlementPage'
 import { UserManagementPage } from '@/pages/UserManagementPage'
+import { AnnouncementsPage } from '@/pages/admin/AnnouncementsPage'
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
 import { PurchaseOrderCreatePage } from '@/pages/procurement/PurchaseOrderCreatePage'
@@ -1209,6 +1210,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[2, 5, 6, 8, 13, 14]}>
                 <ReportEmployeeKpiPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/announcements"
+            element={
+              <ProtectedRoute allowedRoles={[8]} strictRoles>
+                <AnnouncementsPage />
               </ProtectedRoute>
             }
           />

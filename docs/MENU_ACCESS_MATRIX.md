@@ -2,7 +2,7 @@
 
 This document outlines the authoritative role-based access permissions for each menu item, group, and route in the **Zen Warehouse Management System (WHMS) & Backoffice** (`frontend\warehousemanagement`), synchronized with `src/components/layout/Sidebar.tsx` and `src/App.tsx`.
 
-*Last Updated: 18 November 2026*
+*Last Updated: 24 November 2026*
 
 ---
 
@@ -56,6 +56,7 @@ This document outlines the authoritative role-based access permissions for each 
 |:---|:---|:---:|:---:|:---:|:---|
 | **Dasbor Utama** | `/dashboard` | `Warehouse` | **3, 4, 5, 6, 7, 8, 10** (18) | Authenticated | Halaman beranda utama WHMS menampilkan metrik inventaris, ringkasan transaksi, dan indikator status stok. |
 | **Manajemen Pengguna** | `/users` | `Users` | **2, 6, 8** | `[2, 6, 8]` | Manajemen akun staf. Role 8 (Superuser) & Role 2 (Master HRD) dapat mengelola seluruh outlet & mengubah role (Role 2 tidak dapat menetapkan/mengubah akun Role 8). Role 6 (Admin Outlet) terbatas pada cabang sendiri untuk persetujuan akun operasional (Role 12). |
+| **Pengumuman & Push** | `/admin/announcements` | `Megaphone` | **8** *(Strict)* | `[8]` (`strictRoles`) | Broadcast pengumuman modul baru & Web Push Notification latar belakang (Android/iOS PWA/Desktop) serta riwayat pengumuman & statistik perangkat aktif. Eksklusif SUPERUSER Role ID 8 (tidak dapat di-bypass Role 18). Lonceng notifikasi In-App (`NotificationBell`) di header dapat diakses semua role terautentikasi. |
 
 ---
 

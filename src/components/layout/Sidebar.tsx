@@ -76,6 +76,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { toast } from 'sonner'
 import { Menu } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { NotificationBell } from '@/components/NotificationBell'
 
 // ============================================
 // TYPES
@@ -165,6 +166,14 @@ const navItems: NavItem[] = [
     icon: Users,
     roleIds: [2, 6, 8],
     badge: 'Admin',
+  },
+  {
+    title: 'Pengumuman & Push',
+    path: '/admin/announcements',
+    icon: Megaphone,
+    roleIds: [8],
+    strictRoles: true,
+    badge: 'Push',
   },
 ]
 
@@ -1098,6 +1107,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 {companyName}
               </p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <NotificationBell />
           </div>
         </header>
 
