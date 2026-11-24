@@ -77,6 +77,27 @@ WHMS mendukung teknologi **Progressive Web App (PWA)** sehingga dapat dipasang l
 
 ---
 
+### E. Mengaktifkan Notifikasi Pengumuman (Ikon Lonceng 🔔)
+WHMS dilengkapi sistem **Notifikasi Latar Belakang (*Web Push*)** dan **Papan Pengumuman Dalam Aplikasi (*In-App Notification*)** agar staf cabang maupun holding langsung menerima informasi saat modul baru diluncurkan atau ada pembaruan penting:
+
+1. **Cara Mengaktifkan Notifikasi pada Perangkat Anda:**
+   - Login ke aplikasi WHMS, lalu ketuk ikon **Lonceng (🔔)** di pojok kanan atas layar (*header*).
+   - Pada panel pengumuman yang muncul, klik tombol hijau **Aktifkan**.
+   - Ketika browser memunculkan dialog izin, klik **Izinkan (*Allow*)**.
+   - Setelah aktif, status akan berubah menjadi **"Notifikasi Push perangkat aktif"** dan ikon lonceng berubah menjadi **Lonceng Berdering**.
+2. **Panduan Khusus Berdasarkan Perangkat:**
+   - **Android (Chrome / Edge / PWA Terpasang):** Notifikasi langsung muncul di bilah status (*status bar*) lengkap dengan getar meski aplikasi WHMS sedang ditutup.
+   - **Komputer / Laptop (Windows & macOS):** Notifikasi tampil di *Action Center* / *Notification Center* sistem operasi meski jendela browser/PWA ditutup (pastikan mode *Do Not Disturb / Focus Assist* tidak dalam keadaan menyala dan browser tidak dalam mode *Incognito/Tamu*).
+   - **iPhone / iPad (Safari iOS 16.4 ke atas):** Pengguna iOS **wajib memasang WHMS ke Layar Utama (*Add to Home Screen*)** terlebih dahulu (lihat Bagian 1.D.3), lalu membuka aplikasi dari ikon WHMS di Layar Utama sebelum menekan tombol **Aktifkan** pada ikon Lonceng.
+3. **Membaca, Membuka Modul, & Menjaga Kebersihan Daftar Pengumuman:**
+   - Lencana angka merah di ikon Lonceng menunjukkan jumlah pengumuman yang belum Anda baca.
+   - Klik salah satu pengumuman untuk langsung menuju halaman modul atau panduan yang dimaksud (otomatis ditandai sudah dibaca), atau klik **Tandai dibaca** di kanan atas panel untuk menandai seluruh daftar sekaligus.
+   - Jika ingin berhenti menerima notifikasi latar belakang pada perangkat tertentu, buka ikon Lonceng lalu klik **Nonaktifkan**.
+4. **Broadcast Pengumuman Baru (Khusus Role 8 — SUPERUSER):**
+   - Pengelola sistem (`SUPERUSER`) dapat mengakses menu **Pengumuman & Push** (`/admin/announcements`) untuk mengirim pengumuman ke **Semua Pengguna**, **Role Tertentu**, atau **Outlet Tertentu**, melihat jumlah perangkat aktif per platform (Android/iOS/Desktop), dan meninjau riwayat pengiriman.
+
+---
+
 ## 2. Modul Master Data
 
 Menu Master Data digunakan untuk mengelola data acuan produk, kategori, vendor, dan profil cabang.
@@ -387,6 +408,34 @@ Gunakan formulir ini jika barang yang sebelumnya diambil untuk operasional dikem
 2. **Keterbacaan Laporan yang Adil**:
    - Pada **Laporan Nilai Stok** dan **Laporan Selisih Opname**, kolom *Harga Beli* dan *Harga Jual* bagi barang antar-gerai akan menampilkan angka yang sama (`sell_price`).
    - Dengan aturan ini, cabang tetap dapat menghitung valuasi aset stok gudang secara akurat tanpa mengekspos margin keuntungan atau harga modal holding kepada staf cabang.
+
+---
+
+### G. Kartu Stok & Audit Mutasi Persediaan (`Inventaris & Stok > Kartu Stok`)
+> [!NOTE]
+> Modul ini dialokasikan khusus untuk **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 7 (Warehouse Staff)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, dan **Role 14 (Manager / Auditor Cabang)**.
+
+Modul **Kartu Stok** (`/inventory/stock-card`) menyajikan rincian kronologis setiap mutasi masuk, mutasi keluar, dan saldo berjalan untuk **1 jenis barang pada 1 gudang outlet**, dilengkapi detektor anomali rekonsiliasi untuk mengaudit penyebab selisih stok:
+
+1. **Pembatasan Outlet (Outlet Scoping):**
+   - **Role 6, 7, & 14:** Outlet/gudang **terkunci otomatis** pada `kode_outlet` milik pengguna sendiri (divalidasi di antarmuka dan server database).
+   - **Role 5, 8, & 13:** Dapat memilih **1 outlet spesifik** melalui dropdown untuk diaudit.
+2. **Langkah Melihat Kartu Stok:**
+   - Pilih **Outlet / Gudang** (untuk Role 5, 8, 13) atau verifikasi outlet Anda.
+   - Pada kolom **Pilih Barang (Hanya 1 Item)**, ketik **SKU** atau **Nama Barang** untuk memilih satu barang.
+   - Pilih **Mode Periode Mutasi**:
+     - **Dari Saldo Awal (Semua Riwayat)**: Menampilkan seluruh mutasi sejak pencatatan awal (`Saldo Awal = 0`).
+     - **Rentang Tanggal**: Tentukan **Dari Tanggal** dan **Sampai Tanggal**; baris pertama otomatis menampilkan **Saldo Awal per tanggal mulai** yang dihitung maju dari transaksi sebelumnya.
+3. **Header Barang & 11 Sumber Mutasi Tercatat:**
+   - **Kartu Header Barang**: Menampilkan foto produk (klik untuk memperbesar), **SKU**, **Nama Barang**, **Satuan (UOM)**, dan 4 kartu ringkas (**Saldo Awal**, **Total Masuk**, **Total Keluar**, **Saldo Akhir**).
+   - **11 Sumber Mutasi Otomatis (Urutan Kronologis WIB)**: *Penerimaan Supplier (GR)*, *Terima STO Antar Cabang*, *Kirim STO Antar Cabang*, *Pengembalian STO Ditolak*, *Produksi (Bahan Baku & Hasil Jadi)*, *Pemakaian Internal*, *Retur Internal*, *Penyusutan / Pemusnahan*, *Penjualan Customer B2B (Surat Jalan)*, serta *Penyesuaian Stock Opname (`COMPLETED`)*.
+4. **Membaca Detektor Anomali & Rekonsiliasi Sistem:**
+   - Kartu Stok menggunakan perhitungan **maju murni (*Pure Forward*) dari 0** lalu membandingkannya dengan saldo di sistem (`inventory_balance.qty_on_hand`):
+     - **Badge Hijau (`✓ Seimbang`)**: Total mutasi kartu stok cocok 100% dengan stok sistem saat ini.
+     - **Banner Merah (`Terdeteksi Anomali Selisih Stok`)**: Menunjukkan selisih antara **Kalkulasi Riwayat Kartu Stok** dan **Stok Tercatat di Sistem** beserta jumlah titik Stock Opname yang saldo sebelum opname-nya tidak cocok dengan `system_qty` (`⚠️ Anomali Opname`), sehingga tim audit dapat langsung menemukan tanggal dan dokumen pemicu selisih.
+5. **Cetak Kertas A5 Landscape & Ekspor CSV:**
+   - Klik tombol **Cetak (A5)** untuk membuka pratinjau cetak standar **A5 Landscape (`210 × 148 mm`)** berisi kop outlet, thumbnail foto produk, SKU, tabel mutasi berulang lintas halaman, total mutasi, dan status rekonsiliasi.
+   - Klik tombol **Ekspor CSV** untuk mengunduh file `.csv` (format UTF-8 BOM, rapi saat dibuka di Microsoft Excel).
 
 ---
 
@@ -940,23 +989,25 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
    - **Pemberlakuan Privasi Harga Antar-Cabang**: Pada item yang diperoleh dari transfer logistik (STO) cabang lain, kolom *Harga Beli* otomatis disamakan dengan *Harga Jual* untuk melindungi kerahasiaan harga modal holding/cabang asal.
 3. **Laporan Kuantitas Stok (`Inventaris & Stok > Laporan Kuantitas Stok`)**:
    - Memantau saldo fisik barang secara murni (tanpa nominal rupiah) untuk kebutuhan cek fisik cepat di rak gudang. Submenu ini disembunyikan dari **Role 14**.
-4. **Laporan Pemakaian Internal (`Inventaris & Stok > Laporan Pemakaian Internal`)**:
+4. **Kartu Stok (`Inventaris & Stok > Kartu Stok`)**:
+   - Melacak mutasi masuk, keluar, saldo berjalan, dan audit rekonsiliasi anomali untuk **1 item barang** sejak saldo awal maupun pada rentang tanggal tertentu (untuk **Role 5, 6, 7, 8, 13, 14**; Role 6, 7, 14 terkunci pada outlet sendiri). Dilengkapi pratinjau cetak default **A5 Landscape** dan **Ekspor CSV**.
+5. **Laporan Pemakaian Internal (`Inventaris & Stok > Laporan Pemakaian Internal`)**:
    - Merekap seluruh barang yang dipakai untuk operasional, total biaya pengeluaran, perincian kategori pemakaian, dan staf penanggung jawab.
-5. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
+6. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
    - Memantau nilai barang yang dikembalikan ke gudang beserta persentase kondisi barang (Baik vs Rusak).
-6. **Laporan STO Lengkap (`Transfer Stok (STO)`)**:
+7. **Laporan STO Lengkap (`Transfer Stok (STO)`)**:
    - **Laporan Request Barang (`Penerimaan > Laporan Request Barang`)**: Laporan komprehensif 2-tab yang memantau **Ringkasan Dokumen Request** dan **Detail Item: Request vs Realisasi STO**, lengkap dengan tombol **Cetak** A4 sesuai tab aktif.
    - **Laporan Item Order STO 2 Sisi**:
      - `Penerimaan > Laporan Item Order STO`: Menampilkan rincian item order STO di mana cabang Anda bertindak sebagai **Outlet Penerima** (`to_outlet`).
      - `Pengiriman > Laporan Item Order STO`: Menampilkan rincian item order STO di mana cabang Anda bertindak sebagai **Outlet Pengirim** (`from_outlet`).
    - **Laporan Order STO, Penerimaan STO, Daftar Item Penerimaan STO, & STO Dalam Transit**: Seluruhnya dilengkapi tombol **Cetak** pratinjau A4 resmi (`printReportA4`) dan **Ekspor CSV**.
    - **Ringkasan Laporan STO (`Transfer Stok (STO) > Ringkasan Laporan STO`)**: Rekapitulasi volume dan nilai transfer antar-cabang.
-7. **Laporan Pengadaan & Keuangan dengan Pratinjau Cetak A4 & Akses Role 14**:
+8. **Laporan Pengadaan & Keuangan dengan Pratinjau Cetak A4 & Akses Role 14**:
    - **Pratinjau Cetak A4 Terpadu (`Cetak`)**: Tersedia pada **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier (GR)**, **Laporan PO Tertunda**, **Kinerja Pemasok**, **Laporan Faktur Pembelian** (kolom Outlet kini menampilkan `name_outlet`), dan **Laporan Umur Hutang (AP)**.
    - **Akses Role 14 (Manager Cabang)**: Role 14 dapat membuka 13 menu laporan lintas modul (**Kinerja Pemasok**, **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier**, **Laporan Item Order STO [Penerimaan & Pengiriman]**, **Laporan Penerimaan STO**, **Daftar Item Penerimaan STO**, **Ringkasan Laporan STO**, **Laporan Biaya & Hasil Produksi**, **Laporan Umur Hutang (AP)**, **Laporan Faktur Pembelian**, **Laporan Piutang STO**, dan **Laporan Arus Kas**) dengan data yang **selalu terkunci pada `kode_outlet` cabangnya sendiri**.
-8. **Laporan Biaya & Hasil Produksi (`Produksi > Laporan Biaya & Hasil`)**:
+9. **Laporan Biaya & Hasil Produksi (`Produksi > Laporan Biaya & Hasil`)**:
    - Evaluasi efisiensi racikan, persentase rendemen hasil (*yield percentage*), dan varians biaya produksi.
-9. **Laporan Penjualan & Pengiriman B2B Customer (`Jual Customer`)**:
+10. **Laporan Penjualan & Pengiriman B2B Customer (`Jual Customer`)**:
    - **Hak Akses Laporan**: **Role 6 & Role 7** terkunci pada data cabangnya sendiri (`kode_outlet`), sedangkan **Role 5, Role 8, & Role 13** dapat membuka data untuk **semua outlet** atau memilih outlet tertentu.
    - **Lap. Pengiriman Barang (`Jual Customer > Lap. Pengiriman Barang`)**:
      - Menyajikan rincian item pengiriman barang kepada customer dengan filter **Rentang Tanggal** dan kotak pencarian **Nama Customer (`master_customer.name`)**.
@@ -986,6 +1037,12 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 
 **6. Layanan spa tertentu tidak muncul di cabang saya pada website**
 - Buka menu **Master Data > Info Outlet** menggunakan akun Admin Cabang. Pada bagian **Layanan Tersedia di Outlet Ini**, centang layanan yang disediakan cabang Anda lalu klik Simpan. Layanan tersebut akan otomatis terdaftar sebagai cabang yang menyediakan layanan di website.
+
+**7. Notifikasi Push tidak muncul atau tombol "Aktifkan" tidak tersedia di iPhone/iPad**
+- Pada perangkat iPhone/iPad (iOS 16.4+), notifikasi Web Push hanya bekerja setelah WHMS dipasang ke **Layar Utama (*Add to Home Screen*)** melalui browser Safari dan dibuka dari ikon tersebut. Di PC atau Android, pastikan izin notifikasi situs pada Chrome/Edge tidak diblokir dan tidak memakai jendela *Incognito / Tamu*.
+
+**8. Kartu Stok menampilkan peringatan "Terdeteksi Anomali Selisih"**
+- Peringatan ini berarti total kalkulasi maju seluruh mutasi (GR, STO, Produksi, Pemakaian, Retur, Penyusutan, Penjualan Customer, dan Stock Opname) berbeda dari angka `qty_on_hand` di sistem. Periksa baris yang ditandai lencana merah **`Anomali Opname`** pada tabel Kartu Stok atau laporkan hasil **Ekspor CSV** tersebut ke tim Finance / IT Holding untuk pemeriksaan lebih lanjut.
 
 ---
 

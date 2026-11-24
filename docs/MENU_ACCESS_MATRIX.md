@@ -61,13 +61,14 @@ This document outlines the authoritative role-based access permissions for each 
 ---
 
 ### 3.2. Inventaris & Stok (Inventory)
-**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), Warehouse Staff (7), SUPERUSER (8), Finance Outlet (10)
+**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), Warehouse Staff (7), SUPERUSER (8), Finance Outlet (10), Supervisor/Direksi (13), Auditor/Manager Cabang (14)
 | Submenu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
 | **Stock Opname** | `/inventory/stock-opname` | `ClipboardList` | **6, 7** | `[6, 7, 8]` | Pelaksanaan stock opname fisik gudang, pencatatan batch opname, dan penghitungan selisih. |
 | **Penyusutan / Pemusnahan** | `/inventory/shrinkage` | `AlertTriangle` | **6, 7** | `[6, 7, 8]` | Pencatatan barang rusak, tumpah, kadaluarsa, atau hilang dengan pilihan kategori penyusutan standar. |
 | **Laporan Nilai Stok** | `/inventory/report` | `TrendingUp` | **5, 6, 8, 10, 14** | `[1, 2, 5, 6, 8, 10, 14]` | Laporan valuasi nominal rupiah persediaan stok. *(Catatan: Role 7 Staf Gudang dinonaktifkan dari menu ini; Role 14 terkunci hanya untuk `kode_outlet` miliknya).* |
 | **Laporan Kuantitas Stok** | `/inventory/report-qty` | `Boxes` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Laporan kuantitas fisik persediaan barang gudang (satuan dasar/base UOM), saldo awal, masuk, keluar, dan saldo akhir. |
+| **Kartu Stok** | `/inventory/stock-card` | `BookOpen` | **5, 6, 7, 8, 13, 14** | `[5, 6, 7, 8, 13, 14]` | Pelacakan mutasi stok masuk/keluar/saldo berjalan (1 barang per gudang outlet, Pure Forward Ledger + Detektor Anomali rekonsiliasi & titik opname, termasuk Stock Opname `COMPLETED`). Mendukung mode *Dari Saldo Awal* dan *Rentang Tanggal*, foto produk, cetak **A5 Landscape** (`printStockCardA5`), serta ekspor CSV. **Role 6, 7, 14** terkunci ketat pada `kode_outlet` sendiri (di UI & RPC `get_stock_card`); **Role 5, 8, 13** dapat memilih 1 outlet spesifik. |
 | **Laporan Penyusutan** | `/inventory/report-shrinkage` | `AlertOctagon` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Riwayat dan audit penyusutan/pemusnahan barang per kategori, tanggal, dan cabang. |
 | **Laporan Selisih Opname** | `/inventory/report-opname-variance` | `Scale` | **5, 6, 7, 8, 10, 14** | `[1, 2, 5, 6, 7, 8, 10, 14]` | Laporan audit selisih opname vs data sistem (mendukung toggle "Tampilkan Hanya yang Berselisih"). *(Role 14 terkunci hanya untuk `kode_outlet` miliknya).* |
 | **Laporan Pemakaian Internal** | `/inventory/report-internal-usage` | `LogOut` | **5, 6, 7, 8, 10** | `[1, 5, 6, 7, 8, 10]` | Laporan riwayat pemakaian barang operasional cabang (linen, minyak spa, amenities) lengkap dengan ekspor CSV. |
@@ -261,7 +262,7 @@ This document outlines the authoritative role-based access permissions for each 
 | **Dasbor Utama** | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — |
 | **Manajemen Pengguna** | — | ✅*(All)* | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | ✅ | — |
 | **Inventaris & Opname** | — | — | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — |
-| **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty Only)* | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty & Kartu Stok)* | ✅ | ✅ | ✅*(Kartu Stok)* | ✅*(Nilai, Selisih, Kartu Stok)* | ✅ | — |
 | **Pemakaian/Retur Internal**| — | — | — | — | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — |
 | **Pengadaan PO & Faktur** | ✅ | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
 | **Penerimaan GR Supplier** | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — |

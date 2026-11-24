@@ -821,7 +821,7 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'], // Finance Outlet
   11: [],                                                                     // Pending ROLE_MENU_PERMISSION
   12: [],                                                                     // Pending ROLE_MENU_PERMISSION
-  13: ['hrd', 'customer', 'customer-sales'],                                  // Supervisor / Direksi (HRD & Report)
+  13: ['inventory', 'hrd', 'customer', 'customer-sales'],                      // Supervisor / Direksi (HRD & Report)
   14: ['dashboard', 'inventory', 'hrd'],                                      // MANAGER (Persetujuan Opname & HRD)
   15: [],                                                                     // Pending ROLE_MENU_PERMISSION
   16: [],                                                                     // Pending ROLE_MENU_PERMISSION

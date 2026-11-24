@@ -59,6 +59,7 @@ import { StockOpnamePage } from '@/pages/inventory/StockOpnamePage'
 import StockOpnameApprovalPage from '@/pages/inventory/StockOpnameApprovalPage'
 import InventoryReportPage from '@/pages/inventory/InventoryReportPage'
 import InventoryQtyReportPage from '@/pages/inventory/InventoryQtyReportPage'
+import StockCardPage from '@/pages/inventory/StockCardPage'
 import ShrinkageReportPage from '@/pages/inventory/ShrinkageReportPage'
 import StockOpnameVariancePage from '@/pages/inventory/StockOpnameVariancePage'
 import InternalUsageListPage from '@/pages/inventory/InternalUsageListPage'
@@ -828,6 +829,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[1, 2, 5, 6, 7, 8, 10]}>
                 <InventoryQtyReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/stock-card"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 7, 8, 13, 14]}>
+                <StockCardPage />
               </ProtectedRoute>
             }
           />
