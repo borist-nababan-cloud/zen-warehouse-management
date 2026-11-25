@@ -35,7 +35,7 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 ---
 
 ### C. Antarmuka Utama & Zen Dark Mode
-* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dasbor Utama*, *Inventaris & Stok*, *Penerimaan Barang (GR)*, *Pengeluaran Barang (GI)*, *Jual Customer*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
+* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dashboard Utama*, *POS*, *Inventaris & Stok*, *Penerimaan Barang (GR)*, *Pengeluaran Barang (GI)*, *Jual Customer*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
 * **Ganti Mode Gelap (Zen Dark Mode)**:
   - Klik tombol **Ganti Mode Gelap** di bagian bawah sidebar untuk mengaktifkan tema malam (*River Stone Palette*) yang nyaman di mata untuk shift malam.
   - Klik kembali untuk beralih ke mode terang (*Zen Linen*). Pilihan tema tersimpan otomatis di perangkat Anda.
@@ -90,9 +90,11 @@ WHMS dilengkapi sistem **Notifikasi Latar Belakang (*Web Push*)** dan **Papan Pe
    - **Android (Chrome / Edge / PWA Terpasang):** Notifikasi langsung muncul di bilah status (*status bar*) lengkap dengan getar meski aplikasi WHMS sedang ditutup.
    - **Komputer / Laptop (Windows & macOS):** Notifikasi tampil di *Action Center* / *Notification Center* sistem operasi meski jendela browser/PWA ditutup (pastikan mode *Do Not Disturb / Focus Assist* tidak dalam keadaan menyala dan browser tidak dalam mode *Incognito/Tamu*).
    - **iPhone / iPad (Safari iOS 16.4 ke atas):** Pengguna iOS **wajib memasang WHMS ke Layar Utama (*Add to Home Screen*)** terlebih dahulu (lihat Bagian 1.D.3), lalu membuka aplikasi dari ikon WHMS di Layar Utama sebelum menekan tombol **Aktifkan** pada ikon Lonceng.
-3. **Membaca, Membuka Modul, & Menjaga Kebersihan Daftar Pengumuman:**
+3. **Membaca Paragraf Penuh di Halaman Notifikasi (`/notifications`), Filter & Status Baca:**
    - Lencana angka merah di ikon Lonceng menunjukkan jumlah pengumuman yang belum Anda baca.
-   - Klik salah satu pengumuman untuk langsung menuju halaman modul atau panduan yang dimaksud (otomatis ditandai sudah dibaca), atau klik **Tandai dibaca** di kanan atas panel untuk menandai seluruh daftar sekaligus.
+   - Klik salah satu item pengumuman di popover lonceng **atau** klik tombol **Lihat Semua Notifikasi** di bagian bawah popover untuk membuka halaman penuh **Notifikasi & Pengumuman** (`/notifications`) di jendela utama.
+   - Pada halaman penuh tersebut, seluruh pengumuman diurutkan dari **yang paling baru di posisi teratas** dan ditampilkan dengan **isi paragraf utuh tanpa terpotong**.
+   - Tersedia 3 kartu ringkasan (**Total Notifikasi**, **Belum Dibaca**, **Sudah Dibaca**), filter status baca & kategori, kolom pencarian, tombol **Tandai Semua Sudah Dibaca**, tombol per kartu **Tandai Sudah Dibaca** / **Tandai Belum Dibaca**, serta tombol **Buka Halaman Terkait** bila pengumuman terhubung ke modul tertentu.
    - Jika ingin berhenti menerima notifikasi latar belakang pada perangkat tertentu, buka ikon Lonceng lalu klik **Nonaktifkan**.
 4. **Broadcast Pengumuman Baru (Khusus Role 8 — SUPERUSER):**
    - Pengelola sistem (`SUPERUSER`) dapat mengakses menu **Pengumuman & Push** (`/admin/announcements`) untuk mengirim pengumuman ke **Semua Pengguna**, **Role Tertentu**, atau **Outlet Tertentu**, melihat jumlah perangkat aktif per platform (Android/iOS/Desktop), dan meninjau riwayat pengiriman.
@@ -458,9 +460,10 @@ Modul **Kartu Stok** (`/inventory/stock-card`) menyajikan rincian kronologis set
    - Pilih **Mode Periode Mutasi**:
      - **Dari Saldo Awal (Semua Riwayat)**: Menampilkan seluruh mutasi sejak pencatatan awal (`Saldo Awal = 0`).
      - **Rentang Tanggal**: Tentukan **Dari Tanggal** dan **Sampai Tanggal**; baris pertama otomatis menampilkan **Saldo Awal per tanggal mulai** yang dihitung maju dari transaksi sebelumnya.
-3. **Header Barang & 11 Sumber Mutasi Tercatat:**
+3. **Header Barang, Presisi 3 Desimal, & 12 Sumber Mutasi Tercatat:**
    - **Kartu Header Barang**: Menampilkan foto produk (klik untuk memperbesar), **SKU**, **Nama Barang**, **Satuan (UOM)**, dan 4 kartu ringkas (**Saldo Awal**, **Total Masuk**, **Total Keluar**, **Saldo Akhir**).
-   - **11 Sumber Mutasi Otomatis (Urutan Kronologis WIB)**: *Penerimaan Supplier (GR)*, *Terima STO Antar Cabang*, *Kirim STO Antar Cabang*, *Pengembalian STO Ditolak*, *Produksi (Bahan Baku & Hasil Jadi)*, *Pemakaian Internal*, *Retur Internal*, *Penyusutan / Pemusnahan*, *Penjualan Customer B2B (Surat Jalan)*, serta *Penyesuaian Stock Opname (`COMPLETED`)*.
+   - **Presisi Kuantitas hingga 3 Desimal**: Seluruh angka kuantitas ditampilkan secara presisi hingga **3 angka di belakang koma** (misal `0,025` liter) dan disimpan hingga **4 desimal** di database (`NUMERIC(15,4)`) sehingga pemakaian bahan baku resep 3 desimal tidak lagi menimbulkan selisih pembulatan.
+   - **12 Sumber Mutasi Otomatis (Urutan Kronologis WIB)**: *Penerimaan Supplier (GR)*, *Retur Pembelian (PO)*, *Terima STO Antar Cabang*, *Kirim STO Antar Cabang*, *Pengembalian STO Ditolak*, *Produksi (Bahan Baku & Hasil Jadi — otomatis menampilkan **No. STO & Outlet Tujuan** bila produksi ditautkan ke STO)*, *Pemakaian Internal*, *Retur Internal*, *Penyusutan / Pemusnahan*, *Penjualan Customer B2B (Surat Jalan)*, serta *Penyesuaian Stock Opname (`COMPLETED`)*.
 4. **Membaca Detektor Anomali & Rekonsiliasi Sistem:**
    - Kartu Stok menggunakan perhitungan **maju murni (*Pure Forward*) dari 0** lalu membandingkannya dengan saldo di sistem (`inventory_balance.qty_on_hand`):
      - **Badge Hijau (`✓ Seimbang`)**: Total mutasi kartu stok cocok 100% dengan stok sistem saat ini.
@@ -937,16 +940,39 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
 2. **Pilihan Produk Jadi Terbatas pada Resep Cabang**:
    - Dropdown **Produk (Barang Jadi)** secara ketat **hanya menampilkan produk yang telah terdaftar di Master Resep (`master_recipes`) dengan `kode_outlet` cabang aktif Anda**.
    - Hal ini mencegah staf memproses racikan produk jadi yang belum memiliki formula resep resmi atau formula milik cabang lain.
-3. Masukkan **Jumlah Batch** yang akan diproduksi.
-4. Sistem secara otomatis menampilkan lembar kerja bahan baku:
-   - Menghitung kebutuhan total kuantitas setiap bahan baku.
-   - Memeriksa ketersediaan stok bahan baku di gudang cabang secara *real-time*.
+3. **Referensi No. STO (Opsional — Status `DRAFT`):**
+   - Apabila produksi dijalankan untuk memenuhi permintaan kirim barang antar-outlet, pilih **Referensi No. STO** pada dropdown (hanya menampilkan dokumen `sto_orders` milik cabang pengirim yang masih berstatus **`DRAFT`** / belum *Goods Issue*).
+   - Kolom ini bersifat **opsional** — boleh dikosongkan apabila produksi dilakukan untuk persediaan stok reguler cabang sendiri.
+   - Ketika sebuah No. STO dipilih, sistem menampilkan **kotak informasi *read-only*** berisi outlet tujuan dan daftar barang beserta Qty Order pada STO tersebut (produk yang sesuai dengan Barang Jadi terpilih akan diberi penanda *"Produk Dipilih"*).
+4. Masukkan **Jumlah Output Aktual** yang diproduksi.
+5. Sistem secara otomatis menampilkan lembar kerja bahan baku:
+   - Menghitung kebutuhan total kuantitas setiap bahan baku secara proporsional (mendukung presisi hingga 3–4 desimal).
    - Menampilkan estimasi Harga Pokok Produksi (HPP) per unit dalam format Rupiah (`Rp`).
-5. Pastikan seluruh stok bahan baku berstatus mencukupi (indikator hijau), lalu klik **Proses Produksi**.
-6. Sistem secara otomatis:
-   - Memotong seluruh bahan baku dari saldo stok gudang cabang.
+6. Pastikan kuantitas pemakaian aktual bahan baku sudah sesuai, lalu klik **Simpan & Proses Produksi**.
+7. Sistem secara otomatis:
+   - Memotong seluruh bahan baku dari saldo stok gudang cabang dengan presisi penuh (`NUMERIC(15,4)`).
    - Menambahkan produk jadi ke saldo inventaris gudang secara instan.
-   - Mencatat mutasi produksi ke kartu stok dan histori biaya database.
+   - Mencatat mutasi produksi ke **Kartu Stok** (beserta **No. STO & Outlet Tujuan** bila ditautkan) dan **Laporan Biaya & Hasil Produksi** (kolom **Ref. STO**).
+
+---
+
+## 9B. Modul POS — Daftar Gift Certificate (`POS > GC List`)
+> [!NOTE]
+> Modul **GC List** (`/pos/gc-list`) dapat diakses khusus oleh **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager / Auditor)**, **Role 19 (Resepsionis Cabang)**, dan **Role 20 (IT Support)**. Saat ini modul beroperasi dalam mode **baca-saja (*read-only*)** untuk pemantauan dan pelaporan.
+
+1. **Aturan Cakupan Outlet (Server-Side RBAC):**
+   - **Role 6, 14, & 19:** Otomatis terkunci pada cabang tugas masing-masing (menampilkan voucher yang dibeli **atau** dipakai di cabang tersebut), dilengkapi sub-filter: *Semua Terkait Outlet Saya*, *Dibeli di Outlet Saya*, atau *Dipakai di Outlet Saya*.
+   - **Role 5, 8, 13, & 20:** Memiliki akses multi-outlet penuh dengan dropdown terpisah untuk **Outlet Beli** dan **Outlet Pakai**.
+2. **4 Kartu Ringkasan Atas (Jumlah Lembar & Total Nominal Rp):**
+   - **Total GC (Sesuai Filter)**, **Belum Dipakai (Berlaku)**, **Sudah Dipakai (Redeemed)**, dan **Kadaluarsa (Expired)** — dihitung langsung dari seluruh data hasil filter di server (bukan hanya halaman yang sedang dibuka).
+3. **Filter Cepat & Pencarian Kode GC Lintas Periode:**
+   - **Default First Load:** Menampilkan basis **Tanggal Beli (`buy_at`)** periode **Bulan Ini (WIB)** agar pemuatan >14.500 data tetap cepat dan ringan.
+   - **Basis & Preset Tanggal:** Pilih `Tanggal Beli (buy_at)` atau `Tanggal Pakai (used_at)` beserta tombol cepat **Hari Ini**, **Minggu Ini**, **Bulan Ini**, **Tahun Ini**, atau rentang tanggal kustom.
+   - **Pencarian Auto-Filter:** Ketik sebagian atau penuh **`gc_number`**, **`gc_barcode`**, atau **`qrcode`** pada kotak pencarian — sistem otomatis mencari **lintas seluruh periode tanggal** agar voucher lama langsung ditemukan.
+   - **Filter Tambahan:** Status Pemakaian (*Belum Dipakai* / *Sudah Dipakai*), Masa Berlaku (*Masih Berlaku* / *Akan Expired ≤ 30 Hari* / *Sudah Kadaluarsa*), Status Aktif (*Aktif* / *Non-Aktif*), serta **Rekonsiliasi Lintas Outlet** (*Beli ≠ Pakai*).
+4. **Rincian Voucher, Cetak A4 & Ekspor CSV:**
+   - Klik tombol **Detail** pada setiap baris untuk melihat informasi lengkap voucher (UID, barcode, QR Code digital, nomor pembayaran beli/pakai, outlet beli/pakai, dan masa berlaku).
+   - Gunakan tombol **Cetak (A4)** untuk pratinjau cetak berstandar A4 atau **Ekspor CSV** untuk analisis di Microsoft Excel.
 
 ---
 
@@ -1016,13 +1042,13 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
        3. **Kolom 3 (Pemeriksa / Verifikator 2)**: Garis tanda tangan kosong `(...................)`.
        4. **Kolom 4 (Disetujui / Manager Cabang)**: Garis tanda tangan kosong `(...................)`.
 2. **Laporan Nilai Stok (`Inventaris & Stok > Laporan Nilai Stok`)**:
-   - Menghitung total valuasi aset gudang per cabang berdasarkan saldo kuantitas stok (*Qty on Hand*), harga beli, dan harga jual.
+   - Menghitung total valuasi aset gudang per cabang berdasarkan saldo kuantitas stok (*Qty on Hand*, mendukung tampilan presisi hingga **3 desimal**), harga beli, dan harga jual.
    - **Akses Role 14 (Manager Cabang)**: Role 14 dapat membuka laporan ini dengan data yang otomatis difilter dan terkunci pada `kode_outlet` cabangnya sendiri.
    - **Pemberlakuan Privasi Harga Antar-Cabang**: Pada item yang diperoleh dari transfer logistik (STO) cabang lain, kolom *Harga Beli* otomatis disamakan dengan *Harga Jual* untuk melindungi kerahasiaan harga modal holding/cabang asal.
 3. **Laporan Kuantitas Stok (`Inventaris & Stok > Laporan Kuantitas Stok`)**:
-   - Memantau saldo fisik barang secara murni (tanpa nominal rupiah) untuk kebutuhan cek fisik cepat di rak gudang. Submenu ini disembunyikan dari **Role 14**.
+   - Memantau saldo fisik barang secara murni (tanpa nominal rupiah, tampilan presisi hingga **3 desimal**) untuk kebutuhan cek fisik cepat di rak gudang. Submenu ini disembunyikan dari **Role 14**.
 4. **Kartu Stok (`Inventaris & Stok > Kartu Stok`)**:
-   - Melacak mutasi masuk, keluar, saldo berjalan, dan audit rekonsiliasi anomali untuk **1 item barang** sejak saldo awal maupun pada rentang tanggal tertentu (untuk **Role 5, 6, 7, 8, 13, 14**; Role 6, 7, 14 terkunci pada outlet sendiri). Dilengkapi pratinjau cetak default **A5 Landscape** dan **Ekspor CSV**.
+   - Melacak mutasi masuk, keluar, saldo berjalan (presisi hingga **3 desimal**), dan audit rekonsiliasi anomali untuk **1 item barang** sejak saldo awal maupun pada rentang tanggal tertentu (untuk **Role 5, 6, 7, 8, 13, 14**; Role 6, 7, 14 terkunci pada outlet sendiri), termasuk tampilan **No. STO & Outlet Tujuan** pada mutasi produksi. Dilengkapi pratinjau cetak default **A5 Landscape** dan **Ekspor CSV**.
 5. **Laporan Pemakaian Internal (`Inventaris & Stok > Laporan Pemakaian Internal`)**:
    - Merekap seluruh barang yang dipakai untuk operasional, total biaya pengeluaran, perincian kategori pemakaian, dan staf penanggung jawab.
 6. **Laporan Retur Internal (`Inventaris & Stok > Laporan Retur Internal`)**:
@@ -1038,7 +1064,7 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
    - **Pratinjau Cetak A4 Terpadu (`Cetak`)**: Tersedia pada **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier (GR)**, **Laporan PO Tertunda**, **Kinerja Pemasok**, **Laporan Faktur Pembelian** (kolom Outlet kini menampilkan `name_outlet`), dan **Laporan Umur Hutang (AP)**.
    - **Akses Role 14 (Manager Cabang)**: Role 14 dapat membuka 13 menu laporan lintas modul (**Kinerja Pemasok**, **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier**, **Laporan Item Order STO [Penerimaan & Pengiriman]**, **Laporan Penerimaan STO**, **Daftar Item Penerimaan STO**, **Ringkasan Laporan STO**, **Laporan Biaya & Hasil Produksi**, **Laporan Umur Hutang (AP)**, **Laporan Faktur Pembelian**, **Laporan Piutang STO**, dan **Laporan Arus Kas**) dengan data yang **selalu terkunci pada `kode_outlet` cabangnya sendiri**.
 9. **Laporan Biaya & Hasil Produksi (`Produksi > Laporan Biaya & Hasil`)**:
-   - Evaluasi efisiensi racikan, persentase rendemen hasil (*yield percentage*), dan varians biaya produksi.
+   - Evaluasi efisiensi racikan, persentase rendemen hasil (*yield percentage*), varians biaya produksi, serta kolom **Ref. STO** (No. STO & Outlet Tujuan) lengkap dengan pencarian STO dan ekspor CSV.
 10. **Laporan Penjualan & Pengiriman B2B Customer (`Jual Customer`)**:
    - **Hak Akses Laporan**: **Role 6 & Role 7** terkunci pada data cabangnya sendiri (`kode_outlet`), sedangkan **Role 5, Role 8, & Role 13** dapat membuka data untuk **semua outlet** atau memilih outlet tertentu.
    - **Lap. Pengiriman Barang (`Jual Customer > Lap. Pengiriman Barang`)**:
