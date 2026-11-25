@@ -25,6 +25,7 @@ import { PeakHoursDashboardPage } from './pages/posdashboard/PeakHoursDashboardP
 import { PosLiveDashboardPage } from './pages/posdashboard/PosLiveDashboardPage'
 import { PosPeriodicDashboardPage } from './pages/posdashboard/PosPeriodicDashboardPage'
 import { MasterTargetPage } from './pages/posdashboard/MasterTargetPage'
+import { GcListPage } from './pages/pos/GcListPage'
 import { OutletInfoPage } from './pages/master/OutletInfoPage'
 import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
 import { ShrinkageCategoriesPage } from './pages/master/ShrinkageCategoriesPage'
@@ -100,6 +101,7 @@ import StoArReportPage from '@/pages/finance/StoArReportPage'
 
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { TutorialPage } from '@/pages/TutorialPage'
+import { NotificationsPage } from '@/pages/NotificationsPage'
 import { PWAInstallBanner } from '@/components/PWAInstallBanner'
 import { MasterFacilitiesPage } from '@/pages/web/MasterFacilitiesPage'
 import { GalleryPage } from '@/pages/web/GalleryPage'
@@ -268,6 +270,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 8, 13]}>
                 <MasterTargetPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* POS - GC List */}
+          <Route
+            path="/pos/gc-list"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 19, 20]} strictRoles>
+                <GcListPage />
               </ProtectedRoute>
             }
           />
@@ -1227,6 +1239,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[8]} strictRoles>
                 <AnnouncementsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
               </ProtectedRoute>
             }
           />

@@ -67,7 +67,8 @@ import {
   FolderTree,
   ShieldAlert,
   AlertCircle,
-  FileWarning
+  FileWarning,
+  Gift
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -136,10 +137,26 @@ const navItems: NavItem[] = [
     ]
   },
   {
-    title: 'Dasbor Utama',
+    title: 'Dashboard Utama',
     path: '/dashboard',
     icon: Warehouse,
-    roleIds: [3, 4, 5, 6, 7, 8, 10],
+    roleIds: [3, 4, 5, 6, 7, 8, 10, 20],
+  },
+  {
+    title: 'POS',
+    path: '#',
+    icon: Store,
+    roleIds: [5, 6, 8, 13, 14, 19, 20],
+    strictRoles: true,
+    children: [
+      {
+        title: 'GC List',
+        path: '/pos/gc-list',
+        icon: Gift,
+        roleIds: [5, 6, 8, 13, 14, 19, 20],
+        strictRoles: true,
+      },
+    ],
   },
   {
     title: 'Inventaris & Stok',
@@ -591,8 +608,8 @@ export function Sidebar({ className, onNavigate, isMobile = false }: SidebarProp
   // Filter nav items based on user role
   const availableItems = user
     ? allNavItems.filter((item) => {
-      // SUPERUSER (8) and WEB_ADMIN (18) see everything
-      if (user.user_role === 8 || user.user_role === 18) return true
+      // SUPERUSER (8) and WEB_ADMIN (18) see everything unless strictRoles is set
+      if (!(item as NavItem).strictRoles && (user.user_role === 8 || user.user_role === 18)) return true
       // Check if user's role is in the allowed roles for this item
       return item.roleIds.includes(user.user_role)
     })

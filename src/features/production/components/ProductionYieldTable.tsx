@@ -17,6 +17,13 @@ interface ProductionYieldTableProps {
     outlets?: { kode_outlet: string, name_outlet: string }[]
 }
 
+function formatQty(val: number | null | undefined): string {
+    return new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+    }).format(Number(val || 0))
+}
+
 export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data, showOutlet = false, outlets = [] }) => {
     if (data.length === 0) {
         return (
@@ -34,6 +41,7 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
                         <TableHead className="w-[120px]">Tanggal</TableHead>
                         {showOutlet && <TableHead>Outlet</TableHead>}
                         <TableHead>No. Dokumen</TableHead>
+                        <TableHead>Ref. STO</TableHead>
                         <TableHead>Nama Produk Jadi</TableHead>
                         <TableHead className="text-center">Hasil (Qty)</TableHead>
                         <TableHead className="text-right font-bold text-indigo-700">
@@ -58,12 +66,28 @@ export const ProductionYieldTable: React.FC<ProductionYieldTableProps> = ({ data
                             <TableCell className="text-xs font-mono text-slate-500">
                                 {row.document_number}
                             </TableCell>
+                            <TableCell className="text-xs">
+                                {row.sto_number ? (
+                                    <div className="space-y-0.5">
+                                        <Badge variant="outline" className="font-mono text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                                            {row.sto_number}
+                                        </Badge>
+                                        {row.sto_to_outlet && (
+                                            <div className="text-[11px] text-slate-500">
+                                                Ke: {row.sto_to_outlet_name || row.sto_to_outlet} [{row.sto_to_outlet}]
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <span className="text-slate-400">-</span>
+                                )}
+                            </TableCell>
                             <TableCell className="font-medium text-slate-800">
                                 {row.finished_good_name}
                             </TableCell>
                             <TableCell className="text-center">
                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                    {row.qty_produced}
+                                    {formatQty(row.qty_produced)}
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right font-bold text-indigo-700 bg-indigo-50/30">

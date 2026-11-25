@@ -178,9 +178,7 @@ export function NotificationBell() {
       }
     }
     setOpen(false)
-    if (item.url && item.url.startsWith('/')) {
-      navigate(item.url)
-    }
+    navigate(`/notifications?id=${encodeURIComponent(item.id)}`)
   }
 
   const handleMarkAllRead = async () => {
@@ -349,21 +347,32 @@ export function NotificationBell() {
                     <p className="text-xs text-zen-charcoal/75 mt-0.5 line-clamp-2 leading-relaxed">
                       {item.body}
                     </p>
-                    {item.url && item.url !== '/dashboard' && (
-                      <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-medium text-zen-moss">
-                        Buka halaman terkait
-                        <ExternalLink className="h-3 w-3" />
-                      </span>
-                    )}
+                    <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-medium text-zen-moss">
+                      Klik untuk baca selengkapnya
+                      <ExternalLink className="h-3 w-3" />
+                    </span>
                   </button>
                 )
               })
             )}
           </div>
 
-          {/* Superuser Footer Shortcut */}
-          {isSuperuser && (
-            <div className="border-t border-zen-border/70 p-2.5 bg-zen-linen/50 dark:bg-zen-stone">
+          {/* Popover Footer: Full Notifications Page & Superuser Shortcut */}
+          <div className="border-t border-zen-border/70 p-2.5 bg-zen-linen/50 dark:bg-zen-stone space-y-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                setOpen(false)
+                navigate('/notifications')
+              }}
+              className="w-full h-8 text-xs bg-zen-matcha hover:bg-zen-moss text-white"
+            >
+              <Bell className="h-3.5 w-3.5 mr-1.5" />
+              Lihat Semua Notifikasi
+            </Button>
+
+            {isSuperuser && (
               <Button
                 variant="outline"
                 size="sm"
@@ -376,8 +385,8 @@ export function NotificationBell() {
                 <Megaphone className="h-3.5 w-3.5 mr-1.5" />
                 Kelola & Kirim Pengumuman Push
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

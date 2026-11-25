@@ -91,6 +91,14 @@ export default function InventoryReportPage() {
         }).format(amount)
     }
 
+    // Helper: Format Qty (dinamis maks. 3 desimal)
+    const formatQty = (qty: number | null | undefined) => {
+        return new Intl.NumberFormat('id-ID', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3,
+        }).format(Number(qty || 0))
+    }
+
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'IN_STOCK': return 'Stok Tersedia (> 0)'
@@ -176,7 +184,7 @@ export default function InventoryReportPage() {
                       item.item_name,
                       item.name_outlet || item.kode_outlet,
                       item.purchase_uom,
-                      item.qty_on_hand,
+                      formatQty(item.qty_on_hand),
                       formatCurrency(item.buy_price),
                       formatCurrency(item.sell_price),
                       formatCurrency(item.valuation_buy_total),
@@ -186,7 +194,7 @@ export default function InventoryReportPage() {
                       item.sku,
                       item.item_name,
                       item.purchase_uom,
-                      item.qty_on_hand,
+                      formatQty(item.qty_on_hand),
                       formatCurrency(item.buy_price),
                       formatCurrency(item.sell_price),
                       formatCurrency(item.valuation_buy_total),
@@ -402,7 +410,7 @@ export default function InventoryReportPage() {
                                                 <TableCell className="text-xs text-muted-foreground">{item.name_outlet || item.kode_outlet}</TableCell>
                                             )}
                                             <TableCell className="text-center text-xs text-muted-foreground">{item.purchase_uom}</TableCell>
-                                            <TableCell className="text-right font-bold text-slate-700">{item.qty_on_hand}</TableCell>
+                                            <TableCell className="text-right font-bold text-slate-700">{formatQty(item.qty_on_hand)}</TableCell>
                                             <TableCell className="text-right text-muted-foreground text-xs">{formatCurrency(item.buy_price)}</TableCell>
                                             <TableCell className="text-right text-muted-foreground text-xs">{formatCurrency(item.sell_price)}</TableCell>
                                             <TableCell className="text-right font-mono font-medium text-purple-700 bg-purple-50/10">

@@ -2,11 +2,11 @@
 
 This document outlines the authoritative role-based access permissions for each menu item, group, and route in the **Zen Warehouse Management System (WHMS) & Backoffice** (`frontend\warehousemanagement`), synchronized with `src/components/layout/Sidebar.tsx` and `src/App.tsx`.
 
-*Last Updated: 24 November 2026*
+*Last Updated: 26 November 2026*
 
 ---
 
-## 1. Role Reference (Role IDs 1 – 19)
+## 1. Role Reference (Role IDs 1 – 20)
 
 | Role ID | System Role Code | Indonesian Role Title | WHM Access Status | Scope & Capabilities |
 |:---:|:---|:---|:---:|:---|
@@ -28,24 +28,25 @@ This document outlines the authoritative role-based access permissions for each 
 | **16** | `role_16` | HR / Evaluator TR | ✅ Active | HR & Evaluator Terapis (Akses Kategori, Variabel, dan Pembuatan Evaluasi TR) |
 | **17** | `member` | Pelanggan / Tamu | ❌ Blocked | Public Web Member (Public static website only, strictly blocked from WHM) |
 | **18** | `web_admin` | Web Admin | ✅ Active | Digital Media & Content Administrator (Full access to Web Data CMS, CRM chats, and WHM modules) |
-| **19** | `reception` | Resepsionis Cabang | ✅ Active | Branch Receptionist / Front Office (CRM Inbox Outlet, live reservation chats for assigned branch) |
+| **19** | `reception` | Resepsionis Cabang | ✅ Active | Branch Receptionist / Front Office (CRM Inbox Outlet, live reservation chats for assigned branch, POS GC List cabang) |
+| **20** | `IT-SUPPORT` | IT Support | ✅ Active | IT Support & Operational Systems (Dashboard Utama & POS GC List multi-outlet) |
 
 ---
 
 ## 2. Multi-Outlet Scoping & Branch Selector Rules
 
-1. **Multi-Outlet Privileged Roles (`[5, 8, 13, 14]`):**
-   * Report and analysis pages display the **Outlet Dropdown Selector** allowing users to switch between `"ALL" / "SEMUA OUTLET"` or a specific branch (`kode_outlet` from `master_outlet` where `can_sto = true`).
+1. **Multi-Outlet Privileged Roles (`[5, 8, 13, 14]` / `[5, 8, 13, 20]` pada POS GC List):**
+   * Report and analysis pages display the **Outlet Dropdown Selector** allowing users to switch between `"ALL" / "SEMUA OUTLET"` or a specific branch (`kode_outlet` from `master_outlet` where `can_sto = true`, atau seluruh outlet aktif/POS pada modul POS GC List).
    * A4 Printouts (`printReportA4`) automatically format the header with `"ALL OUTLET"` or the specific branch details (address, phone, email) based on the selection.
-2. **Single-Outlet Scoped Roles (`[6, 7, 10, 19]`):**
+2. **Single-Outlet Scoped Roles (`[6, 7, 10, 19]` & Role `14` pada modul tertentu):**
    * Navigation, data queries, and mutations are **strictly locked** to the user's assigned branch (`user.kode_outlet`).
    * No branch dropdown selector is shown; data filtering is enforced automatically at the application and query level.
 3. **Superuser & Web Admin Auto-Bypass (`[8, 18]`):**
    * In `Sidebar.tsx`:
      ```typescript
-     if (user.user_role === 8 || user.user_role === 18) return true;
+     if (!(item as NavItem).strictRoles && (user.user_role === 8 || user.user_role === 18)) return true;
      ```
-     Users with Role ID `8` or `18` automatically pass item-level sidebar role checks. Role 8 has full access to every system route, while Role 18 is dedicated to Web Data CMS, CRM Inbox, and operational interfaces.
+     Users with Role ID `8` or `18` automatically pass non-strict item-level sidebar role checks. Role 8 has full access to every system route, while Role 18 is dedicated to Web Data CMS, CRM Inbox, and operational interfaces.
 
 ---
 
@@ -54,9 +55,17 @@ This document outlines the authoritative role-based access permissions for each 
 ### 3.1. General & Dashboard
 | Menu Item | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
-| **Dasbor Utama** | `/dashboard` | `Warehouse` | **3, 4, 5, 6, 7, 8, 10** (18) | Authenticated | Halaman beranda utama WHMS menampilkan metrik inventaris, ringkasan transaksi, dan indikator status stok. |
+| **Dashboard Utama** | `/dashboard` | `Warehouse` | **3, 4, 5, 6, 7, 8, 10, 20** (18) | Authenticated | Halaman beranda utama WHMS menampilkan metrik inventaris, ringkasan transaksi, dan indikator status stok. |
 | **Manajemen Pengguna** | `/users` | `Users` | **2, 6, 8** | `[2, 6, 8]` | Manajemen akun staf. Role 8 (Superuser) & Role 2 (Master HRD) dapat mengelola seluruh outlet & mengubah role (Role 2 tidak dapat menetapkan/mengubah akun Role 8). Role 6 (Admin Outlet) terbatas pada cabang sendiri untuk persetujuan akun operasional (Role 12). **Khusus Role 8 (SUPERUSER):** memiliki tombol **Reset Sandi** untuk mereset kata sandi akun Email & Kata Sandi melalui Edge Function `admin-reset-password` (tanpa SMTP) disertai pencabutan sesi aktif dan audit log `whm_password_reset_logs`. |
 | **Pengumuman & Push** | `/admin/announcements` | `Megaphone` | **8** *(Strict)* | `[8]` (`strictRoles`) | Broadcast pengumuman modul baru & Web Push Notification latar belakang (Android/iOS PWA/Desktop) serta riwayat pengumuman & statistik perangkat aktif. Eksklusif SUPERUSER Role ID 8 (tidak dapat di-bypass Role 18). Lonceng notifikasi In-App (`NotificationBell`) di header dapat diakses semua role terautentikasi. |
+
+---
+
+### 3.1A. POS (Point of Sale)
+**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), SUPERUSER (8), Supervisor / Direksi (13), Auditor / Manager Cabang (14), Resepsionis Cabang (19), IT Support (20) — *Strict Roles*
+| Submenu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
+|:---|:---|:---:|:---:|:---:|:---|
+| **GC List** | `/pos/gc-list` | `Gift` | **5, 6, 8, 13, 14, 19, 20** *(Strict)* | `[5, 6, 8, 13, 14, 19, 20]` (`strictRoles`) | Pemantauan & pelaporan daftar transaksi Gift Certificate (`ot_pos_gc_transaction`, mode baca-saja dengan modal rincian, paginasi server-side 50 baris/halaman, 4 kartu ringkasan jumlah & nilai Rp, preset tanggal cepat WIB, status pemakaian/kadaluarsa/aktif, filter lintas outlet, pencarian global `gc_number`/`gc_barcode`/`qrcode` lintas semua tanggal, cetak **A4** `printReportA4`, dan ekspor CSV). **Role 6, 14, 19** terkunci ketat di server (`public.get_pos_gc_list`) pada `kode_outlet_buy = outlet OR kode_outlet_used = outlet`; **Role 5, 8, 13, 20** dapat memfilter seluruh Outlet Beli dan Outlet Pakai. |
 
 ---
 
@@ -251,43 +260,45 @@ This document outlines the authoritative role-based access permissions for each 
 | Menu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
 | **Tutorial Aplikasi** | `/tutorial` | `BookOpen` | **Semua Role** | `<ProtectedRoute>` | Pratinjau interaktif panduan pengguna resmi (`docs/USER_GUIDE.md`) dengan Daftar Isi, pencarian cepat, dan cetak panduan (tombol berada di atas `Ubah Kata Sandi`). |
+| **Notifikasi & Pengumuman** | `/notifications` | `Bell` | **Semua Role** *(via Popover Lonceng)* | `<ProtectedRoute>` | Pusat riwayat notifikasi & pengumuman sistem di jendela utama (diurutkan dari terbaru tanpa pemotongan paragraf), dilengkapi filter status baca (`Semua`/`Belum Dibaca`/`Sudah Dibaca`), filter kategori, pencarian, toggle status baca/belum dibaca, sorotan *deep-link* `?id=<id>`, serta tombol pintasan ke halaman terkait. Diakses melalui tombol **Lihat Semua Notifikasi** atau klik item pada popover ikon lonceng di kanan atas. |
 | **Ubah Kata Sandi** | `/change-password` | `Lock` | **Semua Role** | `<ProtectedRoute>` | Penggantian kata sandi akun email/password (pengguna Google OAuth mendapat notifikasi informasi). |
 
 ---
 
 ## 4. Matriks Ringkas Akses Menu per Role
 
-| Modul / Menu Grup | 1 Admin Holding | 2 Master HRD | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 13 Supervisor | 14 Auditor | 18 Web Admin | 19 Resepsionis |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Dasbor Utama** | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — |
-| **Manajemen Pengguna** | — | ✅*(All)* | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | ✅ | — |
-| **Inventaris & Opname** | — | — | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — |
-| **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty & Kartu Stok)* | ✅ | ✅ | ✅*(Kartu Stok)* | ✅*(Nilai, Selisih, Kartu Stok)* | ✅ | — |
-| **Pemakaian/Retur Internal**| — | — | — | — | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — |
-| **Pengadaan PO & Faktur** | ✅ | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
-| **Penerimaan GR Supplier** | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — |
-| **Laporan Procurement** | ✅ | — | — | — | ✅ | ✅ | ✅*(GR)* | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| **Transfer Stok (STO)** | — | — | — | — | — | ✅ | ✅*(Issue/Rec)*| ✅ | ✅ | — | — | ✅ | — |
-| **Laporan STO** | — | — | — | — | ✅ | ✅ | ✅*(Items)*| ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| **Produksi & Resep** | — | — | — | — | — | ✅*(Resep)*| ✅*(Run)*| ✅ | ✅*(Resep)*| — | — | ✅ | — |
-| **Laporan Produksi** | ✅ | — | — | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| **Kas & Bank Cabang** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
-| **Kategori Transaksi** | — | — | — | — | ✅ | — | — | ✅ | — | — | — | ✅ | — |
-| **Laporan Keuangan & AP** | ✅ | — | ✅ | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| **Pelunasan Hutang & STO**| — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
-| **Info Outlet** | — | — | — | — | — | ✅*(Own)* | — | ✅*(All)*| — | — | — | ✅ | — |
-| **Master Kategori Gudang**| — | — | — | — | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
-| **Master Produk & Harga** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
-| **Pemasok (Supplier)** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — |
-| **Customer (B2B)** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | ✅*(All)* | — | — | — |
-| **Jual Customer (SO, Faktur, AR)** | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — |
-| **Jual Customer (Issue Barang)** | — | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — |
-| **Lap. Jual & Kirim Customer** | — | — | — | — | ✅*(All)* | ✅*(Own)* | ✅*(Own)* | ✅*(All)* | — | ✅*(All)* | — | — | — |
-| **CRM Inbox Outlet** | — | — | — | — | ✅ | ✅ | — | ✅ | — | ✅ | — | — | ✅ |
-| **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | ✅ | — |
-| **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | ✅ | — |
-| **POS Dashboard (Live, Periodic, Master Target)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | — | — |
-| **HRD Evaluasi & Faults TR / KPI** | — | ✅*(All kecuali Buat Evaluasi & TR Faults)* | — | — | ✅*(All)* | ✅*(Laporan Cabang & Input/Laporan KPI Admin Cabang)* | — | ✅*(All)* | — | ✅*(Laporan & Master KPI)* | ✅*(Input, Laporan Cabang & Master/Transaksi KPI)* | — | ✅*(Laporan Cabang)* |
+| Modul / Menu Grup | 1 Admin Holding | 2 Master HRD | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 13 Supervisor | 14 Auditor | 18 Web Admin | 19 Resepsionis | 20 IT Support |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Dashboard Utama** | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — | ✅ |
+| **POS > GC List** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | ✅*(All)* | ✅*(Own)* | — | ✅*(Own)* | ✅*(All)* |
+| **Manajemen Pengguna** | — | ✅*(All)* | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | ✅ | — | — |
+| **Inventaris & Opname** | — | — | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — | — |
+| **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty & Kartu Stok)* | ✅ | ✅ | ✅*(Kartu Stok)* | ✅*(Nilai, Selisih, Kartu Stok)* | ✅ | — | — |
+| **Pemakaian/Retur Internal**| — | — | — | — | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — | — |
+| **Pengadaan PO & Faktur** | ✅ | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Penerimaan GR Supplier** | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — | — |
+| **Laporan Procurement** | ✅ | — | — | — | ✅ | ✅ | ✅*(GR)* | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
+| **Transfer Stok (STO)** | — | — | — | — | — | ✅ | ✅*(Issue/Rec)*| ✅ | ✅ | — | — | ✅ | — | — |
+| **Laporan STO** | — | — | — | — | ✅ | ✅ | ✅*(Items)*| ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
+| **Produksi & Resep** | — | — | — | — | — | ✅*(Resep)*| ✅*(Run)*| ✅ | ✅*(Resep)*| — | — | ✅ | — | — |
+| **Laporan Produksi** | ✅ | — | — | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
+| **Kas & Bank Cabang** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Kategori Transaksi** | — | — | — | — | ✅ | — | — | ✅ | — | — | — | ✅ | — | — |
+| **Laporan Keuangan & AP** | ✅ | — | ✅ | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
+| **Pelunasan Hutang & STO**| — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Info Outlet** | — | — | — | — | — | ✅*(Own)* | — | ✅*(All)*| — | — | — | ✅ | — | — |
+| **Master Kategori Gudang**| — | — | — | — | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Master Produk & Harga** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Pemasok (Supplier)** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Customer (B2B)** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | ✅*(All)* | — | — | — | — |
+| **Jual Customer (SO, Faktur, AR)** | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — | — |
+| **Jual Customer (Issue Barang)** | — | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — |
+| **Lap. Jual & Kirim Customer** | — | — | — | — | ✅*(All)* | ✅*(Own)* | ✅*(Own)* | ✅*(All)* | — | ✅*(All)* | — | — | — | — |
+| **CRM Inbox Outlet** | — | — | — | — | ✅ | ✅ | — | ✅ | — | ✅ | — | — | ✅ | — |
+| **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | ✅ | — | — |
+| **POS Dashboard (Live, Periodic, Master Target)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | — | — | — |
+| **HRD Evaluasi & Faults TR / KPI** | — | ✅*(All kecuali Buat Evaluasi & TR Faults)* | — | — | ✅*(All)* | ✅*(Laporan Cabang & Input/Laporan KPI Admin Cabang)* | — | ✅*(All)* | — | ✅*(Laporan & Master KPI)* | ✅*(Input, Laporan Cabang & Master/Transaksi KPI)* | — | ✅*(Laporan Cabang)* | — |
 
 ---
 

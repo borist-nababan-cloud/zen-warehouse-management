@@ -360,6 +360,18 @@ export async function markAnnouncementAsRead(
   if (error) throw error
 }
 
+export async function markAnnouncementAsUnread(
+  announcementId: string,
+  userId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('whm_announcement_reads')
+    .delete()
+    .eq('announcement_id', announcementId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
 export async function markAllAnnouncementsAsRead(
   announcementIds: string[],
   userId: string

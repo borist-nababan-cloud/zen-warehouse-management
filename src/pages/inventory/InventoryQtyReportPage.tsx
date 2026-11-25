@@ -76,6 +76,13 @@ export default function InventoryQtyReportPage() {
     const totalItems = filteredData.length
     const totalQtyOnHand = filteredData.reduce((sum, item) => sum + (Number(item.qty_on_hand) || 0), 0)
 
+    const formatQty = (qty: number | null | undefined) => {
+        return new Intl.NumberFormat('id-ID', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3,
+        }).format(Number(qty || 0))
+    }
+
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'IN_STOCK': return 'Stok Tersedia (> 0)'
@@ -149,14 +156,14 @@ export default function InventoryQtyReportPage() {
                       item.item_name,
                       item.name_outlet || item.kode_outlet,
                       item.purchase_uom,
-                      item.qty_on_hand,
+                      formatQty(item.qty_on_hand),
                   ]
-                : [item.sku, item.item_name, item.purchase_uom, item.qty_on_hand]
+                : [item.sku, item.item_name, item.purchase_uom, formatQty(item.qty_on_hand)]
         )
 
         const totalRow = showOutletCol
-            ? ['', '', '', 'TOTAL KUANTITAS', totalQtyOnHand]
-            : ['', '', 'TOTAL KUANTITAS', totalQtyOnHand]
+            ? ['', '', '', 'TOTAL KUANTITAS', formatQty(totalQtyOnHand)]
+            : ['', '', 'TOTAL KUANTITAS', formatQty(totalQtyOnHand)]
 
         await printReportA4({
             title: 'Laporan Kuantitas Stok',
@@ -171,7 +178,7 @@ export default function InventoryQtyReportPage() {
             extraFilters: searchTerm ? [{ label: 'Pencarian', value: searchTerm }] : [],
             summaryItems: [
                 { label: 'Total Barang (SKU)', value: `${totalItems} SKU` },
-                { label: 'Total Kuantitas Fisik', value: `${totalQtyOnHand}` },
+                { label: 'Total Kuantitas Fisik', value: formatQty(totalQtyOnHand) },
             ],
             columns,
             rows,
@@ -330,7 +337,7 @@ export default function InventoryQtyReportPage() {
                                                 <TableCell className="text-xs text-muted-foreground">{item.name_outlet || item.kode_outlet}</TableCell>
                                             )}
                                             <TableCell className="text-center text-xs text-muted-foreground">{item.purchase_uom}</TableCell>
-                                            <TableCell className="text-right font-bold text-slate-700">{item.qty_on_hand}</TableCell>
+                                            <TableCell className="text-right font-bold text-slate-700">{formatQty(item.qty_on_hand)}</TableCell>
                                         </TableRow>
                                     ))
                                 )}

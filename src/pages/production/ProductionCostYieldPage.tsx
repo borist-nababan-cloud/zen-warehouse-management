@@ -75,7 +75,9 @@ export const ProductionCostYieldPage = () => {
             const q = searchQuery.toLowerCase()
             result = result.filter(item =>
                 item.finished_good_name.toLowerCase().includes(q) ||
-                item.document_number.toLowerCase().includes(q)
+                item.document_number.toLowerCase().includes(q) ||
+                (item.sto_number || '').toLowerCase().includes(q) ||
+                (item.sto_to_outlet_name || '').toLowerCase().includes(q)
             )
         }
 
@@ -100,16 +102,21 @@ export const ProductionCostYieldPage = () => {
             return
         }
 
-        const headers = ['Tanggal', 'Outlet', 'No. Dokumen', 'Nama Produk Jadi', 'Hasil Produksi (Qty)', 'Biaya per Unit (HPP)', 'Total Biaya Produksi', 'Jumlah Bahan Baku', 'Dibuat Oleh']
+        const headers = ['Tanggal', 'Outlet', 'No. Dokumen', 'Ref. No. STO', 'Outlet Tujuan STO', 'Nama Produk Jadi', 'Hasil Produksi (Qty)', 'Biaya per Unit (HPP)', 'Total Biaya Produksi', 'Jumlah Bahan Baku', 'Dibuat Oleh']
         const csvRows = [headers.join(',')]
 
         filteredData.forEach(row => {
             const outletName = availableOutlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet || '-'
+            const stoDest = row.sto_to_outlet
+                ? `${row.sto_to_outlet_name || row.sto_to_outlet} [${row.sto_to_outlet}]`
+                : '-'
 
             const values = [
                 format(new Date(row.transaction_date), 'yyyy-MM-dd'),
                 `"${outletName}"`,
                 `"${row.document_number}"`,
+                `"${row.sto_number || '-'}"`,
+                `"${stoDest}"`,
                 `"${row.finished_good_name}"`,
                 row.qty_produced,
                 row.unit_cost_result,

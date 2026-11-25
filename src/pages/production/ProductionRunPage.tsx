@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuthUser } from '@/hooks/useAuth'
-import { createProductionRun, getRecipeByProduct, getIngredientsWithCost } from '@/services/productionService'
+import {
+    createProductionRun,
+    getRecipeByProduct,
+    getIngredientsWithCost,
+    getDraftStoOrdersForProduction,
+    DraftStoOrderOption,
+} from '@/services/productionService'
 import { getRecipes, Recipe } from '@/services/recipeService'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
@@ -22,7 +28,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Calendar as CalendarIcon, Save, Loader2, Info, Factory, Layers } from 'lucide-react'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import { Calendar as CalendarIcon, Save, Loader2, Info, Factory, Layers, Truck, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -46,17 +53,21 @@ export function ProductionRunPage() {
     const [selectedProductId, setSelectedProductId] = useState<string>('')
     const [actualOutput, setActualOutput] = useState<number>(0)
     const [standardOutputBase, setStandardOutputBase] = useState<number>(1)
+    const [selectedStoId, setSelectedStoId] = useState<string>('')
 
     const [ingredients, setIngredients] = useState<ProductionItem[]>([])
 
-    // Data Fetching: load recipes for user's own outlet only
+    // Data Fetching: load recipes & DRAFT STO orders for user's own outlet only
     const outletCode = user?.kode_outlet || '901'
     const [recipes, setRecipes] = useState<Recipe[]>([])
     const [isLoadingRecipes, setIsLoadingRecipes] = useState(false)
+    const [draftStos, setDraftStos] = useState<DraftStoOrderOption[]>([])
+    const [isLoadingStos, setIsLoadingStos] = useState(false)
 
     useEffect(() => {
         if (outletCode) {
             loadRecipesForOutlet(outletCode)
+            loadDraftStosForOutlet(outletCode)
         }
     }, [outletCode])
 
@@ -68,6 +79,44 @@ export function ProductionRunPage() {
         }
         setIsLoadingRecipes(false)
     }
+
+    async function loadDraftStosForOutlet(code: string) {
+        setIsLoadingStos(true)
+        const res = await getDraftStoOrdersForProduction(code)
+        if (res.isSuccess && res.data) {
+            setDraftStos(res.data)
+        } else if (res.error) {
+            toast.error(`Gagal memuat daftar STO DRAFT: ${res.error}`)
+        }
+        setIsLoadingStos(false)
+    }
+
+    const selectedSto = useMemo(
+        () => draftStos.find((s) => s.id === selectedStoId) || null,
+        [draftStos, selectedStoId]
+    )
+
+    const stoSelectOptions = useMemo(() => {
+        const formatStoDate = (iso: string) => {
+            try {
+                return format(new Date(iso), 'dd/MM/yyyy')
+            } catch {
+                return ''
+            }
+        }
+        return [
+            {
+                value: '',
+                label: '— Tanpa Referensi STO (Produksi Reguler) —',
+                subLabel: 'Produksi untuk persediaan stok internal outlet',
+            },
+            ...draftStos.map((s) => ({
+                value: s.id,
+                label: `${s.document_number} — Tujuan: [${s.to_outlet}] ${s.to_outlet_name}`,
+                subLabel: `Status: DRAFT • ${s.items.length} item • Dibuat: ${formatStoDate(s.created_at)}`,
+            })),
+        ]
+    }, [draftStos])
 
     // Fetch Recipe when Product Changes
     useEffect(() => {
@@ -159,15 +208,25 @@ export function ProductionRunPage() {
                     barang_id: i.barang_id,
                     qty: i.qty,
                     cost: i.cost
-                }))
+                })),
+                sto_order_id: selectedSto?.id || null,
+                sto_number: selectedSto?.document_number || null,
             })
 
             if (result.isSuccess) {
-                toast.success("Proses produksi berhasil dicatat dan diproses!")
+                toast.success(
+                    selectedSto
+                        ? `Proses produksi berhasil dicatat untuk referensi ${selectedSto.document_number}!`
+                        : "Proses produksi berhasil dicatat dan diproses!"
+                )
                 // Reset form
                 setActualOutput(0)
                 setSelectedProductId('')
+                setSelectedStoId('')
                 setIngredients([])
+                if (outletCode) {
+                    loadDraftStosForOutlet(outletCode)
+                }
             } else {
                 toast.error(result.error || "Gagal memproses produksi.")
             }
@@ -269,6 +328,104 @@ export function ProductionRunPage() {
                                         })()}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Optional Reference STO (DRAFT) */}
+                            <div className="md:col-span-3 space-y-2 pt-2 border-t border-border/50">
+                                <div className="flex items-center justify-between gap-2">
+                                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                        <Truck className="h-3.5 w-3.5 text-primary" />
+                                        Referensi No. STO (Opsional — Status DRAFT / Belum Goods Issue)
+                                    </Label>
+                                    {selectedSto && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setSelectedStoId('')}
+                                            className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="h-3.5 w-3.5 mr-1" />
+                                            Hapus Referensi STO
+                                        </Button>
+                                    )}
+                                </div>
+                                <SearchableSelect
+                                    value={selectedStoId}
+                                    onChange={setSelectedStoId}
+                                    options={stoSelectOptions}
+                                    disabled={isLoadingStos || isSubmitting}
+                                    placeholder={
+                                        isLoadingStos
+                                            ? "Memuat daftar STO berstatus DRAFT..."
+                                            : draftStos.length === 0
+                                                ? "Tidak ada STO berstatus DRAFT saat ini (Opsional)"
+                                                : "Pilih No. STO (Opsional — kosongkan untuk produksi reguler)..."
+                                    }
+                                />
+
+                                {/* Read-only STO Info Box when a Draft STO is selected */}
+                                {selectedSto && (
+                                    <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 p-3.5 space-y-2.5">
+                                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                            <div className="flex items-center gap-2 font-semibold text-foreground">
+                                                <Truck className="h-4 w-4 text-primary shrink-0" />
+                                                <span>Info Panduan Item STO:</span>
+                                                <span className="font-mono text-primary">{selectedSto.document_number}</span>
+                                            </div>
+                                            <span className="inline-flex items-center rounded-md bg-background/80 border border-border px-2 py-0.5 text-[11px] font-medium text-foreground">
+                                                Tujuan: [{selectedSto.to_outlet}] {selectedSto.to_outlet_name}
+                                            </span>
+                                        </div>
+
+                                        {selectedSto.items.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground italic">
+                                                Belum ada daftar item pada dokumen STO ini.
+                                            </p>
+                                        ) : (
+                                            <div className="rounded-md border border-border/60 bg-background overflow-hidden">
+                                                <Table>
+                                                    <TableHeader className="bg-muted/40">
+                                                        <TableRow>
+                                                            <TableHead className="h-8 text-[11px] font-semibold w-[22%]">SKU</TableHead>
+                                                            <TableHead className="h-8 text-[11px] font-semibold">Nama Barang Diminta</TableHead>
+                                                            <TableHead className="h-8 text-[11px] font-semibold text-right w-[20%]">Qty Order STO</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {selectedSto.items.map((stItem) => {
+                                                            const isSelectedFg = selectedProductId === String(stItem.barang_id)
+                                                            return (
+                                                                <TableRow
+                                                                    key={stItem.id}
+                                                                    className={isSelectedFg ? 'bg-primary/10 font-semibold' : ''}
+                                                                >
+                                                                    <TableCell className="py-1.5 font-mono text-[11px] text-muted-foreground">
+                                                                        {stItem.sku}
+                                                                    </TableCell>
+                                                                    <TableCell className="py-1.5 text-xs text-foreground">
+                                                                        {stItem.item_name}
+                                                                        {isSelectedFg && (
+                                                                            <span className="ml-2 inline-flex items-center rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                                                                Produk Dipilih
+                                                                            </span>
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell className="py-1.5 text-right font-mono text-xs font-semibold text-foreground">
+                                                                        {new Intl.NumberFormat('id-ID', {
+                                                                            minimumFractionDigits: 0,
+                                                                            maximumFractionDigits: 3,
+                                                                        }).format(stItem.qty_ordered)}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            )
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

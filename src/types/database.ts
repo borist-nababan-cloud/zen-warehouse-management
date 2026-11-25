@@ -22,10 +22,12 @@
  * 12 - operational_staff  (Zen Internal App staff/therapist, blocked from WHMS)
  * 17 - member             (Customer/Member role, blocked from WHMS)
  * 18 - web_admin          (Web Administrator with full WHM access)
+ * 19 - reception          (Branch receptionist / front office)
+ * 20 - it_support         (IT Support - Dashboard Utama & POS GC List)
  */
 
 
-export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19
+export type RoleId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20
 
 /**
  * Legacy Role Names (for backward compatibility)
@@ -49,6 +51,7 @@ export type UserRole =
   | 'member'
   | 'web_admin'
   | 'reception'
+  | 'it_support'
 
 /**
  * Map RoleId to UserRole string
@@ -73,6 +76,7 @@ export const ROLE_ID_TO_NAME: Record<RoleId, string> = {
   17: 'member',
   18: 'web_admin',
   19: 'reception',
+  20: 'it_support',
 }
 
 /**
@@ -99,6 +103,8 @@ export const ROLE_NAME_TO_ID: Record<string, RoleId> = {
   member: 17,
   web_admin: 18,
   reception: 19,
+  it_support: 20,
+  'IT-SUPPORT': 20,
 }
 
 // ============================================
@@ -816,6 +822,7 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   17: 'Member (Pelanggan)',
   18: 'Web Admin',
   19: 'Resepsionis Cabang',
+  20: 'IT Support',
 }
 
 /**
@@ -823,28 +830,29 @@ export const ROLE_LABELS: Record<RoleId, string> = {
  * Role 1, 2, 3, 4, 5, 6, 7, 10: Standard operational and warehouse permissions
  * Role 8: SUPERUSER has full access to all menus
  * Role 9 (UNASSIGNED) & Role 17 (MEMBER): Cannot access / blocked from login
- * Role 11, 12, 13, 14, 15, 16, 18: Can login/register, menu permissions pending future implementation
+ * Role 11, 12, 13, 14, 15, 16, 18, 20: Role-specific / pending permissions
  */
 export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   1: ['dashboard', 'inventory', 'purchase-orders', 'finance', 'product', 'price-unit', 'supplier'],      // admin_holding
   2: ['dashboard', 'inventory', 'purchase-orders', 'users', 'hrd'],           // MASTER_HRD
   3: ['dashboard', 'laundry'],                                                // laundry_admin
   4: ['dashboard', 'laundry'],                                                // laundry_staff
-  5: ['dashboard', 'finance', 'inventory', 'product', 'price-unit', 'supplier', 'hrd', 'customer', 'customer-sales'], // finance
-  6: ['dashboard', 'inventory', 'product', 'price-unit', 'supplier', 'users', 'customer', 'customer-sales'], // outlet_admin
+  5: ['dashboard', 'pos', 'finance', 'inventory', 'product', 'price-unit', 'supplier', 'hrd', 'customer', 'customer-sales'], // finance
+  6: ['dashboard', 'pos', 'inventory', 'product', 'price-unit', 'supplier', 'users', 'customer', 'customer-sales'], // outlet_admin
   7: ['dashboard', 'inventory', 'purchase-orders', 'sto', 'production', 'type', 'customer-sales'], // warehouse_staff
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - blocked from login
   10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'], // Finance Outlet
   11: [],                                                                     // Pending ROLE_MENU_PERMISSION
   12: [],                                                                     // Pending ROLE_MENU_PERMISSION
-  13: ['inventory', 'hrd', 'customer', 'customer-sales'],                      // Supervisor / Direksi (HRD & Report)
-  14: ['dashboard', 'inventory', 'hrd'],                                      // MANAGER (Persetujuan Opname & HRD)
+  13: ['pos', 'inventory', 'hrd', 'customer', 'customer-sales'],              // Supervisor / Direksi (POS, Inventory, HRD & Report)
+  14: ['dashboard', 'pos', 'inventory', 'hrd'],                               // MANAGER (POS, Persetujuan Opname & HRD)
   15: [],                                                                     // Pending ROLE_MENU_PERMISSION
   16: [],                                                                     // Pending ROLE_MENU_PERMISSION
   17: [],                                                                     // MEMBER - blocked from login
   18: [],                                                                     // WEB_ADMIN - pending ROLE_MENU_PERMISSION
-  19: ['crm'],                                                                // Resepsionis Cabang
+  19: ['pos', 'crm'],                                                         // Resepsionis Cabang
+  20: ['dashboard', 'pos'],                                                   // IT-SUPPORT
 }
 
 /**
@@ -1095,6 +1103,10 @@ export interface ViewReportProductionYield {
   ingredient_count: number
   created_by_name: string
   kode_outlet: string
+  sto_order_id?: string | null
+  sto_number?: string | null
+  sto_to_outlet?: string | null
+  sto_to_outlet_name?: string | null
 }
 
 export interface ViewReportPoOutstanding {

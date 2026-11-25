@@ -12,6 +12,93 @@ export interface CreateProductionRunParams {
         qty: number
         cost: number
     }[]
+    sto_order_id?: string | null
+    sto_number?: string | null
+}
+
+export interface DraftStoOrderItemInfo {
+    id: string
+    barang_id: number
+    qty_ordered: number
+    sku: string
+    item_name: string
+}
+
+export interface DraftStoOrderOption {
+    id: string
+    document_number: string
+    from_outlet: string
+    to_outlet: string
+    to_outlet_name: string
+    created_at: string
+    items: DraftStoOrderItemInfo[]
+}
+
+export async function getDraftStoOrdersForProduction(
+    outletCode: string
+): Promise<ApiResponse<DraftStoOrderOption[]>> {
+    try {
+        if (!outletCode) {
+            return { data: [], error: null, isSuccess: true }
+        }
+
+        const { data: orders, error: ordersError } = await supabase
+            .from('sto_orders')
+            .select(`
+                id,
+                document_number,
+                from_outlet,
+                to_outlet,
+                created_at,
+                to_master_outlet:master_outlet!sto_orders_to_outlet_fkey ( kode_outlet, name_outlet ),
+                sto_items:sto_items (
+                    id,
+                    barang_id,
+                    qty_requested,
+                    master_barang ( sku, name )
+                )
+            `)
+            .eq('from_outlet', outletCode)
+            .eq('sender_status', 'DRAFT')
+            .order('created_at', { ascending: false })
+
+        if (ordersError) throw ordersError
+
+        const mapped: DraftStoOrderOption[] = (orders || []).map((o: any) => {
+            const toMo = Array.isArray(o.to_master_outlet) ? o.to_master_outlet[0] : o.to_master_outlet
+            return {
+                id: o.id,
+                document_number: o.document_number,
+                from_outlet: o.from_outlet,
+                to_outlet: o.to_outlet,
+                to_outlet_name: toMo?.name_outlet || o.to_outlet,
+                created_at: o.created_at,
+                items: (o.sto_items || []).map((it: any) => {
+                    const mb = Array.isArray(it.master_barang) ? it.master_barang[0] : it.master_barang
+                    return {
+                        id: it.id,
+                        barang_id: Number(it.barang_id),
+                        qty_ordered: Number(it.qty_requested || 0),
+                        sku: mb?.sku || '-',
+                        item_name: mb?.name || `Barang #${it.barang_id}`,
+                    }
+                }),
+            }
+        })
+
+        return {
+            data: mapped,
+            error: null,
+            isSuccess: true,
+        }
+    } catch (error: any) {
+        console.error('Error fetching draft STO orders for production:', error)
+        return {
+            data: [],
+            error: error.message || 'Gagal memuat daftar STO DRAFT',
+            isSuccess: false,
+        }
+    }
 }
 
 export async function createProductionRun(params: CreateProductionRunParams): Promise<ApiResponse<boolean>> {
@@ -21,7 +108,9 @@ export async function createProductionRun(params: CreateProductionRunParams): Pr
             p_date: params.date,
             p_fg_barang_id: params.fg_barang_id,
             p_qty_produced: params.qty_produced,
-            p_ingredients: params.ingredients
+            p_ingredients: params.ingredients,
+            p_sto_order_id: params.sto_order_id || null,
+            p_sto_number: params.sto_number || null,
         })
 
         if (error) throw error

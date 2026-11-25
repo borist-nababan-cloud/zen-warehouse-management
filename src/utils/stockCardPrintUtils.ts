@@ -13,7 +13,7 @@ function escapeHtml(value: string | number | null | undefined): string {
 function formatQty(val: number | null | undefined): string {
   return new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 3,
   }).format(Number(val || 0))
 }
 
