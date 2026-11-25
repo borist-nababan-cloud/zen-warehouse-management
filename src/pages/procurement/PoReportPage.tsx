@@ -4,7 +4,7 @@ import { useAuthUser } from '@/hooks/useAuth'
 import { reportService } from '@/services/reportService'
 import { ViewReportPurchaseOrders } from '@/types/database'
 import { masterOutletService } from '@/services/masterOutletService'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrencyAuto, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,17 +36,30 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog'
-import { Printer, FileText, Search, TrendingUp, Filter, Wallet, Store, Download, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { Printer, FileText, Search, TrendingUp, Filter, Wallet, Store, Download, Image as ImageIcon, RotateCcw, History, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { printReportA4 } from '@/utils/reportPrintUtils'
+import { PurchaseReturnModal } from '@/components/procurement/PurchaseReturnModal'
+import { purchaseReturnService, type PoReturnHistoryItem } from '@/services/purchaseReturnService'
+import {
+    TransactionImageGalleryDialog,
+    normalizeViewReceiptImages,
+    type GalleryImageItem,
+} from '@/components/common/TransactionImageGalleryDialog'
 
 export default function PoReportPage() {
     const { user } = useAuthUser()
     const [data, setData] = useState<ViewReportPurchaseOrders[]>([])
     const [originalData, setOriginalData] = useState<ViewReportPurchaseOrders[]>([])
     const [loading, setLoading] = useState(true)
-    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
+    const [galleryModal, setGalleryModal] = useState<{ title: string; images: GalleryImageItem[] } | null>(null)
+    const [returnTargetPoId, setReturnTargetPoId] = useState<string | null>(null)
+    const [historyTargetPo, setHistoryTargetPo] = useState<{ poId: string; poDocNo: string } | null>(null)
+    const [historyLoading, setHistoryLoading] = useState(false)
+    const [historyRows, setHistoryRows] = useState<PoReturnHistoryItem[]>([])
+
+    const canCancelOrReturnPo = [5, 6, 8, 10, 14].includes(Number(user?.user_role || 0))
 
     // Filter States
     const [startDate, setStartDate] = useState<string>('')
@@ -132,11 +145,28 @@ export default function PoReportPage() {
         switch (status) {
             case 'COMPLETED': return 'bg-emerald-100 text-emerald-800 border-emerald-200'
             case 'PAID': return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            case 'INVOICED': return 'bg-indigo-100 text-indigo-800 border-indigo-200'
             case 'ISSUED': return 'bg-amber-100 text-amber-800 border-amber-200'
             case 'PARTIAL': return 'bg-blue-100 text-blue-800 border-blue-200'
+            case 'RETURNED': return 'bg-rose-100 text-rose-800 border-rose-200'
             case 'CANCELLED': return 'bg-slate-100 text-slate-600 border-slate-200'
             case 'DRAFT': return 'bg-gray-100 text-gray-600 border-gray-200'
             default: return 'bg-gray-100 text-gray-800'
+        }
+    }
+
+    const handleOpenHistory = async (poId: string, poDocNo: string) => {
+        setHistoryTargetPo({ poId, poDocNo })
+        setHistoryLoading(true)
+        setHistoryRows([])
+        try {
+            const preview = await purchaseReturnService.getReturnPreview(poId)
+            setHistoryRows(preview.history || [])
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Gagal memuat riwayat retur PO.'
+            toast.error(msg)
+        } finally {
+            setHistoryLoading(false)
         }
     }
 
@@ -176,6 +206,7 @@ export default function PoReportPage() {
     }
 
     const totalValue = data.reduce((acc, curr) => acc + (curr.grand_total || 0), 0)
+    const totalReturnedValue = data.reduce((acc, curr) => acc + Number(curr.total_returned_amount || 0), 0)
 
     const handlePrintReport = async () => {
         if (data.length === 0) {
@@ -196,7 +227,7 @@ export default function PoReportPage() {
             extraFilters: searchTerm ? [{ label: 'Pencarian', value: searchTerm }] : [],
             summaryItems: [
                 { label: 'Total Dokumen PO', value: `${data.length} Dokumen` },
-                { label: 'Total Nilai PO', value: formatCurrency(totalValue) },
+                { label: 'Total Nilai PO', value: formatCurrencyAuto(totalValue) },
             ],
             columns: [
                 { header: 'Tanggal', width: '75px' },
@@ -214,9 +245,9 @@ export default function PoReportPage() {
                 row.supplier_name || '-',
                 row.status,
                 formatDate(row.expected_delivery_date),
-                formatCurrency(Number(row.grand_total || 0)),
+                formatCurrencyAuto(Number(row.grand_total || 0)),
             ]),
-            totalRow: ['TOTAL', '', '', '', '', `${data.length} PO`, formatCurrency(totalValue)],
+            totalRow: ['TOTAL', '', '', '', '', `${data.length} PO`, formatCurrencyAuto(totalValue)],
         })
     }
 
@@ -334,7 +365,9 @@ export default function PoReportPage() {
                                         <SelectItem value="ISSUED">Diterbitkan (ISSUED)</SelectItem>
                                         <SelectItem value="PARTIAL">Diterima Sebagian (PARTIAL)</SelectItem>
                                         <SelectItem value="COMPLETED">Selesai (COMPLETED)</SelectItem>
+                                        <SelectItem value="INVOICED">Sudah Difaktur (INVOICED)</SelectItem>
                                         <SelectItem value="PAID">Lunas (PAID)</SelectItem>
+                                        <SelectItem value="RETURNED">Diretur (RETURNED)</SelectItem>
                                         <SelectItem value="CANCELLED">Dibatalkan (CANCELLED)</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -366,7 +399,20 @@ export default function PoReportPage() {
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-blue-600">Total Nilai Pesanan</p>
-                                    <h3 className="text-2xl font-bold text-blue-900">{formatCurrency(totalValue)}</h3>
+                                    <h3 className="text-2xl font-bold text-blue-900">{formatCurrencyAuto(totalValue)}</h3>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-rose-50 border-rose-100 shadow-sm">
+                        <CardContent className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-rose-100 rounded-full text-rose-600">
+                                    <RotateCcw className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-rose-600">Total Nilai Retur</p>
+                                    <h3 className="text-2xl font-bold text-rose-900">{formatCurrencyAuto(totalReturnedValue)}</h3>
                                 </div>
                             </div>
                         </CardContent>
@@ -387,7 +433,7 @@ export default function PoReportPage() {
                                 <TableHead>Status</TableHead>
                                 <TableHead>Estimasi Kirim</TableHead>
                                 <TableHead className="text-right">Total Keseluruhan</TableHead>
-                                <TableHead className="text-center w-[160px]">Aksi</TableHead>
+                                <TableHead className="text-center w-[260px]">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -404,9 +450,32 @@ export default function PoReportPage() {
                             ) : (
                                 data.map((row) => {
                                     const poDocNo = row.po_doc_number || row.document_number || '-'
+                                    const hasPaidInvoice =
+                                        row.status === 'PAID' ||
+                                        row.invoice_status === 'PAID' ||
+                                        row.invoice_status === 'PARTIAL' ||
+                                        Number(row.invoice_paid_amount || 0) > 0
+                                    const canReturnStatus =
+                                        row.status === 'ISSUED' ||
+                                        row.status === 'PARTIAL' ||
+                                        row.status === 'COMPLETED' ||
+                                        (row.status === 'INVOICED' && !hasPaidInvoice)
+                                    const cancelDisabledTitle = hasPaidInvoice
+                                        ? 'PO/faktur yang sudah dibayar (PAID/PARTIAL) tidak dapat dibatalkan atau diretur'
+                                        : row.status === 'CANCELLED' || row.status === 'RETURNED'
+                                          ? `PO sudah berstatus ${row.status}`
+                                          : row.status === 'DRAFT'
+                                            ? 'PO berstatus DRAFT belum dikirim ke supplier'
+                                            : 'Batal / Retur PO'
+
+                                    const imgs = normalizeViewReceiptImages(
+                                        row.receipt_images,
+                                        row.receipt_image_url,
+                                        poDocNo
+                                    )
                                     return (
-                                        <TableRow key={row.po_id} className="hover:bg-slate-50/50">
-                                            <TableCell className="font-medium text-slate-600">
+                                        <TableRow key={row.po_id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                            <TableCell className="font-medium text-slate-600 dark:text-slate-300">
                                                 {formatDate(row.po_date)}
                                             </TableCell>
                                             {canSelectOutlet && selectedOutlet === 'ALL' && (
@@ -414,80 +483,123 @@ export default function PoReportPage() {
                                                     {availableOutlets.find(o => o.kode_outlet === row.kode_outlet)?.name_outlet || row.kode_outlet}
                                                 </TableCell>
                                             )}
-                                            <TableCell className="font-mono text-xs text-slate-500">
+                                            <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400">
                                                 {poDocNo}
                                             </TableCell>
-                                            <TableCell className="font-medium text-slate-700">
+                                            <TableCell className="font-medium text-slate-700 dark:text-slate-200">
                                                 {row.supplier_name}
                                             </TableCell>
                                             <TableCell>
-                                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(row.status)}`}>
-                                                    {row.status}
-                                                </span>
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(row.status)}`}>
+                                                        {row.status}
+                                                    </span>
+                                                    {(row.return_count || 0) > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenHistory(row.po_id, poDocNo)}
+                                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800 text-[10px] font-medium transition-colors"
+                                                            title="Lihat riwayat retur & nota debet"
+                                                        >
+                                                            <History className="h-2.5 w-2.5" />
+                                                            Retur {row.return_count}x
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </TableCell>
-                                            <TableCell className="text-slate-500 text-sm">
+                                            <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
                                                 {formatDate(row.expected_delivery_date)}
                                             </TableCell>
-                                            <TableCell className="text-right font-medium text-slate-700">
-                                                {formatCurrency(row.grand_total)}
+                                            <TableCell className="text-right font-medium text-slate-700 dark:text-slate-200">
+                                                {formatCurrencyAuto(row.grand_total)}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
+                                                <div className="flex items-center justify-center gap-1">
                                                     {/* Print PO */}
                                                     <Button
                                                         variant="ghost"
-                                                        size="icon"
+                                                        size="sm"
                                                         title="Cetak PO"
-                                                        className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                                        className="flex flex-col h-auto py-1 px-2 gap-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                                                         onClick={() => {
                                                             const url = `/procurement/purchase-orders/${row.po_id}/print`
                                                             window.open(url, '_blank')
                                                         }}
                                                     >
                                                         <Printer className="h-4 w-4" />
+                                                        <span className="text-[10px] leading-tight font-medium">Cetak</span>
                                                     </Button>
 
-                                                    {/* View Goods Receipt Photo (beside Print icon) */}
-                                                    {row.receipt_image_url ? (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            title="Lihat Foto Penerimaan Barang"
-                                                            className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                            onClick={() =>
-                                                                setPreviewImage({
-                                                                    url: row.receipt_image_url!,
-                                                                    title: `Bukti Penerimaan PO: ${poDocNo}`,
-                                                                })
-                                                            }
-                                                        >
-                                                            <ImageIcon className="h-4 w-4" />
-                                                        </Button>
-                                                    ) : (
-                                                        <div
-                                                            className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
-                                                            title="Tidak ada foto bukti penerimaan"
-                                                        >
-                                                            -
-                                                        </div>
-                                                    )}
+                                                    {/* View Goods Receipt Photos (All GRs for this PO) */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={imgs.length === 0}
+                                                        title={
+                                                            imgs.length > 0
+                                                                ? `Lihat ${imgs.length} Foto Penerimaan Barang`
+                                                                : 'Tidak ada foto bukti penerimaan'
+                                                        }
+                                                        className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                            imgs.length > 0
+                                                                ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50'
+                                                                : 'text-slate-300 dark:text-slate-600'
+                                                        }`}
+                                                        onClick={() => {
+                                                            if (imgs.length === 0) return
+                                                            setGalleryModal({
+                                                                title: `Bukti Penerimaan PO: ${poDocNo}`,
+                                                                images: imgs,
+                                                            })
+                                                        }}
+                                                    >
+                                                        <ImageIcon className="h-4 w-4" />
+                                                        <span className="text-[10px] leading-tight font-medium">
+                                                            {imgs.length > 0 ? `Foto GR (${imgs.length})` : 'Foto GR'}
+                                                        </span>
+                                                    </Button>
 
-                                                    {/* Print Invoice (if linked) */}
-                                                    {row.linked_invoice_id ? (
+                                                    {/* Print Invoice */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={!row.linked_invoice_id}
+                                                        title={row.linked_invoice_id ? 'Lihat Faktur Terkait' : 'Belum ada faktur pembelian'}
+                                                        className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                            row.linked_invoice_id
+                                                                ? 'text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50'
+                                                                : 'text-slate-300 dark:text-slate-600'
+                                                        }`}
+                                                        onClick={() => {
+                                                            if (!row.linked_invoice_id) return
+                                                            const url = `/finance/invoices/print/${row.linked_invoice_id}`
+                                                            window.open(url, '_blank')
+                                                        }}
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                        <span className="text-[10px] leading-tight font-medium">Faktur</span>
+                                                    </Button>
+
+                                                    {/* Cancel / Return PO */}
+                                                    {canCancelOrReturnPo && (
                                                         <Button
                                                             variant="ghost"
-                                                            size="icon"
-                                                            title="Lihat Faktur Terkait"
-                                                            className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                                                            size="sm"
+                                                            disabled={!canReturnStatus}
+                                                            title={cancelDisabledTitle}
+                                                            className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                                canReturnStatus
+                                                                    ? 'text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50'
+                                                                    : 'text-slate-300 dark:text-slate-600'
+                                                            }`}
                                                             onClick={() => {
-                                                                const url = `/finance/invoices/print/${row.linked_invoice_id}`
-                                                                window.open(url, '_blank')
+                                                                if (!canReturnStatus) return
+                                                                setReturnTargetPoId(row.po_id)
                                                             }}
                                                         >
-                                                            <FileText className="h-4 w-4" />
+                                                            <RotateCcw className="h-4 w-4" />
+                                                            <span className="text-[10px] leading-tight font-medium">Batal PO</span>
                                                         </Button>
-                                                    ) : (
-                                                        <div className="h-8 w-8 flex items-center justify-center text-slate-300 select-none">-</div>
                                                     )}
                                                 </div>
                                             </TableCell>
@@ -504,33 +616,137 @@ export default function PoReportPage() {
                 </div>
             </div>
 
-            {/* Goods Receipt Photo Preview Dialog */}
-            <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-                <DialogContent className="max-w-2xl">
+            {/* Goods Receipt Multi-Photo Gallery Dialog */}
+            <TransactionImageGalleryDialog
+                open={!!galleryModal}
+                onOpenChange={(open) => !open && setGalleryModal(null)}
+                title={galleryModal?.title || 'Bukti Foto Penerimaan'}
+                images={galleryModal?.images || []}
+            />
+
+            {/* Cancel / Return PO Modal */}
+            <PurchaseReturnModal
+                poId={returnTargetPoId}
+                open={!!returnTargetPoId}
+                onOpenChange={(open) => !open && setReturnTargetPoId(null)}
+                onSuccess={fetchData}
+            />
+
+            {/* Return History & Debit Note Dialog */}
+            <Dialog open={!!historyTargetPo} onOpenChange={(open) => !open && setHistoryTargetPo(null)}>
+                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{previewImage?.title || 'Bukti Foto Penerimaan'}</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5 text-rose-600" />
+                            Riwayat Retur PO: {historyTargetPo?.poDocNo}
+                        </DialogTitle>
                     </DialogHeader>
-                    {previewImage && (
-                        <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
-                            <img
-                                src={previewImage.url}
-                                alt={previewImage.title}
-                                className="max-h-[65vh] w-auto object-contain rounded"
-                            />
+                    {historyLoading ? (
+                        <div className="py-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Memuat riwayat retur...
+                        </div>
+                    ) : historyRows.length === 0 ? (
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                            Belum ada dokumen retur pasca-penerimaan untuk PO ini.
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {historyRows.map((ret) => (
+                                <div
+                                    key={ret.id}
+                                    className="rounded-lg border bg-card p-4 space-y-3"
+                                >
+                                    <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono text-sm font-semibold">
+                                                    {ret.document_number}
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800">
+                                                    {ret.return_type === 'FULL_RETURN' ? 'Retur Penuh' : 'Retur Sebagian'}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                Oleh {ret.created_by_name || '-'} • {formatDate(ret.created_at)}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                                                -{formatCurrencyAuto(ret.total_return_amount)}
+                                            </p>
+                                            {Number(ret.shipping_deduction || 0) > 0 && (
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Termasuk potongan ongkir: -{formatCurrencyAuto(ret.shipping_deduction)}
+                                                </p>
+                                            )}
+                                            {Number(ret.other_cost_deduction || 0) !== 0 && (
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Penyesuaian biaya lain-lain: {formatCurrencyAuto(-Number(ret.other_cost_deduction))}
+                                                </p>
+                                            )}
+                                            {ret.deduction_invoice_id && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="mt-1 h-7 text-xs gap-1"
+                                                    onClick={() => window.open(`/finance/invoices/print/${ret.deduction_invoice_id}`, '_blank')}
+                                                >
+                                                    <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                                                    Cetak Nota Debet ({ret.deduction_invoice_doc || 'DN'})
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="text-xs bg-muted/50 rounded p-2">
+                                        <span className="font-semibold">Alasan: </span>
+                                        <span>{ret.reason}</span>
+                                    </div>
+
+                                    {ret.items && ret.items.length > 0 && (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b text-muted-foreground">
+                                                        <th className="py-1.5 text-left font-medium">Barang</th>
+                                                        <th className="py-1.5 text-right font-medium">Qty Retur</th>
+                                                        <th className="py-1.5 text-right font-medium">Harga Satuan</th>
+                                                        <th className="py-1.5 text-right font-medium">Subtotal</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {ret.items.map((item, idx) => (
+                                                        <tr key={`${ret.id}-${item.barang_id}-${idx}`} className="border-b last:border-0">
+                                                            <td className="py-1.5">
+                                                                <span className="font-medium">{item.item_name}</span>
+                                                                {item.sku && (
+                                                                    <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+                                                                        ({item.sku})
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-1.5 text-right">
+                                                                {item.qty_returned} {item.uom_purchase}
+                                                            </td>
+                                                            <td className="py-1.5 text-right">
+                                                                {formatCurrencyAuto(item.price_per_unit)}
+                                                            </td>
+                                                            <td className="py-1.5 text-right font-medium text-rose-600 dark:text-rose-400">
+                                                                -{formatCurrencyAuto(item.subtotal)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     )}
                     <DialogFooter>
-                        {previewImage && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(previewImage.url, '_blank')}
-                            >
-                                <ExternalLink className="h-4 w-4 mr-1.5" />
-                                Buka di Tab Baru
-                            </Button>
-                        )}
-                        <Button variant="secondary" size="sm" onClick={() => setPreviewImage(null)}>
+                        <Button variant="secondary" size="sm" onClick={() => setHistoryTargetPo(null)}>
                             Tutup
                         </Button>
                     </DialogFooter>

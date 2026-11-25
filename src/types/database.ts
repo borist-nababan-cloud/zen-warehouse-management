@@ -384,7 +384,7 @@ export interface InventoryBalance {
 // PROCUREMENT MODULE TYPES
 // ============================================
 
-export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'PARTIAL' | 'COMPLETED' | 'CANCELLED' | 'PAID' | 'INVOICED'
+export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'PARTIAL' | 'COMPLETED' | 'CANCELLED' | 'PAID' | 'INVOICED' | 'RETURNED'
 
 export interface PurchaseOrder {
   id: string                      // UUID PK
@@ -393,6 +393,8 @@ export interface PurchaseOrder {
   kode_outlet: string             // FK
   status: PurchaseOrderStatus
   total_amount: number
+  tax_amount?: number
+  grand_total?: number
   expected_delivery_date: string  // date string YYYY-MM-DD
   ro_number?: string | null       // [NEW]
   notes?: string | null           // [NEW] (already part of schema but good to be explicit if missing)
@@ -418,6 +420,14 @@ export interface PurchaseOrderItem {
   master_barang?: MasterBarang | null
 }
 
+export interface ReceiptImageEntry {
+  gr_id?: string
+  gr_doc: string
+  received_at?: string | null
+  slot: number
+  url: string
+}
+
 export interface GoodsReceipt {
   id: string                      // UUID PK
   document_number: string         // e.g., "GR-2025-001"
@@ -426,7 +436,9 @@ export interface GoodsReceipt {
   supplier_delivery_note: string  // External Ref No
   received_by: string             // UUID FK auth.uid()
   received_at?: string
-  image_url?: string | null       // Optional Goods Receipt photo
+  image_url?: string | null       // Optional Goods Receipt photo 1
+  image_url_2?: string | null     // Optional Goods Receipt photo 2
+  image_url_3?: string | null     // Optional Goods Receipt photo 3
   // Joins
   purchase_orders?: PurchaseOrder | null
   master_outlet?: MasterOutlet | null
@@ -463,6 +475,7 @@ export interface ViewPoDetailsReceived {
   total_price_received: number
   latest_gr_id?: string | null
   receipt_image_url?: string | null
+  receipt_images?: ReceiptImageEntry[] | null
 }
 
 // ============================================
@@ -643,15 +656,19 @@ export interface StoInvoice {
 
 export interface PurchaseInvoice {
   id: string
-  parent_invoice_id?: string // For recursiveness if needed, or null
+  parent_invoice_id?: string | null // For debit note / deduction invoice linkage
+  purchase_return_id?: string | null
+  invoice_type?: 'INVOICE' | 'DEBIT_NOTE'
   document_number: string
   supplier_invoice_number: string
   invoice_date: string
   payment_due_date: string | null
   purchase_order_id: string
-  status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
+  status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED' | 'RETURNED'
   total_amount: number
   shipping_cost?: number // Added via migration
+  other_cost?: number // Added via migration (positive surcharge or negative deduction, 2 decimals)
+  other_cost_notes?: string | null // Mandatory when other_cost != 0
   kode_supplier?: string // Added via migration
   kode_outlet?: string // Added via migration
   notes: string | null
@@ -1114,9 +1131,14 @@ export interface ViewReportPurchaseInvoices {
   po_doc: string                // Was po_doc_number
   purchase_order_id: string | null     // Was po_id, nullable for STO
   sto_id?: string | null        // Added for STO Invoices
-  status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED'
+  status: 'UNPAID' | 'PAID' | 'PARTIAL' | 'CANCELLED' | 'RETURNED'
+  invoice_type?: 'INVOICE' | 'DEBIT_NOTE'
+  parent_invoice_id?: string | null
+  purchase_return_id?: string | null
   total_amount: number
   shipping_cost?: number        // Added via user SQL update
+  other_cost?: number           // Positive surcharge or negative deduction (2 decimals)
+  other_cost_notes?: string | null
   total_paid_amount: number | null // Added
   payment_due_date: string | null // Added
   kode_outlet: string
@@ -1140,6 +1162,13 @@ export interface ViewReportPurchaseOrders {
   linked_invoice_id: string | null
   kode_outlet: string
   receipt_image_url?: string | null
+  receipt_images?: ReceiptImageEntry[] | null
+  has_goods_receipt?: boolean
+  invoice_status?: string | null
+  invoice_paid_amount?: number
+  return_count?: number
+  total_returned_amount?: number
+  latest_debit_note_id?: string | null
 }
 
 // ============================================

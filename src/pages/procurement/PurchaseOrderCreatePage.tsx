@@ -320,8 +320,10 @@ export function PurchaseOrderCreatePage() {
 
             if (isEditMode && id) {
                 // --- UPDATE MODE ---
+                const poTotal = calculateGrandTotal()
                 const result = await updatePurchaseOrderItems(id, {
-                    total_amount: calculateGrandTotal(),
+                    total_amount: poTotal,
+                    grand_total: poTotal,
                     status: status,
                     ro_number: roNumber,
                     notes: notes
@@ -336,11 +338,13 @@ export function PurchaseOrderCreatePage() {
 
             } else {
                 // --- CREATE MODE ---
+                const poTotal = calculateGrandTotal()
                 const headerData = {
                     document_number: docNumber,
                     kode_supplier: selectedSupplierId,
                     kode_outlet: user.kode_outlet,
-                    total_amount: calculateGrandTotal(),
+                    total_amount: poTotal,
+                    grand_total: poTotal,
                     expected_delivery_date: expectedDate || new Date().toISOString().split('T')[0],
                     status: status,
                     created_by: user.id,

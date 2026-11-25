@@ -22,8 +22,19 @@ import {
   BadgeCheck,
   Unlink2,
   RotateCcw,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  Sparkles,
+  CheckCircle2,
+  LogOut,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  adminResetUserPassword,
+  generateStrongTemporaryPassword,
+} from '@/services/userAdminService'
 
 interface RoleOption {
   id: number
@@ -49,6 +60,8 @@ interface ManageableUser {
   rejected_reason?: string | null
   approved_at?: string | null
   created_at: string
+  auth_provider?: string
+  has_email_auth?: boolean
 }
 
 export function UserManagementPage() {
@@ -71,6 +84,20 @@ export function UserManagementPage() {
   const [newSelectedRole, setNewSelectedRole] = useState<number>(12)
   const [unlinkingUser, setUnlinkingUser] = useState<ManageableUser | null>(null)
   const [selectedPendingRoles, setSelectedPendingRoles] = useState<Record<string, number>>({})
+  const [resetPasswordUser, setResetPasswordUser] = useState<ManageableUser | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [revokeSessions, setRevokeSessions] = useState(true)
+  const [resetModalError, setResetModalError] = useState<string | null>(null)
+  const [resetSuccessInfo, setResetSuccessInfo] = useState<{
+    email: string
+    sessionsRevoked: boolean
+    revokedSessionCount: number
+    tempPassword: string
+    warning?: string
+  } | null>(null)
+  const [copiedKey, setCopiedKey] = useState<'password' | 'message' | null>(null)
 
   // Strict Permission Check: Role 8 (SUPERUSER), Role 2 (MASTER_HRD), & Role 6 (outlet_admin)
   const isSuperuser = currentUser?.user_role === 8
@@ -246,6 +273,120 @@ export function UserManagementPage() {
     }
   }
 
+  const openResetPasswordModal = (targetUser: ManageableUser) => {
+    setResetPasswordUser(targetUser)
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setShowNewPassword(false)
+    setRevokeSessions(true)
+    setResetModalError(null)
+    setResetSuccessInfo(null)
+    setCopiedKey(null)
+  }
+
+  const closeResetPasswordModal = () => {
+    if (resetPasswordUser && actionLoading === resetPasswordUser.uid) return
+    setResetPasswordUser(null)
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setShowNewPassword(false)
+    setRevokeSessions(true)
+    setResetModalError(null)
+    setResetSuccessInfo(null)
+    setCopiedKey(null)
+  }
+
+  const handleGenerateTempPassword = () => {
+    try {
+      const generated = generateStrongTemporaryPassword(12)
+      setNewPassword(generated)
+      setConfirmNewPassword(generated)
+      setShowNewPassword(true)
+      setResetModalError(null)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal membuat kata sandi acak.'
+      setResetModalError(msg)
+      toast.error(msg)
+    }
+  }
+
+  const handleCopyText = async (text: string, key: 'password' | 'message') => {
+    try {
+      if (!navigator.clipboard?.writeText) {
+        toast.error('Browser tidak mendukung salin otomatis. Silakan salin teks secara manual.')
+        return
+      }
+      await navigator.clipboard.writeText(text)
+      setCopiedKey(key)
+      toast.success(
+        key === 'password'
+          ? 'Kata sandi sementara berhasil disalin.'
+          : 'Pesan panduan login berhasil disalin.'
+      )
+      setTimeout(() => {
+        setCopiedKey((prev) => (prev === key ? null : prev))
+      }, 2500)
+    } catch {
+      toast.error('Gagal menyalin ke clipboard. Silakan salin secara manual.')
+    }
+  }
+
+  const handleResetPasswordConfirm = async () => {
+    if (!resetPasswordUser || !isSuperuser) return
+
+    if (newPassword !== newPassword.trim()) {
+      setResetModalError('Kata sandi baru tidak boleh diawali atau diakhiri spasi.')
+      return
+    }
+    if (newPassword.length < 8 || newPassword.length > 64) {
+      setResetModalError('Kata sandi baru harus terdiri dari 8 hingga 64 karakter.')
+      return
+    }
+    if (/[\x00-\x1F\x7F]/.test(newPassword)) {
+      setResetModalError('Kata sandi baru tidak boleh mengandung karakter kontrol.')
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      setResetModalError('Konfirmasi kata sandi baru tidak cocok.')
+      return
+    }
+
+    setActionLoading(resetPasswordUser.uid)
+    setResetModalError(null)
+    setFeedback(null)
+
+    try {
+      const issuedPassword = newPassword
+      const result = await adminResetUserPassword({
+        target_uid: resetPasswordUser.uid,
+        new_password: issuedPassword,
+        revoke_sessions: revokeSessions,
+      })
+
+      setNewPassword('')
+      setConfirmNewPassword('')
+      setShowNewPassword(false)
+      setResetSuccessInfo({
+        email: result.target_email || resetPasswordUser.email,
+        sessionsRevoked: result.sessions_revoked,
+        revokedSessionCount: result.revoked_session_count,
+        tempPassword: issuedPassword,
+        warning: result.warning,
+      })
+      setFeedback({ type: 'success', message: result.message })
+      toast.success(result.message)
+      if (result.warning) {
+        toast.warning(result.warning)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal mereset kata sandi pengguna.'
+      setResetModalError(msg)
+      toast.error(msg)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   // Categorize counts
   const pendingUsers = useMemo(() => {
     return users.filter((u) => u.approval_status === 'PENDING')
@@ -360,9 +501,11 @@ export function UserManagementPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                {isMultiOutletAdmin
-                  ? 'Wewenang penuh mengelola, menyetujui, mengubah role, dan melepas tautan kode karyawan dari seluruh gerai.'
-                  : `Wewenang mengelola staf khusus gerai Anda (${callerOutlet || currentUser?.kode_outlet}).`}
+                {isSuperuser
+                  ? 'Wewenang penuh mengelola, menyetujui, mengubah role, melepas tautan kode karyawan, dan mereset kata sandi akun email dari seluruh gerai.'
+                  : isMasterHrd
+                    ? 'Wewenang penuh mengelola, menyetujui, mengubah role, dan melepas tautan kode karyawan dari seluruh gerai.'
+                    : `Wewenang mengelola staf khusus gerai Anda (${callerOutlet || currentUser?.kode_outlet}).`}
               </p>
             </div>
           </div>
@@ -560,6 +703,10 @@ export function UserManagementPage() {
 
                 const primaryName = u.namakaryawan || u.full_name || u.email
                 const hasOfficialName = !!u.namakaryawan
+                const canResetPassword =
+                  isSuperuser &&
+                  u.uid !== currentUser?.id &&
+                  u.has_email_auth !== false
 
                 return (
                   <div
@@ -667,6 +814,18 @@ export function UserManagementPage() {
                               <Shield className="w-2.5 h-2.5 mr-1" />
                               Role {u.user_role || u.role_user} ({u.role_name || 'Staff'})
                             </span>
+
+                            {isSuperuser && u.has_email_auth !== undefined && (
+                              <span
+                                className={`px-2 py-0.5 rounded-lg border font-medium flex items-center ${
+                                  u.has_email_auth
+                                    ? 'bg-amber-50/80 border-amber-200 text-amber-800'
+                                    : 'bg-sky-50 border-sky-200 text-sky-700'
+                                }`}
+                              >
+                                {u.has_email_auth ? 'Email & Sandi' : 'Google OAuth'}
+                              </span>
+                            )}
                           </div>
 
                           {u.rejected_reason && isRejected && (
@@ -755,6 +914,18 @@ export function UserManagementPage() {
                                 <span>Ubah Role</span>
                               </button>
                             )}
+
+                            {canResetPassword && (
+                              <button
+                                onClick={() => openResetPasswordModal(u)}
+                                disabled={isActionRunning}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all shadow-xs"
+                                title="Reset kata sandi akun Email & Kata Sandi (Khusus Role 8)"
+                              >
+                                <KeyRound className="w-3.5 h-3.5 text-amber-700" />
+                                <span>Reset Sandi</span>
+                              </button>
+                            )}
                           </>
                         ) : (
                           <>
@@ -770,6 +941,18 @@ export function UserManagementPage() {
                               >
                                 <Edit3 className="w-3.5 h-3.5 text-zen-moss" />
                                 <span>Ubah Role</span>
+                              </button>
+                            )}
+
+                            {canResetPassword && (
+                              <button
+                                onClick={() => openResetPasswordModal(u)}
+                                disabled={isActionRunning}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all shadow-xs"
+                                title="Reset kata sandi akun Email & Kata Sandi (Khusus Role 8)"
+                              >
+                                <KeyRound className="w-3.5 h-3.5 text-amber-700" />
+                                <span>Reset Sandi</span>
                               </button>
                             )}
 
@@ -971,6 +1154,308 @@ export function UserManagementPage() {
                   {actionLoading === rejectingUser.uid ? 'Memproses...' : 'Konfirmasi Tolak'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Kata Sandi Modal (Khusus SUPERUSER Role 8) */}
+        {isSuperuser && resetPasswordUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+            <div className="bg-white dark:bg-zen-paper rounded-2xl max-w-md w-full p-6 border border-zen-border shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              {!resetSuccessInfo ? (
+                <>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                        <KeyRound className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold font-serif text-zen-charcoal">
+                          Reset Kata Sandi Pengguna
+                        </h3>
+                        <p className="text-[11px] text-zen-muted">
+                          Khusus SUPERUSER (Role 8) • Tidak memerlukan email SMTP
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeResetPasswordModal}
+                      disabled={actionLoading === resetPasswordUser.uid}
+                      aria-label="Tutup jendela reset kata sandi"
+                      className="p-1.5 rounded-lg text-zen-muted hover:text-zen-charcoal hover:bg-zen-cream transition-colors disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Ringkasan Akun Target */}
+                  <div className="p-3.5 rounded-xl bg-zen-linen/70 dark:bg-black/20 border border-zen-border space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-zen-muted">Nama Staf:</span>
+                      <span className="font-bold text-zen-charcoal text-right truncate">
+                        {resetPasswordUser.namakaryawan || resetPasswordUser.full_name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-zen-muted">Email:</span>
+                      <span className="font-mono font-medium text-zen-charcoal truncate max-w-[240px]">
+                        {resetPasswordUser.email}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-zen-muted">Gerai / Lokasi:</span>
+                      <span className="font-medium text-zen-charcoal text-right">
+                        {resetPasswordUser.kode_outlet
+                          ? `Gerai ${resetPasswordUser.kode_outlet}${
+                              resetPasswordUser.name_outlet ? ` • ${resetPasswordUser.name_outlet}` : ''
+                            }`
+                          : 'Pusat / Holding'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-zen-border">
+                      <span className="text-zen-muted">Role Saat Ini:</span>
+                      <span className="font-bold text-zen-moss dark:text-zen-matcha">
+                        Role {resetPasswordUser.user_role || resetPasswordUser.role_user} (
+                        {resetPasswordUser.role_name || 'Staff'})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tombol Buat Sandi Acak */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-zen-charcoal">
+                      Atur Kata Sandi Sementara
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleGenerateTempPassword}
+                      disabled={actionLoading === resetPasswordUser.uid}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 bg-zen-matcha/15 hover:bg-zen-matcha/25 text-zen-moss dark:text-zen-matcha border border-zen-matcha/30 transition-all disabled:opacity-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Buat Sandi Acak Kuat</span>
+                    </button>
+                  </div>
+
+                  {/* Input Kata Sandi Baru */}
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="admin-reset-new-password"
+                        className="block text-xs font-semibold text-zen-charcoal mb-1"
+                      >
+                        Kata Sandi Baru
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="admin-reset-new-password"
+                          type={showNewPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          value={newPassword}
+                          onChange={(e) => {
+                            setNewPassword(e.target.value)
+                            if (resetModalError) setResetModalError(null)
+                          }}
+                          disabled={actionLoading === resetPasswordUser.uid}
+                          placeholder="Minimal 8 karakter..."
+                          className="w-full pr-10 pl-3 py-2 text-xs rounded-xl border border-zen-border bg-zen-linen/40 dark:bg-black/20 text-zen-charcoal focus:border-zen-matcha focus:ring-1 focus:ring-zen-matcha outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword((prev) => !prev)}
+                          aria-label={
+                            showNewPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'
+                          }
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zen-muted hover:text-zen-charcoal"
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-zen-muted mt-1">
+                        8–64 karakter, tanpa spasi di awal atau akhir.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="admin-reset-confirm-password"
+                        className="block text-xs font-semibold text-zen-charcoal mb-1"
+                      >
+                        Konfirmasi Kata Sandi Baru
+                      </label>
+                      <input
+                        id="admin-reset-confirm-password"
+                        type={showNewPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        value={confirmNewPassword}
+                        onChange={(e) => {
+                          setConfirmNewPassword(e.target.value)
+                          if (resetModalError) setResetModalError(null)
+                        }}
+                        disabled={actionLoading === resetPasswordUser.uid}
+                        placeholder="Ulangi kata sandi baru..."
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-zen-border bg-zen-linen/40 dark:bg-black/20 text-zen-charcoal focus:border-zen-matcha focus:ring-1 focus:ring-zen-matcha outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Opsi Cabut Sesi Aktif */}
+                  <label className="flex items-start space-x-2.5 p-3 rounded-xl bg-zen-linen/50 dark:bg-black/15 border border-zen-border cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={revokeSessions}
+                      onChange={(e) => setRevokeSessions(e.target.checked)}
+                      disabled={actionLoading === resetPasswordUser.uid}
+                      className="mt-0.5 rounded border-zen-border text-zen-matcha focus:ring-zen-matcha"
+                    />
+                    <span className="text-xs text-zen-charcoal leading-relaxed">
+                      <span className="font-semibold flex items-center gap-1">
+                        <LogOut className="w-3.5 h-3.5 text-zen-moss dark:text-zen-matcha" />
+                        <span>Keluarkan pengguna dari semua sesi aktif di perangkat lain</span>
+                      </span>
+                      <span className="block text-[11px] text-zen-muted mt-0.5">
+                        Direkomendasikan agar sesi lama segera berakhir setelah sandi diubah.
+                      </span>
+                    </span>
+                  </label>
+
+                  {resetModalError && (
+                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{resetModalError}</span>
+                    </div>
+                  )}
+
+                  {/* Peringatan Keamanan */}
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/70 text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed flex items-start space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      Kirimkan kata sandi sementara hanya melalui kanal privat (chat langsung/telepon)
+                      dan instruksikan pengguna untuk segera menggantinya lewat menu{' '}
+                      <strong>Ubah Kata Sandi</strong>.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={closeResetPasswordModal}
+                      disabled={actionLoading === resetPasswordUser.uid}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-zen-muted hover:text-zen-charcoal hover:bg-zen-cream transition-colors disabled:opacity-50"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetPasswordConfirm}
+                      disabled={actionLoading === resetPasswordUser.uid}
+                      className="px-4 py-2 rounded-xl bg-zen-matcha hover:bg-zen-moss text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 flex items-center space-x-1.5"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>
+                        {actionLoading === resetPasswordUser.uid
+                          ? 'Mereset Sandi...'
+                          : 'Reset Kata Sandi'}
+                      </span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Mode Sukses: Tampilkan Sandi Sementara Sekali Salin */}
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold font-serif text-zen-charcoal">
+                        Kata Sandi Berhasil Direset
+                      </h3>
+                      <p className="text-[11px] text-zen-muted">
+                        Akun: <span className="font-mono">{resetSuccessInfo.email}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-zen-linen/70 dark:bg-black/25 border border-zen-border space-y-2.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-zen-muted uppercase tracking-wider">
+                        Kata Sandi Sementara
+                      </span>
+                      <span className="text-emerald-700 dark:text-emerald-300 font-semibold">
+                        {resetSuccessInfo.sessionsRevoked
+                          ? `Sesi aktif dicabut (${resetSuccessInfo.revokedSessionCount} sesi)`
+                          : 'Sesi aktif tidak dicabut'}
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-zen-stone border border-zen-border font-mono text-sm font-bold text-zen-charcoal tracking-wide select-all break-all">
+                      {resetSuccessInfo.tempPassword}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(resetSuccessInfo.tempPassword, 'password')}
+                        className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-zen-matcha hover:bg-zen-moss text-white transition-all shadow-xs"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>
+                          {copiedKey === 'password' ? 'Sandi Tersalin!' : 'Salin Sandi'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const guideMessage = [
+                            `Kata sandi akun WHMS Anda (${resetSuccessInfo.email}) telah direset oleh Admin.`,
+                            `Kata sandi sementara: ${resetSuccessInfo.tempPassword}`,
+                            `Silakan login kembali di ${window.location.origin}, lalu segera ganti kata sandi Anda melalui menu "Ubah Kata Sandi".`,
+                          ].join('\n')
+                          handleCopyText(guideMessage, 'message')
+                        }}
+                        className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-zen-sand/25 hover:bg-zen-sand/40 text-zen-charcoal border border-zen-border transition-all"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>
+                          {copiedKey === 'message' ? 'Pesan Tersalin!' : 'Salin Pesan Panduan'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {resetSuccessInfo.warning && (
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{resetSuccessInfo.warning}</span>
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/70 text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed flex items-start space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      Kata sandi ini hanya ditampilkan satu kali dan tidak disimpan di database.
+                      Setelah jendela ditutup, kata sandi akan dihapus dari layar.
+                    </span>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={closeResetPasswordModal}
+                      className="w-full sm:w-auto px-5 py-2 rounded-xl bg-zen-charcoal dark:bg-zen-matcha text-white text-xs font-semibold hover:opacity-90 transition-all"
+                    >
+                      Selesai &amp; Tutup
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

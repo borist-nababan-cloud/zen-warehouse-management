@@ -15,13 +15,18 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { format } from 'date-fns'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Eye, Image as ImageIcon } from 'lucide-react'
+import {
+    TransactionImageGalleryDialog,
+    collectGrImages,
+} from '@/components/common/TransactionImageGalleryDialog'
 
 export function GoodsReceiptDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const [gr, setGr] = useState<GoodsReceipt | null>(null)
     const [loading, setLoading] = useState(true)
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
 
     useEffect(() => {
         if (id) {
@@ -40,6 +45,8 @@ export function GoodsReceiptDetailPage() {
 
     if (loading) return <DashboardLayout><div>Loading...</div></DashboardLayout>
     if (!gr) return <DashboardLayout><div>Receipt not found</div></DashboardLayout>
+
+    const grImages = collectGrImages(gr)
 
     return (
         <DashboardLayout>
@@ -84,6 +91,56 @@ export function GoodsReceiptDetailPage() {
                     </Card>
                 </div>
 
+                {/* Bukti Foto Penerimaan (Maks. 3 Foto) */}
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                                <ImageIcon className="h-4 w-4 text-blue-600" />
+                                Bukti Foto Penerimaan
+                            </span>
+                            <span className="text-xs font-normal text-muted-foreground">
+                                {grImages.length} Foto Terlampir
+                            </span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {grImages.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                Tidak ada foto bukti penerimaan yang diunggah untuk dokumen GR ini.
+                            </p>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {grImages.map((img, idx) => (
+                                    <button
+                                        key={`${img.url}-${idx}`}
+                                        type="button"
+                                        onClick={() => setGalleryIndex(idx)}
+                                        className="group relative rounded-lg border overflow-hidden bg-slate-50 text-left hover:border-blue-400 transition-all"
+                                    >
+                                        <div className="aspect-video w-full overflow-hidden bg-slate-100">
+                                            <img
+                                                src={img.url}
+                                                alt={img.label || `Foto ${idx + 1}`}
+                                                className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                                            />
+                                        </div>
+                                        <div className="px-3 py-2 flex items-center justify-between text-xs bg-white">
+                                            <span className="font-medium text-slate-700">
+                                                {img.label || `Foto ${idx + 1}`}
+                                            </span>
+                                            <span className="inline-flex items-center gap-1 text-blue-600 font-medium">
+                                                <Eye className="h-3.5 w-3.5" />
+                                                Perbesar
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
                 {/* Items Table */}
                 <Card>
                     <CardHeader>
@@ -121,6 +178,14 @@ export function GoodsReceiptDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <TransactionImageGalleryDialog
+                open={galleryIndex !== null}
+                onOpenChange={(open) => !open && setGalleryIndex(null)}
+                title={`Bukti Foto GR: ${gr.document_number}`}
+                images={grImages}
+                initialIndex={galleryIndex ?? 0}
+            />
         </DashboardLayout>
     )
 }

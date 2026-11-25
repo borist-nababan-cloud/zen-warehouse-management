@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getInvoicePrintDetails, getInvoiceReportById, InvoicePrintDetails } from '@/services/invoiceService'
 import { ViewReportPurchaseInvoices } from '@/types/database'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrencyAuto, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, Printer } from 'lucide-react'
@@ -52,6 +52,8 @@ export default function PurchaseInvoicePrint() {
 
     const supplier = invoice.master_supplier
     const po = invoice.purchase_orders
+    const isDebitNote = invoice.invoice_type === 'DEBIT_NOTE'
+    const signFactor = isDebitNote ? -1 : 1
 
     // A4 dimensions approx: 210mm x 297mm. 
     // We use standard checks for print media in CSS.
@@ -84,11 +86,19 @@ export default function PurchaseInvoicePrint() {
                 {/* Header */}
                 <div className="flex justify-between items-start border-b border-indigo-100 pb-8 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">PURCHASE INVOICE</h1>
+                        <h1 className={`text-3xl font-bold tracking-tight ${isDebitNote ? 'text-rose-700' : 'text-slate-800'}`}>
+                            {isDebitNote ? 'NOTA DEBET / FAKTUR PENGURANG' : 'PURCHASE INVOICE'}
+                        </h1>
                         <div className="mt-4 text-sm text-slate-500 space-y-1">
                             <p>Document No: <span className="font-mono font-medium text-slate-700">{invoice.document_number}</span></p>
                             <p>Date: <span className="font-medium text-slate-700">{formatDate(invoice.invoice_date)}</span></p>
                             <p>Status: <span className="font-medium px-2 py-0.5 rounded-full text-xs uppercase bg-slate-100 border">{invoice.status}</span></p>
+                            {isDebitNote && invoice.return_info && (
+                                <>
+                                    <p>No. Dokumen Retur: <span className="font-mono font-semibold text-rose-700">{invoice.return_info.document_number}</span></p>
+                                    <p>Alasan Retur: <span className="text-slate-700">{invoice.return_info.reason}</span></p>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div className="text-right">
@@ -146,7 +156,7 @@ export default function PurchaseInvoicePrint() {
                             {invoice.items.map((item, idx) => {
                                 // Calculate line total for display. Note: Exact calc might depend on conversion rates.
                                 // Assuming price_per_unit matches uom_purchase
-                                const lineTotal = item.qty_received * item.price_per_unit
+                                const lineTotal = signFactor * item.qty_received * item.price_per_unit
                                 return (
                                     <TableRow key={idx} className="border-b border-slate-100">
                                         <TableCell>
@@ -154,13 +164,13 @@ export default function PurchaseInvoicePrint() {
                                             <div className="text-xs text-slate-400">{item.master_barang?.sku}</div>
                                         </TableCell>
                                         <TableCell className="text-right font-mono">
-                                            {item.qty_received} <span className="text-xs text-slate-400">{item.uom_purchase}</span>
+                                            {isDebitNote ? `-${item.qty_received}` : item.qty_received} <span className="text-xs text-slate-400">{item.uom_purchase}</span>
                                         </TableCell>
                                         <TableCell className="text-right font-mono text-slate-600">
-                                            {formatCurrency(item.price_per_unit)}
+                                            {formatCurrencyAuto(item.price_per_unit)}
                                         </TableCell>
-                                        <TableCell className="text-right font-medium text-slate-700">
-                                            {formatCurrency(lineTotal)}
+                                        <TableCell className={`text-right font-medium ${isDebitNote ? 'text-rose-700' : 'text-slate-700'}`}>
+                                            {formatCurrencyAuto(lineTotal)}
                                         </TableCell>
                                     </TableRow>
                                 )
@@ -171,25 +181,47 @@ export default function PurchaseInvoicePrint() {
 
                 {/* Totals */}
                 <div className="flex justify-end mb-12">
-                    <div className="w-1/3 space-y-3">
+                    <div className="w-1/2 max-w-sm space-y-3">
                         <div className="flex justify-between items-center text-slate-600">
                             <span>Subtotal</span>
                             <span>{(() => {
-                                const subTotal = invoice.items.reduce((acc, item) => acc + (item.qty_received * item.price_per_unit), 0)
-                                return formatCurrency(subTotal)
+                                const subTotal = signFactor * invoice.items.reduce((acc, item) => acc + (item.qty_received * item.price_per_unit), 0)
+                                return formatCurrencyAuto(subTotal)
                             })()}</span>
                         </div>
                         {/* Shipping Cost */}
-                        {invoice.shipping_cost && invoice.shipping_cost > 0 && (
+                        {invoice.shipping_cost !== undefined && Number(invoice.shipping_cost) !== 0 && (
                             <div className="flex justify-between items-center text-slate-600">
-                                <span>Shipping Cost</span>
-                                <span>{formatCurrency(invoice.shipping_cost)}</span>
+                                <span>{isDebitNote ? 'Potongan Ongkos Kirim' : 'Shipping Cost'}</span>
+                                <span>{formatCurrencyAuto(Number(invoice.shipping_cost))}</span>
+                            </div>
+                        )}
+                        {/* Other Cost */}
+                        {invoice.other_cost !== undefined && Number(invoice.other_cost) !== 0 && (
+                            <div className="flex justify-between items-start gap-4 text-slate-600">
+                                <div>
+                                    <div>
+                                        {isDebitNote
+                                            ? 'Penyesuaian Biaya Lain-lain'
+                                            : Number(invoice.other_cost) < 0
+                                              ? 'Potongan / Biaya Lain-lain'
+                                              : 'Biaya Lain-lain'}
+                                    </div>
+                                    {invoice.other_cost_notes && (
+                                        <div className="text-xs text-slate-400 italic">
+                                            {invoice.other_cost_notes}
+                                        </div>
+                                    )}
+                                </div>
+                                <span className={Number(invoice.other_cost) < 0 ? 'text-rose-700 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
+                                    {formatCurrencyAuto(Number(invoice.other_cost))}
+                                </span>
                             </div>
                         )}
                         {/* Add Tax/Discount here if they exist in schema later */}
-                        <div className="flex justify-between items-center pt-3 border-t border-slate-200 text-lg font-bold text-slate-800">
-                            <span>Total Amount</span>
-                            <span>{formatCurrency(invoice.total_amount)}</span>
+                        <div className={`flex justify-between items-center pt-3 border-t border-slate-200 text-lg font-bold ${isDebitNote ? 'text-rose-700' : 'text-slate-800'}`}>
+                            <span>{isDebitNote ? 'Total Pengurang (Nota Debet)' : 'Total Amount'}</span>
+                            <span>{formatCurrencyAuto(invoice.total_amount)}</span>
                         </div>
                     </div>
                 </div>
@@ -216,7 +248,7 @@ export default function PurchaseInvoicePrint() {
                                                 {p.method}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs">{p.document_number}</TableCell>
-                                            <TableCell className="text-right font-medium">{formatCurrency(p.amount)}</TableCell>
+                                            <TableCell className="text-right font-medium">{formatCurrencyAuto(p.amount)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

@@ -3,6 +3,7 @@ import { useAuthUser } from '@/hooks/useAuth'
 import { getCompletedPurchaseOrders, createPurchaseInvoice } from '@/services/purchaseInvoiceService'
 import { getPoDetailsFromView } from '@/services/goodsReceiptService'
 import { PurchaseOrder, ViewPoDetailsReceived } from '@/types/database'
+import { formatCurrencyDecimal } from '@/lib/utils'
 import { toast } from 'sonner'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import {
@@ -60,6 +61,19 @@ export function InvoicingPoPage() {
     const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState('')
     const [dueDate, setDueDate] = useState<string>('')
     const [shippingCost, setShippingCost] = useState<number>(0)
+    const [otherCostInput, setOtherCostInput] = useState<string>('0')
+    const [otherCostNotes, setOtherCostNotes] = useState<string>('')
+
+    const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
+    const normalizedOtherStr = otherCostInput.trim().replace(',', '.')
+    const parsedOtherRaw =
+        normalizedOtherStr === '' || normalizedOtherStr === '-' ? 0 : Number(normalizedOtherStr)
+    const isOtherCostSyntaxValid =
+        normalizedOtherStr === '' || (normalizedOtherStr !== '-' && Number.isFinite(parsedOtherRaw))
+    const otherCostValue = Number.isFinite(parsedOtherRaw) ? round2(parsedOtherRaw) : 0
+    const safeShippingCost = round2(Number.isFinite(shippingCost) ? shippingCost : 0)
+    const itemsTotal = round2(poDetails.reduce((sum, item) => sum + (item.total_price_received || 0), 0))
+    const estimatedGrandTotal = round2(itemsTotal + safeShippingCost + otherCostValue)
 
     const fetchOrders = async (outletCode: string) => {
         setIsLoading(true)
@@ -104,6 +118,8 @@ export function InvoicingPoPage() {
         setSupplierInvoiceNumber('')
         setDueDate('')
         setShippingCost(0)
+        setOtherCostInput('0')
+        setOtherCostNotes('')
         setPoDetails([]) // Reset previous details
         setIsModalOpen(true)
         fetchPoDetails(po.id)
@@ -111,8 +127,28 @@ export function InvoicingPoPage() {
 
     const handleSubmitInvoice = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedPo || !supplierInvoiceNumber || !dueDate) {
+        if (!selectedPo || !supplierInvoiceNumber.trim() || !dueDate) {
             toast.error('Harap lengkapi seluruh kolom wajib')
+            return
+        }
+
+        if (!isOtherCostSyntaxValid) {
+            toast.error('Nominal biaya lain-lain tidak valid.')
+            return
+        }
+
+        if (safeShippingCost < 0) {
+            toast.error('Ongkos kirim tidak boleh bernilai negatif.')
+            return
+        }
+
+        if (otherCostValue !== 0 && !otherCostNotes.trim()) {
+            toast.error('Keterangan biaya lain-lain wajib diisi apabila nominal biaya lain-lain tidak sama dengan 0.')
+            return
+        }
+
+        if (estimatedGrandTotal < 0) {
+            toast.error('Total faktur tidak boleh bernilai negatif. Periksa kembali nominal biaya lain-lain.')
             return
         }
 
@@ -121,14 +157,16 @@ export function InvoicingPoPage() {
         setIsSubmitting(true)
         const result = await createPurchaseInvoice({
             target_po_id: selectedPo.id,
-            supplier_inv_ref: supplierInvoiceNumber,
+            supplier_inv_ref: supplierInvoiceNumber.trim(),
             payment_due_date: dueDate, // Already in YYYY-MM-DD from input type="date"
             user_id: user?.id || '', // Pass user_id from auth context
-            shipping_cost_input: shippingCost
+            shipping_cost_input: safeShippingCost,
+            other_cost_input: otherCostValue,
+            other_cost_notes_input: otherCostNotes.trim() || null,
         })
 
         if (result.isSuccess) {
-            toast.success(`Faktur berhasil dibuat! Total: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(result.data))}`)
+            toast.success(`Faktur berhasil dibuat! Total: ${formatCurrencyDecimal(Number(result.data))}`)
             setIsModalOpen(false)
             // Refresh list
             if (user?.kode_outlet) fetchOrders(user.kode_outlet)
@@ -264,21 +302,34 @@ export function InvoicingPoPage() {
                                                 <TableCell colSpan={4} className="text-right font-medium">Ongkos Kirim</TableCell>
                                                 <TableCell className="text-right text-muted-foreground">-</TableCell>
                                                 <TableCell className="text-right font-medium">
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(shippingCost)}
+                                                    {formatCurrencyDecimal(safeShippingCost)}
+                                                </TableCell>
+                                            </TableRow>
+                                            {/* Other Cost Row */}
+                                            <TableRow className="bg-muted/10">
+                                                <TableCell colSpan={4} className="text-right font-medium">
+                                                    <span>Biaya Lain-lain</span>
+                                                    {otherCostNotes.trim() && (
+                                                        <span className="block text-[11px] font-normal italic text-muted-foreground">
+                                                            {otherCostNotes.trim()}
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right text-muted-foreground">-</TableCell>
+                                                <TableCell className={`text-right font-medium ${otherCostValue < 0 ? 'text-rose-600' : ''}`}>
+                                                    {formatCurrencyDecimal(otherCostValue)}
                                                 </TableCell>
                                             </TableRow>
                                             {/* Summary Row */}
                                             <TableRow className="bg-muted/30 font-bold border-t-2">
                                                 <TableCell colSpan={4} className="text-right">Total Keseluruhan</TableCell>
                                                 <TableCell className="text-right text-muted-foreground">
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
+                                                    {formatCurrencyDecimal(
                                                         poDetails.reduce((sum, item) => sum + (item.total_price_po || 0), 0)
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="text-right text-green-700 text-lg">
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
-                                                        poDetails.reduce((sum, item) => sum + (item.total_price_received || 0), 0) + shippingCost
-                                                    )}
+                                                <TableCell className={`text-right text-lg ${estimatedGrandTotal < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                                                    {formatCurrencyDecimal(estimatedGrandTotal)}
                                                 </TableCell>
                                             </TableRow>
                                         </TableBody>
@@ -325,11 +376,50 @@ export function InvoicingPoPage() {
                                 id="shipping_cost"
                                 type="number"
                                 min="0"
+                                step="0.01"
                                 placeholder="0"
                                 value={shippingCost}
                                 onChange={(e) => setShippingCost(Number(e.target.value))}
                             />
                             <p className="text-xs text-muted-foreground">Biaya pengiriman atau ekspedisi tambahan.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                            <div className="space-y-2">
+                                <Label htmlFor="other_cost">Biaya Lain-lain (Opsional, 2 Desimal)</Label>
+                                <Input
+                                    id="other_cost"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={otherCostInput}
+                                    onChange={(e) => setOtherCostInput(e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Isi nilai positif (+) untuk biaya tambahan (misal PPN/packing/materai) atau negatif (-) sebagai pemotong/diskon.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="other_cost_notes">
+                                    Keterangan Biaya Lain-lain{' '}
+                                    {otherCostValue !== 0 ? (
+                                        <span className="text-red-500">* (Wajib)</span>
+                                    ) : (
+                                        <span className="text-muted-foreground font-normal">(Opsional)</span>
+                                    )}
+                                </Label>
+                                <Input
+                                    id="other_cost_notes"
+                                    placeholder="Misal: Biaya packing kayu, materai, atau potongan diskon"
+                                    value={otherCostNotes}
+                                    onChange={(e) => setOtherCostNotes(e.target.value)}
+                                    required={otherCostValue !== 0}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Wajib diisi apabila nominal Biaya Lain-lain tidak sama dengan 0.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="pt-4 flex justify-end gap-2">

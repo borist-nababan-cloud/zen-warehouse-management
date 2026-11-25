@@ -9,8 +9,23 @@ import {
   MasterBarang
 } from '@/types/database'
 
+export interface InvoicePrintReturnLine {
+  barang_id: number
+  qty_returned: number
+  conversion_rate: number
+  price_per_unit: number
+  uom_purchase?: string
+  master_barang: MasterBarang | null
+}
+
 export interface InvoicePrintDetails extends PurchaseInvoice {
   items: (PurchaseOrderItem & { master_barang: MasterBarang | null })[]
+  return_info?: {
+    document_number: string
+    return_type: string
+    reason: string
+    created_at: string
+  } | null
 }
 
 export async function getInvoicePrintDetails(invoiceId: string): Promise<ApiResponse<InvoicePrintDetails>> {
@@ -57,15 +72,44 @@ export async function getInvoicePrintDetails(invoiceId: string): Promise<ApiResp
                 }
              }
 
-             // 4. Fetch Items using purchase_order_id (which is po_id in items table)
-             const { data: poItems, error: itemsError } = await supabase
-                .from('purchase_order_items')
-                .select('*')
-                .eq('po_id', invoice.purchase_order_id)
+             // 4. Fetch Items: Debit Note shows returned items, normal Invoice shows PO items
+             if (invoice.invoice_type === 'DEBIT_NOTE' && invoice.purchase_return_id) {
+                const { data: retItems, error: retItemsErr } = await supabase
+                  .from('purchase_return_items')
+                  .select('*, purchase_order_items(uom_purchase)')
+                  .eq('return_id', invoice.purchase_return_id)
 
-             if (itemsError) throw itemsError
-             items = poItems || []
+                if (retItemsErr) throw retItemsErr
+                items = (retItems || []).map((ri: any) => ({
+                  id: ri.id,
+                  po_id: invoice.purchase_order_id,
+                  barang_id: ri.barang_id,
+                  qty_ordered: Number(ri.qty_returned || 0),
+                  qty_received: Number(ri.qty_returned || 0),
+                  uom_purchase: ri.purchase_order_items?.uom_purchase || 'UNIT',
+                  conversion_rate: Number(ri.conversion_rate || 1),
+                  price_per_unit: Number(ri.price_per_unit || 0),
+                }))
+             } else {
+                const { data: poItems, error: itemsError } = await supabase
+                   .from('purchase_order_items')
+                   .select('*')
+                   .eq('po_id', invoice.purchase_order_id)
+
+                if (itemsError) throw itemsError
+                items = poItems || []
+             }
         }
+    }
+
+    let returnInfo = null
+    if (invoice.purchase_return_id) {
+      const { data: retData } = await supabase
+        .from('purchase_returns')
+        .select('document_number, return_type, reason, created_at')
+        .eq('id', invoice.purchase_return_id)
+        .maybeSingle()
+      returnInfo = retData || null
     }
 
     // 5. Fetch Barang for items manually
@@ -90,7 +134,8 @@ export async function getInvoicePrintDetails(invoiceId: string): Promise<ApiResp
       // Map legacy/helper fields if needed by UI, or ensure UI uses these nested objects
       master_supplier: supplier,
       purchase_orders: purchaseOrder,
-      items: itemsWithBarang || []
+      items: itemsWithBarang || [],
+      return_info: returnInfo,
     }
 
     return { data: result, error: null, isSuccess: true }

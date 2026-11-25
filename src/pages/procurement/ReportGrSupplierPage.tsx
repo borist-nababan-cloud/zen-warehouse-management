@@ -27,25 +27,23 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Loader2, Filter, Download, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { Loader2, Filter, Download, Printer, Image as ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { masterOutletService } from '@/services/masterOutletService'
 import { printReportA4 } from '@/utils/reportPrintUtils'
+import {
+    TransactionImageGalleryDialog,
+    normalizeViewReceiptImages,
+    type GalleryImageItem,
+} from '@/components/common/TransactionImageGalleryDialog'
 
 export function ReportGrSupplierPage() {
     const { user } = useAuthUser()
     const [data, setData] = useState<ViewPoDetailsReceived[]>([])
     const [isLoading, setIsLoading] = useState(false)
-    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
+    const [galleryModal, setGalleryModal] = useState<{ title: string; images: GalleryImageItem[] } | null>(null)
 
     // Filters
     const [startDate, setStartDate] = useState('')
@@ -337,7 +335,7 @@ export function ReportGrSupplierPage() {
                                         <TableHead className="text-right">Jml Diterima</TableHead>
                                         <TableHead className="text-right">Sisa</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead className="text-center w-[120px]">Aksi</TableHead>
+                                        <TableHead className="text-center w-[160px]">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -348,7 +346,13 @@ export function ReportGrSupplierPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        data.map((item) => (
+                                        data.map((item) => {
+                                            const grImages = normalizeViewReceiptImages(
+                                                item.receipt_images,
+                                                item.receipt_image_url,
+                                                item.document_number
+                                            )
+                                            return (
                                             <TableRow key={item.po_item_id + item.po_id}>
                                                 <TableCell className="font-medium">{item.document_number}</TableCell>
                                                 <TableCell>
@@ -386,13 +390,13 @@ export function ReportGrSupplierPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="flex items-center justify-center gap-1.5">
+                                                    <div className="flex items-center justify-center gap-1">
                                                         {/* Print GR (or PO fallback) */}
                                                         <Button
                                                             variant="ghost"
-                                                            size="icon"
+                                                            size="sm"
                                                             title={item.latest_gr_id ? "Cetak Bukti Penerimaan (GR)" : "Cetak Pesanan Pembelian (PO)"}
-                                                            className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                                            className="flex flex-col h-auto py-1 px-2 gap-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                                                             onClick={() => {
                                                                 if (item.latest_gr_id) {
                                                                     window.open(`/procurement/goods-receipt/${item.latest_gr_id}/print`, '_blank')
@@ -402,36 +406,41 @@ export function ReportGrSupplierPage() {
                                                             }}
                                                         >
                                                             <Printer className="h-4 w-4" />
+                                                            <span className="text-[10px] leading-tight font-medium">Cetak</span>
                                                         </Button>
 
-                                                        {/* View Uploaded Goods Receipt Photo (beside Print icon) */}
-                                                        {item.receipt_image_url ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                title="Lihat Foto Penerimaan Barang"
-                                                                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                                onClick={() =>
-                                                                    setPreviewImage({
-                                                                        url: item.receipt_image_url!,
-                                                                        title: `Bukti Penerimaan PO: ${item.document_number} (${item.item_name})`,
-                                                                    })
-                                                                }
-                                                            >
-                                                                <ImageIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : (
-                                                            <div
-                                                                className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
-                                                                title="Tidak ada foto bukti penerimaan"
-                                                            >
-                                                                -
-                                                            </div>
-                                                        )}
+                                                        {/* View Uploaded Goods Receipt Photos (All GRs for this PO) */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={grImages.length === 0}
+                                                            title={
+                                                                grImages.length > 0
+                                                                    ? `Lihat ${grImages.length} Foto Penerimaan Barang`
+                                                                    : 'Tidak ada foto bukti penerimaan'
+                                                            }
+                                                            className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                                grImages.length > 0
+                                                                    ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50'
+                                                                    : 'text-slate-300 dark:text-slate-600'
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (grImages.length === 0) return
+                                                                setGalleryModal({
+                                                                    title: `Bukti Foto PO: ${item.document_number}`,
+                                                                    images: grImages,
+                                                                })
+                                                            }}
+                                                        >
+                                                            <ImageIcon className="h-4 w-4" />
+                                                            <span className="text-[10px] leading-tight font-medium">
+                                                                {grImages.length > 0 ? `Foto (${grImages.length})` : 'Foto'}
+                                                            </span>
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                        )})
                                     )}
                                 </TableBody>
                             </Table>
@@ -440,38 +449,12 @@ export function ReportGrSupplierPage() {
                 </Card>
             </div>
 
-            {/* Goods Receipt Photo Preview Dialog */}
-            <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{previewImage?.title || 'Bukti Foto Penerimaan Barang'}</DialogTitle>
-                    </DialogHeader>
-                    {previewImage && (
-                        <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
-                            <img
-                                src={previewImage.url}
-                                alt={previewImage.title}
-                                className="max-h-[65vh] w-auto object-contain rounded"
-                            />
-                        </div>
-                    )}
-                    <DialogFooter>
-                        {previewImage && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(previewImage.url, '_blank')}
-                            >
-                                <ExternalLink className="h-4 w-4 mr-1.5" />
-                                Buka di Tab Baru
-                            </Button>
-                        )}
-                        <Button variant="secondary" size="sm" onClick={() => setPreviewImage(null)}>
-                            Tutup
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <TransactionImageGalleryDialog
+                open={!!galleryModal}
+                onOpenChange={(open) => !open && setGalleryModal(null)}
+                title={galleryModal?.title || 'Bukti Foto Penerimaan Barang'}
+                images={galleryModal?.images || []}
+            />
         </DashboardLayout>
     )
 }

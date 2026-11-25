@@ -14,6 +14,7 @@ export type StockCardSourceCode =
   | 'SHRINKAGE'
   | 'CST_SALE'
   | 'OPNAME'
+  | 'PURCHASE_RETURN'
 
 export interface StockCardItemInfo {
   barang_id: number

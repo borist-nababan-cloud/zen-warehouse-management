@@ -28,7 +28,8 @@ import { PackageCheck, ArrowLeft, AlertCircle } from 'lucide-react'
 import { createGoodsReceipt, getPoDetailsFromView } from '@/services/goodsReceiptService'
 import { getPurchaseOrders, getPurchaseOrderById } from '@/services/purchaseOrderService'
 import { PurchaseOrder, ViewPoDetailsReceived } from '@/types/database'
-import { TransactionImageInput, uploadTransactionImage } from '@/components/common/TransactionImageInput'
+import { uploadTransactionImage } from '@/components/common/TransactionImageInput'
+import { TransactionMultiImageInput } from '@/components/common/TransactionMultiImageInput'
 
 interface GRItemRow extends ViewPoDetailsReceived {
     receivingQty: number // The input field
@@ -46,7 +47,7 @@ export function GoodsReceiptCreatePage() {
 
     const [documentNumber, setDocumentNumber] = useState('')
     const [deliveryNote, setDeliveryNote] = useState('')
-    const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null)
+    const [receiptImageFiles, setReceiptImageFiles] = useState<(File | null)[]>([null, null, null])
     const [items, setItems] = useState<GRItemRow[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -98,7 +99,7 @@ export function GoodsReceiptCreatePage() {
             }))
 
             setItems(poItems)
-            setReceiptImageFile(null)
+            setReceiptImageFiles([null, null, null])
             setStep(2)
         } else {
             toast.error('Gagal memuat perhitungan item PO dari server')
@@ -144,15 +145,16 @@ export function GoodsReceiptCreatePage() {
 
         setIsSubmitting(true)
         try {
-            // 0. Optional Image Upload
-            let uploadedImageUrl: string | null = null
-            if (receiptImageFile) {
-                uploadedImageUrl = await uploadTransactionImage(
-                    receiptImageFile,
-                    'goods-receipts',
-                    user.kode_outlet
-                )
-            }
+            // 0. Optional Multi-Image Upload (Max 3 images in parallel)
+            const outletCode = user.kode_outlet
+            const uploadedUrls = await Promise.all(
+                [0, 1, 2].map((slotIdx) => {
+                    const fileItem = receiptImageFiles[slotIdx]
+                    return fileItem
+                        ? uploadTransactionImage(fileItem, 'goods-receipts', outletCode)
+                        : Promise.resolve<string | null>(null)
+                })
+            )
 
             // 1. Header
             const headerData = {
@@ -161,7 +163,9 @@ export function GoodsReceiptCreatePage() {
                 kode_outlet: user.kode_outlet,
                 supplier_delivery_note: deliveryNote || '-',
                 received_by: user.id,
-                image_url: uploadedImageUrl
+                image_url: uploadedUrls[0],
+                image_url_2: uploadedUrls[1],
+                image_url_3: uploadedUrls[2],
             }
 
             // 2. Items
@@ -193,7 +197,7 @@ export function GoodsReceiptCreatePage() {
                 setSelectedPo(null)
                 setSelectedPoId('')
                 setDeliveryNote('')
-                setReceiptImageFile(null)
+                setReceiptImageFiles([null, null, null])
                 setItems([])
                 generateDocNumber(user.kode_outlet)
                 loadPOs(user.kode_outlet)
@@ -301,11 +305,13 @@ export function GoodsReceiptCreatePage() {
                                     />
                                 </div>
                                 <div className="col-span-2 pt-2 border-t border-slate-100">
-                                    <TransactionImageInput
-                                        label="Foto Bukti Penerimaan / Surat Jalan"
-                                        helperText="Ambil foto Surat Jalan atau kondisi barang yang diterima menggunakan kamera atau unggah dari galeri perangkat."
-                                        file={receiptImageFile}
-                                        onChange={setReceiptImageFile}
+                                    <TransactionMultiImageInput
+                                        label="Foto Bukti Penerimaan / Surat Jalan (Maks. 3 Foto)"
+                                        helperText="Ambil foto Surat Jalan, kondisi barang, atau dokumen tambahan menggunakan kamera atau unggah dari galeri (opsional, maksimal 3 foto)."
+                                        files={receiptImageFiles}
+                                        onChange={setReceiptImageFiles}
+                                        maxImages={3}
+                                        slotLabels={['Foto 1 (Surat Jalan)', 'Foto 2 (Kondisi Barang)', 'Foto 3 (Tambahan)']}
                                         disabled={isSubmitting}
                                     />
                                 </div>

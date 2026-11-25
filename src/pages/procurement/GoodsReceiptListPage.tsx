@@ -15,17 +15,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog'
-import { Plus, FileText, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { Plus, FileText, Printer, Image as ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { toast } from 'sonner'
+import {
+    TransactionImageGalleryDialog,
+    collectGrImages,
+    type GalleryImageItem,
+} from '@/components/common/TransactionImageGalleryDialog'
 
 export function GoodsReceiptListPage() {
     const navigate = useNavigate()
@@ -33,7 +31,7 @@ export function GoodsReceiptListPage() {
     const [receipts, setReceipts] = useState<GoodsReceipt[]>([])
     const [loading, setLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
-    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
+    const [galleryModal, setGalleryModal] = useState<{ title: string; images: GalleryImageItem[] } | null>(null)
 
     useEffect(() => {
         if (user?.kode_outlet) {
@@ -100,7 +98,7 @@ export function GoodsReceiptListPage() {
                                         <TableHead>No. Surat Jalan</TableHead>
                                         <TableHead>Diterima Oleh</TableHead>
                                         <TableHead>Rincian</TableHead>
-                                        <TableHead className="w-[120px] text-center">Aksi</TableHead>
+                                        <TableHead className="w-[150px] text-center">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -112,24 +110,14 @@ export function GoodsReceiptListPage() {
                                         </TableRow>
                                     ) : filteredReceipts.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
-                                                <div className="flex flex-col items-center justify-center gap-2">
-                                                    <span>Belum ada data penerimaan barang.</span>
-                                                    <div className="text-xs text-muted-foreground bg-muted p-2 rounded max-w-md text-left font-mono">
-                                                        <p className="font-bold">Info Diagnostik:</p>
-                                                        <p>Outlet: {user?.kode_outlet || 'N/A'}</p>
-                                                        <p>Peran (Role): {user?.user_role || 'N/A'}</p>
-                                                        <p>ID Pengguna: {user?.id || 'N/A'}</p>
-                                                        {loading ? <p>Memuat...</p> : <p>Jumlah Data: {receipts.length}</p>}
-                                                        <p className="mt-1 text-red-500 font-bold whitespace-pre-wrap">
-                                                            Catatan: {receipts.length === 0 && !loading && 'Tidak ada data di database (Periksa filter / RLS)'}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                                Belum ada data penerimaan barang.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredReceipts.map((gr) => (
+                                        filteredReceipts.map((gr) => {
+                                            const grImages = collectGrImages(gr)
+                                            return (
                                             <TableRow
                                                 key={gr.id}
                                                 className="cursor-pointer hover:bg-muted/50"
@@ -155,47 +143,51 @@ export function GoodsReceiptListPage() {
                                                     Lihat Detail
                                                 </TableCell>
                                                 <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex items-center justify-center gap-1.5">
+                                                    <div className="flex items-center justify-center gap-1">
                                                         <Button
                                                             variant="ghost"
-                                                            size="icon"
+                                                            size="sm"
                                                             title="Cetak Bukti Penerimaan (GR)"
-                                                            className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                                            className="flex flex-col h-auto py-1 px-2 gap-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                                                             onClick={() => {
                                                                 window.open(`/procurement/goods-receipt/${gr.id}/print`, '_blank')
                                                             }}
                                                         >
                                                             <Printer className="h-4 w-4" />
-                                                            <span className="sr-only">Cetak</span>
+                                                            <span className="text-[10px] leading-tight font-medium">Cetak</span>
                                                         </Button>
 
-                                                        {gr.image_url ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                title="Lihat Foto Penerimaan Barang"
-                                                                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                                onClick={() =>
-                                                                    setPreviewImage({
-                                                                        url: gr.image_url!,
-                                                                        title: `Bukti Penerimaan GR: ${gr.document_number}`,
-                                                                    })
-                                                                }
-                                                            >
-                                                                <ImageIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : (
-                                                            <div
-                                                                className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
-                                                                title="Tidak ada foto bukti penerimaan"
-                                                            >
-                                                                -
-                                                            </div>
-                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={grImages.length === 0}
+                                                            title={
+                                                                grImages.length > 0
+                                                                    ? `Lihat ${grImages.length} Foto Penerimaan Barang`
+                                                                    : 'Tidak ada foto bukti penerimaan'
+                                                            }
+                                                            className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                                grImages.length > 0
+                                                                    ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50'
+                                                                    : 'text-slate-300 dark:text-slate-600'
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (grImages.length === 0) return
+                                                                setGalleryModal({
+                                                                    title: `Bukti Foto GR: ${gr.document_number}`,
+                                                                    images: grImages,
+                                                                })
+                                                            }}
+                                                        >
+                                                            <ImageIcon className="h-4 w-4" />
+                                                            <span className="text-[10px] leading-tight font-medium">
+                                                                {grImages.length > 0 ? `Foto (${grImages.length})` : 'Foto'}
+                                                            </span>
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                        )})
                                     )}
                                 </TableBody>
                             </Table>
@@ -204,38 +196,12 @@ export function GoodsReceiptListPage() {
                 </Card>
             </div>
 
-            {/* Goods Receipt Photo Preview Dialog */}
-            <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{previewImage?.title || 'Bukti Foto Penerimaan Barang'}</DialogTitle>
-                    </DialogHeader>
-                    {previewImage && (
-                        <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
-                            <img
-                                src={previewImage.url}
-                                alt={previewImage.title}
-                                className="max-h-[65vh] w-auto object-contain rounded"
-                            />
-                        </div>
-                    )}
-                    <DialogFooter>
-                        {previewImage && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(previewImage.url, '_blank')}
-                            >
-                                <ExternalLink className="h-4 w-4 mr-1.5" />
-                                Buka di Tab Baru
-                            </Button>
-                        )}
-                        <Button variant="secondary" size="sm" onClick={() => setPreviewImage(null)}>
-                            Tutup
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <TransactionImageGalleryDialog
+                open={!!galleryModal}
+                onOpenChange={(open) => !open && setGalleryModal(null)}
+                title={galleryModal?.title || 'Bukti Foto Penerimaan Barang'}
+                images={galleryModal?.images || []}
+            />
         </DashboardLayout>
     )
 }

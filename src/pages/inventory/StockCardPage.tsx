@@ -59,6 +59,7 @@ const SOURCE_BADGE_MAP: Record<StockCardSourceCode, string> = {
   SHRINKAGE: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
   CST_SALE: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
   OPNAME: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30',
+  PURCHASE_RETURN: 'bg-rose-600/15 text-rose-700 dark:text-rose-300 border-rose-600/30',
 }
 
 function formatQty(val: number | null | undefined): string {

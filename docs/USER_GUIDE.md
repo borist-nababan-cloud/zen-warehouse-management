@@ -42,9 +42,10 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 * **Tutorial Aplikasi (Panduan Pengguna)**:
   - Tersedia di bagian bawah sidebar (tepat di atas **Ubah Kata Sandi**) untuk seluruh pengguna.
   - Membuka panduan operasional WHMS terbaru langsung di dalam aplikasi lengkap dengan **Daftar Isi**, **Pencarian Topik**, dan tombol **Cetak Panduan**.
-* **Ubah Kata Sandi**:
-  - Tersedia di sidebar bawah untuk pengguna email & kata sandi.
-  - *Catatan:* Pengguna yang masuk via Google OAuth akan mendapatkan notifikasi bahwa kata sandi dikelola langsung melalui akun Google masing-masing.
+* **Ubah Kata Sandi & Reset Kata Sandi Lupa**:
+  - Menu **Ubah Kata Sandi** tersedia di sidebar bawah untuk pengguna email & kata sandi.
+  - *Jika lupa kata sandi akun Email & Kata Sandi:* Hubungi **SUPERUSER (Role 8)** agar melakukan reset melalui tombol **Reset Sandi** pada menu **Manajemen Pengguna** (`/users`), lalu login menggunakan kata sandi sementara yang diberikan dan segera ganti melalui menu **Ubah Kata Sandi**.
+  - *Catatan:* Pengguna yang masuk via Google OAuth akan mendapatkan notifikasi bahwa kata sandi dikelola langsung melalui akun Google masing-masing (tidak memerlukan reset kata sandi lokal).
 
 ---
 
@@ -315,16 +316,47 @@ Digunakan oleh tim promosi dan admin web untuk mengelola konten spanduk dan peng
 2. Klik tombol **Receive Goods / Terima Barang** di pojok kanan atas.
 3. Pilih nomor **Purchase Order (PO)** yang barangnya tiba di cabang.
 4. Masukkan nomor **Delivery Note / Ref No (Surat Jalan)** dari pemasok.
-5. **Unggah Foto Bukti Penerimaan / Surat Jalan (Opsional - Maks. 1 Foto)**:
-   - Klik tombol **Ambil Foto (Kamera)** untuk memotret langsung fisik Surat Jalan atau barang yang tiba menggunakan kamera perangkat (HP/Tablet/Webcam PC), atau klik **Pilih File / Galeri** untuk memilih gambar dari penyimpanan perangkat.
+5. **Unggah Foto Bukti Penerimaan / Surat Jalan (Opsional - Maks. 3 Foto)**:
+   - Tersedia **3 slot foto**: **Foto 1 (Surat Jalan)**, **Foto 2 (Kondisi Barang)**, dan **Foto 3 (Tambahan)**.
+   - Pada masing-masing slot, klik tombol **Kamera** untuk memotret langsung menggunakan kamera perangkat (HP/Tablet/Webcam PC), atau klik **Galeri** untuk memilih gambar dari penyimpanan perangkat.
    - Sistem otomatis mengompresi ukuran foto kamera agar proses unggah cepat dan hemat kuota.
-   - Bersifat **Opsional**: pengguna tetap dapat menyimpan penerimaan barang meskipun tanpa melampirkan foto.
+   - Bersifat **Opsional**: pengguna tetap dapat menyimpan penerimaan barang tanpa foto, cukup 1 foto, atau maksimal 3 foto sekaligus.
 6. Masukkan **Jumlah Diterima (Receive Now)** sesuai fisik yang dihitung di lapangan.
    > [!CAUTION]
    > Sistem menolak penerimaan berlebih (*over-receiving*). Anda tidak dapat memasukkan jumlah yang melebihi sisa kuantitas pemesanan pada PO (`Remaining`).
 7. Klik **Confirm Receipt**. Saldo stok barang di gudang otomatis bertambah secara *real-time*.
-8. **Melihat Foto Bukti Penerimaan pada Laporan**:
-   - Foto bukti penerimaan yang diunggah dapat dilihat kembali kapan saja pada halaman **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier (Report GR Supplier)**, maupun **Riwayat Penerimaan (Goods Receipts)** dengan mengklik ikon **Foto (`Lihat Foto Penerimaan Barang`)** yang terletak tepat di sebelah ikon **Cetak (`Print`)** pada kolom *Actions*.
+8. **Melihat Foto Bukti Penerimaan (Galeri Multi-Foto)**:
+   - Seluruh foto yang diunggah (maksimal 3 foto per GR, dan terhimpun lengkap lintas GR apabila PO diterima bertahap/parsial) dapat dilihat melalui tombol **Foto (N)** / **Foto GR (N)** pada kolom **Aksi** di **Riwayat Penerimaan (GR)**, **Laporan Penerimaan Supplier**, **Laporan Pesanan (PO)**, serta pada kartu **Bukti Foto Penerimaan** di **Halaman Detail GR**.
+   - Dialog galeri mendukung navigasi **Sebelumnya / Berikutnya** (tombol atau panah keyboard), *thumbnail strip*, label nomor dokumen GR sumber foto, dan **Buka di Tab Baru**.
+
+### C. Pembuatan Faktur Pembelian (PO) — Ongkos Kirim & Biaya Lain-lain
+1. Buka menu **Penerimaan Barang (GR) > Faktur Pembelian (PO)** (`/procurement/invoicing-po`).
+2. Pilih PO berstatus **`COMPLETED`** lalu klik **Buat Faktur**.
+3. Isi **Nomor Faktur Pemasok** dan **Tanggal Jatuh Tempo Pembayaran**.
+4. Isi biaya tambahan (bila ada):
+   - **Ongkos Kirim (Opsional)**: biaya pengiriman/ekspedisi (`>= 0`, mendukung 2 angka desimal).
+   - **Biaya Lain-lain (Opsional, 2 Desimal)**: mendukung nilai **positif (`+`)** untuk tambahan tagihan (misal PPN/packing kayu/materai/admin) maupun **negatif (`-`)** sebagai pemotong/diskon/pembulatan turun (selama total akhir faktur tidak negatif).
+   - **Keterangan Biaya Lain-lain**: **wajib diisi** apabila nominal **Biaya Lain-lain** tidak sama dengan `0`.
+5. Nilai total faktur otomatis tercatat ke **Laporan Faktur Pembelian**, **Cetakan Faktur / Nota Debet**, **Buku Besar Hutang (AP Ledger)**, serta ikut diperhitungkan saat melakukan **Batal PO / Retur Pembelian**.
+
+### D. Pembatalan & Retur Pesanan Pembelian (Batal PO)
+Fitur **Batal PO** tersedia langsung pada halaman **Laporan Pesanan (PO)** (`/procurement/report-po`) pada kolom **Aksi** (tombol **Batal PO** dengan ikon + keterangan teks di bawah ikon) untuk Role **5 (Finance), 6 (Outlet Admin), 8 (Superuser), 10 (Finance Outlet), dan 14 (Manager Cabang)** (Role 6, 10, 14 dibatasi pada PO milik outlet sendiri).
+
+Aturan alur pembatalan/retur berdasarkan status PO:
+1. **PO Pra-Penerimaan (`ISSUED`, belum ada GR & belum ada Faktur)**:
+   - Pembatalan langsung mengubah status PO menjadi `CANCELLED` tanpa membuat dokumen retur pembelian maupun mutasi pemotongan stok.
+2. **PO Sudah Diterima (`PARTIAL` atau `COMPLETED`) — Retur Penuh maupun Sebagian**:
+   - Sistem membuat dokumen **Retur Pembelian (`PR-YYYYMMDD-XXXX`)**, memotong saldo stok gudang outlet (`inventory_balance`), mengurangi `qty_received` pada item PO, serta mencatat mutasi keluar **`PURCHASE_RETURN`** pada **Kartu Stok**.
+   - **Retur Penuh (Full Return)**: mengembalikan seluruh sisa barang yang telah diterima dan mengubah status PO menjadi **`RETURNED`**.
+   - **Retur Sebagian (Partial Return)**: pengguna dapat mengatur kuantitas retur per item secara fleksibel; pada PO `COMPLETED` tersedia opsi membuka kembali PO ke status `PARTIAL` agar sisa item dapat diterima ulang.
+   - Jika stok gudang saat ini lebih kecil dari kuantitas yang akan diretur (misalnya barang sudah terpakai/terjual), sistem otomatis menolak retur tersebut.
+3. **PO Sudah Difakturkan (`INVOICED`) — Belum Dibayar (`UNPAID`)**:
+   - Selain membalik stok & GR, sistem otomatis menerbitkan dokumen **Nota Debet / Faktur Pengurang (`DN-YYYYMMDD-XXXX`)** dengan nilai negatif (memperhitungkan potongan ongkos kirim maupun penyesuaian biaya lain-lain), memotong hutang supplier pada **Buku Besar Hutang (AP Ledger)**, serta menutup faktur asli menjadi `CANCELLED` apabila dilakukan retur penuh.
+   - Nota Debet dapat dilihat pada **Laporan Faktur Pembelian** (`/finance/report-invoices`) maupun melalui tombol **Retur Nx** pada baris PO.
+4. **PO / Faktur Sudah Dibayar (`PAID` atau `PARTIAL` Payment)**:
+   - PO yang sudah berstatus **`PAID`** atau memiliki faktur dengan pembayaran/alokasi (`PAID`, `PARTIAL`, atau `paid_amount > 0`) **diblokir keras** dan tidak dapat dibatalkan maupun diretur.
+5. **Pengaman Konfirmasi Ganda**:
+   - Untuk mencegah kesalahan operasional, modal **Batal PO** mewajibkan pengisian **Alasan Pembatalan/Retur** (minimal 10 karakter) serta **pengetikan ulang Nomor PO** persis sesuai referensi PO yang dipilih sebelum eksekusi dapat dilakukan.
 
 ---
 

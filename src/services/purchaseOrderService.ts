@@ -87,6 +87,7 @@ export async function createPurchaseOrder(
       .from('purchase_orders')
       .insert({
         ...header,
+        grand_total: header.grand_total ?? header.total_amount,
         status: 'ISSUED', // As per requirement, simplified flow. Or user chooses. 
         // Logic: The UI will probably allow "Draft" or "Issued". 
         // For this function, let's assume the passed status is in 'header' if we want flexibility, 
@@ -239,6 +240,7 @@ export const updatePurchaseOrderItems = async (
         // 5. Update Header (and Status if provided)
         const headerPayload: any = {
             total_amount: header.total_amount,
+            grand_total: header.grand_total ?? header.total_amount,
             ro_number: header.ro_number, // [NEW]
             notes: header.notes          // [NEW]
         }

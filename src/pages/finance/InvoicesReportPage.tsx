@@ -4,7 +4,7 @@ import { useAuthUser } from '@/hooks/useAuth'
 import { getInvoicesReport } from '@/services/invoiceService'
 import { masterOutletService } from '@/services/masterOutletService'
 import { ViewReportPurchaseInvoices, MasterOutlet } from '@/types/database'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrencyAuto, formatDate } from '@/lib/utils'
 import { printReportA4 } from '@/utils/reportPrintUtils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -139,6 +139,7 @@ export default function InvoicesReportPage() {
             case 'UNPAID': return 'Belum Lunas (UNPAID)'
             case 'PARTIAL': return 'Dibayar Sebagian (PARTIAL)'
             case 'CANCELLED': return 'Dibatalkan (CANCELLED)'
+            case 'RETURNED': return 'Nota Debet (RETURNED)'
             default: return 'Semua Status'
         }
     }
@@ -159,6 +160,9 @@ export default function InvoicesReportPage() {
             "Outlet",
             "Jatuh Tempo",
             "Status",
+            "Ongkos Kirim",
+            "Biaya Lain-lain",
+            "Keterangan Biaya Lain-lain",
             "Total Tagihan"
         ]
 
@@ -172,6 +176,9 @@ export default function InvoicesReportPage() {
             `"${item.kode_outlet || ''}"`,
             item.payment_due_date ? formatDate(item.payment_due_date) : '',
             item.status,
+            Number(item.shipping_cost || 0),
+            Number(item.other_cost || 0),
+            `"${(item.other_cost_notes || '').replace(/"/g, '""')}"`,
             item.total_amount
         ])
 
@@ -212,7 +219,7 @@ export default function InvoicesReportPage() {
             extraFilters: searchTerm ? [{ label: 'Pencarian', value: searchTerm }] : [],
             summaryItems: [
                 { label: 'Total Faktur', value: `${data.length} Dokumen` },
-                { label: 'Total Nilai Faktur', value: formatCurrency(getTotalAmount()) },
+                { label: 'Total Nilai Faktur', value: formatCurrencyAuto(getTotalAmount()) },
             ],
             columns: [
                 { header: 'Tanggal', width: '11%' },
@@ -232,9 +239,9 @@ export default function InvoicesReportPage() {
                 row.supplier_name,
                 row.po_doc || '-',
                 row.status,
-                formatCurrency(row.total_amount),
+                formatCurrencyAuto(row.total_amount),
             ]),
-            totalRow: ['', '', '', '', '', '', 'TOTAL', formatCurrency(getTotalAmount())],
+            totalRow: ['', '', '', '', '', '', 'TOTAL', formatCurrencyAuto(getTotalAmount())],
         })
     }
 
@@ -245,6 +252,7 @@ export default function InvoicesReportPage() {
             case 'PARTIAL': return 'bg-blue-100 text-blue-800 border-blue-200'
             case 'UNPAID': return 'bg-amber-100 text-amber-800 border-amber-200'
             case 'CANCELLED': return 'bg-slate-100 text-slate-600 border-slate-200'
+            case 'RETURNED': return 'bg-rose-100 text-rose-800 border-rose-200'
             default: return 'bg-gray-100 text-gray-800'
         }
     }
@@ -344,6 +352,7 @@ export default function InvoicesReportPage() {
                                         <SelectItem value="UNPAID">Belum Lunas (UNPAID)</SelectItem>
                                         <SelectItem value="PARTIAL">Dibayar Sebagian (PARTIAL)</SelectItem>
                                         <SelectItem value="CANCELLED">Dibatalkan (CANCELLED)</SelectItem>
+                                        <SelectItem value="RETURNED">Nota Debet (RETURNED)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -388,7 +397,7 @@ export default function InvoicesReportPage() {
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-emerald-600">Total Nilai Faktur</p>
-                                    <h3 className="text-2xl font-bold text-emerald-900">{formatCurrency(getTotalAmount())}</h3>
+                                    <h3 className="text-2xl font-bold text-emerald-900">{formatCurrencyAuto(getTotalAmount())}</h3>
                                 </div>
                             </div>
                         </CardContent>
@@ -436,7 +445,14 @@ export default function InvoicesReportPage() {
                                             {getOutletName(row.kode_outlet)}
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-slate-500">
-                                            {row.invoice_doc}
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span>{row.invoice_doc}</span>
+                                                {row.invoice_type === 'DEBIT_NOTE' && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200 font-sans text-[10px] font-semibold">
+                                                        Nota Debet
+                                                    </span>
+                                                )}
+                                            </div>
                                             {row.supplier_invoice_number && (
                                                 <div className="text-[10px] text-slate-400 mt-0.5">Ref: {row.supplier_invoice_number}</div>
                                             )}
@@ -462,8 +478,17 @@ export default function InvoicesReportPage() {
                                                 {row.status}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-right font-medium text-slate-700">
-                                            {formatCurrency(row.total_amount)}
+                                        <TableCell className={`text-right font-medium ${Number(row.total_amount) < 0 ? 'text-rose-600 font-semibold' : 'text-slate-700'}`}>
+                                            <div>{formatCurrencyAuto(row.total_amount)}</div>
+                                            {Number(row.other_cost || 0) !== 0 && (
+                                                <div
+                                                    className={`text-[10px] font-normal mt-0.5 ${Number(row.other_cost) < 0 ? 'text-rose-600' : 'text-slate-500'}`}
+                                                    title={row.other_cost_notes || undefined}
+                                                >
+                                                    {Number(row.other_cost) < 0 ? 'Potongan lain: ' : 'Biaya lain: +'}
+                                                    {formatCurrencyAuto(Number(row.other_cost))}
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex items-center justify-center gap-2">
