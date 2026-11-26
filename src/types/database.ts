@@ -604,6 +604,8 @@ export interface StoShipment {
   shipped_at: string
   shipped_by: string
   image_url?: string | null
+  image_url_2?: string | null
+  image_url_3?: string | null
   // Joins
   sto_shipment_items?: StoShipmentItem[]
 }
@@ -626,6 +628,8 @@ export interface StoReceipt {
   received_at: string
   received_by: string
   image_url?: string | null
+  image_url_2?: string | null
+  image_url_3?: string | null
   // Joins
   sto_receipt_items?: StoReceiptItem[]
 }
@@ -1025,6 +1029,8 @@ export interface StoSummaryReportItem {
   items_summary: string
   shipping_cost: number
   grand_total: number
+  shipment_images?: ReceiptImageEntry[] | null
+  receipt_images?: ReceiptImageEntry[] | null
 }
 
 export interface StoTransitReportItem {
@@ -1067,6 +1073,8 @@ export interface StoOrderItem {
   qty_requested: number
   price_unit: number
   subtotal: number
+  sender_status?: StoStatus
+  recipient_status?: StoRecipientStatus
 }
 
 export interface StoReceiptList {
@@ -1082,6 +1090,8 @@ export interface StoReceiptList {
   grand_total: number
   shipment_image_url?: string | null
   receipt_image_url?: string | null
+  shipment_images?: ReceiptImageEntry[] | null
+  receipt_images?: ReceiptImageEntry[] | null
 }
 
 export interface StoReceiptItem {

@@ -29,7 +29,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { FileText, Download, Loader2, Search, Printer } from 'lucide-react'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns'
 import { toast } from 'sonner'
 import { printReportA4 } from '@/utils/reportPrintUtils'
 
@@ -38,9 +38,10 @@ export function ReportStoOrderPage() {
     const [data, setData] = useState<StoOrderList[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
-    // Filters
-    const [startDate, setStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
-    const [endDate, setEndDate] = useState<string>(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
+    // Filters (default: 7 hari terakhir agar muat awal cepat)
+    const [startDate, setStartDate] = useState<string>(format(subDays(new Date(), 7), 'yyyy-MM-dd'))
+    const [endDate, setEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
+    const [activePreset, setActivePreset] = useState<'week' | 'month' | 'year' | 'custom'>('week')
     const [selectedOutlet, setSelectedOutlet] = useState<string>('ALL')
 
     // Admin Options
@@ -55,13 +56,16 @@ export function ReportStoOrderPage() {
         }
     }, [canFilterOutlet])
 
-    const fetchReport = async () => {
+    const fetchReport = async (overrideStart?: string, overrideEnd?: string) => {
         if (!user?.kode_outlet) return
+
+        const effectiveStart = overrideStart ?? startDate
+        const effectiveEnd = overrideEnd ?? endDate
 
         setIsLoading(true)
         const filters = {
-            startDate: startDate ? new Date(startDate) : undefined,
-            endDate: endDate ? new Date(endDate) : undefined,
+            startDate: effectiveStart ? new Date(effectiveStart) : undefined,
+            endDate: effectiveEnd ? new Date(effectiveEnd) : undefined,
             outlet: canFilterOutlet ? selectedOutlet : undefined,
             userOutlet: user.kode_outlet
         }
@@ -70,9 +74,31 @@ export function ReportStoOrderPage() {
         if (res.isSuccess && res.data) {
             setData(res.data)
         } else {
-            toast.error(res.error || 'Failed to load report')
+            toast.error(res.error || 'Gagal memuat laporan order STO')
         }
         setIsLoading(false)
+    }
+
+    const applyDatePreset = (preset: 'week' | 'month' | 'year') => {
+        const today = new Date()
+        let nextStart: string
+        let nextEnd: string
+
+        if (preset === 'week') {
+            nextStart = format(subDays(today, 7), 'yyyy-MM-dd')
+            nextEnd = format(today, 'yyyy-MM-dd')
+        } else if (preset === 'month') {
+            nextStart = format(startOfMonth(today), 'yyyy-MM-dd')
+            nextEnd = format(endOfMonth(today), 'yyyy-MM-dd')
+        } else {
+            nextStart = format(startOfYear(today), 'yyyy-MM-dd')
+            nextEnd = format(endOfYear(today), 'yyyy-MM-dd')
+        }
+
+        setStartDate(nextStart)
+        setEndDate(nextEnd)
+        setActivePreset(preset)
+        fetchReport(nextStart, nextEnd)
     }
 
     // Initial load
@@ -189,37 +215,69 @@ export function ReportStoOrderPage() {
                 </div>
 
                 <Card className="border-pastel-blue/20 shadow-sm">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Filters</CardTitle>
+                    <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <CardTitle className="text-lg">Filter Laporan</CardTitle>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={activePreset === 'week' ? 'default' : 'outline'}
+                                disabled={isLoading}
+                                onClick={() => applyDatePreset('week')}
+                                className={`h-7 text-xs ${activePreset === 'week' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                            >
+                                Minggu Ini
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={activePreset === 'month' ? 'default' : 'outline'}
+                                disabled={isLoading}
+                                onClick={() => applyDatePreset('month')}
+                                className={`h-7 text-xs ${activePreset === 'month' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                            >
+                                Bulan Ini
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={activePreset === 'year' ? 'default' : 'outline'}
+                                disabled={isLoading}
+                                onClick={() => applyDatePreset('year')}
+                                className={`h-7 text-xs ${activePreset === 'year' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                            >
+                                Tahun Ini
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
-                                <Label>Start Date</Label>
+                                <Label>Dari Tanggal</Label>
                                 <Input
                                     type="date"
                                     value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
+                                    onChange={(e) => { setStartDate(e.target.value); setActivePreset('custom') }}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>End Date</Label>
+                                <Label>Sampai Tanggal</Label>
                                 <Input
                                     type="date"
                                     value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
+                                    onChange={(e) => { setEndDate(e.target.value); setActivePreset('custom') }}
                                 />
                             </div>
 
                             {canFilterOutlet && (
                                 <div className="space-y-2">
-                                    <Label>Outlet Filter</Label>
+                                    <Label>Filter Outlet</Label>
                                     <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="All Outlets" />
+                                            <SelectValue placeholder="Semua Outlet" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ALL">All Outlets</SelectItem>
+                                            <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                             {outletOptions.map(opt => (
                                                 <SelectItem key={opt.kode_outlet} value={opt.kode_outlet}>
                                                     {opt.name_outlet}
@@ -231,11 +289,11 @@ export function ReportStoOrderPage() {
                             )}
 
                             <div className="flex gap-2">
-                                <Button onClick={fetchReport} disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button onClick={() => fetchReport()} disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
                                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-                                    Filter
+                                    Tampilkan
                                 </Button>
-                                <Button variant="outline" onClick={handleExport} disabled={data.length === 0}>
+                                <Button variant="outline" onClick={handleExport} disabled={data.length === 0} title="Ekspor CSV">
                                     <Download className="h-4 w-4" />
                                 </Button>
                             </div>

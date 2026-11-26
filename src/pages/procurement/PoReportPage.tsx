@@ -32,6 +32,7 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -640,6 +641,9 @@ export default function PoReportPage() {
                             <History className="h-5 w-5 text-rose-600" />
                             Riwayat Retur PO: {historyTargetPo?.poDocNo}
                         </DialogTitle>
+                        <DialogDescription>
+                            Daftar dokumen retur pembelian, rincian item yang dikembalikan, dan tautan cetak Nota Debet terkait.
+                        </DialogDescription>
                     </DialogHeader>
                     {historyLoading ? (
                         <div className="py-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">

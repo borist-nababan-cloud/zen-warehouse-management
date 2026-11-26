@@ -36,14 +36,18 @@ export async function getStoSummaryReport(filters: StoReportFilters & { directio
         if (filters.startDate) query = query.gte('order_date', format(filters.startDate, 'yyyy-MM-dd'))
         if (filters.endDate) query = query.lte('order_date', format(filters.endDate, 'yyyy-MM-dd'))
 
-        // Direction logic overrides standard outlet filter
+        // Direction logic with explicit ALL-outlet support for privileged roles (5, 8, 13)
+        const targetOutlet = filters.outlet && filters.outlet !== 'ALL' ? filters.outlet : filters.userOutlet
         if (filters.direction === 'INCOMING') {
-             query = query.eq('to_outlet', filters.userOutlet)
+            if (filters.outlet !== 'ALL') {
+                query = query.eq('to_outlet', targetOutlet)
+            }
         } else if (filters.direction === 'OUTGOING') {
-             query = query.eq('from_outlet', filters.userOutlet)
-        } else {
-             // ALL direction
-             query = applyOutletFilter(query, filters.userOutlet, filters.outlet)
+            if (filters.outlet !== 'ALL') {
+                query = query.eq('from_outlet', targetOutlet)
+            }
+        } else if (filters.outlet !== 'ALL') {
+            query = applyOutletFilter(query, filters.userOutlet, filters.outlet)
         }
 
         const { data, error } = await query
@@ -120,7 +124,7 @@ export async function getStoOrderItemsReport(
             } else if (!filters.outlet) {
                 query = query.eq('from_outlet', filters.userOutlet)
             }
-        } else {
+        } else if (filters.outlet !== 'ALL') {
             query = applyOutletFilter(query, filters.userOutlet, filters.outlet)
         }
 

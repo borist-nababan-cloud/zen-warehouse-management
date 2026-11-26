@@ -91,6 +91,7 @@ import StoListPage from '@/pages/sto/StoListPage'
 import { StoDetailPage } from '@/pages/sto/StoDetailPage'
 import { StoPrintPage } from '@/pages/sto/StoPrintPage'
 import { ReportStoSummaryPage } from '@/pages/sto/ReportStoSummaryPage'
+import { ReportStoSummaryItemsPage } from '@/pages/sto/ReportStoSummaryItemsPage'
 import { ReportStoTransitPage } from '@/pages/sto/ReportStoTransitPage'
 import { ReportStoOrderPage } from '@/pages/sto/ReportStoOrderPage'
 import { ReportStoOrderItemsPage } from '@/pages/sto/ReportStoOrderItemsPage'
@@ -678,8 +679,16 @@ function App() {
           <Route
             path="/sto/report-summary"
             element={
-              <ProtectedRoute allowedRoles={[6, 10, 14]}>
+              <ProtectedRoute allowedRoles={[5, 6, 8, 10, 13, 14]} strictRoles>
                 <ReportStoSummaryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sto/report-summary-items"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 10, 13, 14]} strictRoles>
+                <ReportStoSummaryItemsPage />
               </ProtectedRoute>
             }
           />

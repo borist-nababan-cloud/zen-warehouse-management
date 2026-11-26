@@ -206,7 +206,7 @@ const navItems: NavItem[] = [
 // -- NEW GROUPS --
 
 const goodsReceiptGroup: NavGroup = {
-  title: 'Penerimaan Barang (GR)',
+  title: 'Pembelian (Supplier)',
   icon: FileText,
   roleIds: [5, 6, 7, 8, 10, 14],
   children: [
@@ -233,7 +233,7 @@ const goodsIssuedGroup: NavGroup = {
 const stockTransferGroup: NavGroup = {
   title: 'Transfer Stok (STO)',
   icon: Boxes,
-  roleIds: [5, 6, 7, 8, 10, 14],
+  roleIds: [5, 6, 7, 8, 10, 13, 14],
   children: [
     {
       title: 'Penerimaan',
@@ -260,7 +260,8 @@ const stockTransferGroup: NavGroup = {
         { title: 'Laporan Item Order STO', path: '/sto/report-order-items/pengiriman', icon: List, roleIds: [5, 6, 7, 8, 10, 14] },
       ],
     },
-    { title: 'Ringkasan Laporan STO', path: '/sto/report-summary', icon: Activity, roleIds: [6, 10, 14] },
+    { title: 'Ringkasan Laporan STO', path: '/sto/report-summary', icon: Activity, roleIds: [5, 6, 8, 10, 13, 14], strictRoles: true },
+    { title: 'Ringkasan Items STO', path: '/sto/report-summary-items', icon: List, roleIds: [5, 6, 8, 10, 13, 14], strictRoles: true },
     { title: 'Laporan STO Dalam Transit', path: '/sto/report-transit', icon: Truck, roleIds: [6, 7, 10] },
     { title: 'Laporan Order STO', path: '/sto/report-order', icon: FileText, roleIds: [5, 6, 8, 10] },
   ]

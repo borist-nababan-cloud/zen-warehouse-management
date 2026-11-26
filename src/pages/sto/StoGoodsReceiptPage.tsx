@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, PackageCheck, AlertCircle, Image as ImageIcon, Eye, ExternalLink } from 'lucide-react'
+import { ClipboardCheck, PackageCheck, AlertCircle, Image as ImageIcon, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -13,19 +13,44 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 import { stoService } from '@/services/stoService'
 import { useAuthUser } from '@/hooks/useAuth'
-import { StoOrder } from '@/types/database'
-import { TransactionImageInput, uploadTransactionImage } from '@/components/common/TransactionImageInput'
+import { StoOrder, StoShipment } from '@/types/database'
+import { uploadTransactionImage } from '@/components/common/TransactionImageInput'
+import { TransactionMultiImageInput } from '@/components/common/TransactionMultiImageInput'
+import { TransactionImageGalleryDialog, type GalleryImageItem } from '@/components/common/TransactionImageGalleryDialog'
 
 import { DashboardLayout } from '@/components/layout/Sidebar'
+
+function collectShipmentImages(shipments: StoShipment[]): GalleryImageItem[] {
+    const result: GalleryImageItem[] = []
+    shipments.forEach((shipment) => {
+        const slots: Array<{ slot: number; url?: string | null }> = [
+            { slot: 1, url: shipment.image_url },
+            { slot: 2, url: shipment.image_url_2 },
+            { slot: 3, url: shipment.image_url_3 },
+        ]
+        slots.forEach((s) => {
+            if (s.url && s.url.trim()) {
+                result.push({
+                    url: s.url.trim(),
+                    label: `Foto ${s.slot}`,
+                    grDoc: shipment.document_number,
+                    receivedAt: shipment.shipped_at ?? null,
+                })
+            }
+        })
+    })
+    return result
+}
 
 export default function StoGoodsReceiptPage() {
     const { user } = useAuthUser()
     const queryClient = useQueryClient()
     const [selectedSto, setSelectedSto] = useState<StoOrder | null>(null)
     const [receivingItems, setReceivingItems] = useState<{ sto_item_id: string, barang_id: number, qty_shipped: number, qty_received: number }[]>([])
-    const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null)
-    const [senderImageUrl, setSenderImageUrl] = useState<string | null>(null)
-    const [isSenderImagePreviewOpen, setIsSenderImagePreviewOpen] = useState(false)
+    const [receiptImageFiles, setReceiptImageFiles] = useState<(File | null)[]>([null, null, null])
+    const [senderImages, setSenderImages] = useState<GalleryImageItem[]>([])
+    const [isSenderGalleryOpen, setIsSenderGalleryOpen] = useState(false)
+    const [senderGalleryInitialIdx, setSenderGalleryInitialIdx] = useState(0)
     const [isUploadingImage, setIsUploadingImage] = useState(false)
     const [isDetailOpen, setIsDetailOpen] = useState(false)
 
@@ -48,15 +73,12 @@ export default function StoGoodsReceiptPage() {
             setSelectedSto(fullSto)
 
             const itemsToReceive: typeof receivingItems = []
-            const shipments = (fullSto as any).sto_shipments || []
+            const shipments: StoShipment[] = (fullSto.sto_shipments || []) as StoShipment[]
 
-            // Find latest sender shipment image if any
-            let latestSenderPhoto: string | null = null
-            shipments.forEach((shipment: any) => {
-                if (shipment.image_url) {
-                    latestSenderPhoto = shipment.image_url
-                }
-                shipment.sto_shipment_items?.forEach((shipItem: any) => {
+            const collectedSenderPhotos = collectShipmentImages(shipments)
+
+            shipments.forEach((shipment) => {
+                shipment.sto_shipment_items?.forEach((shipItem) => {
                     itemsToReceive.push({
                         sto_item_id: shipItem.sto_item_id,
                         barang_id: shipItem.barang_id,
@@ -66,13 +88,13 @@ export default function StoGoodsReceiptPage() {
                 })
             })
 
-            setSenderImageUrl(latestSenderPhoto)
-            setReceiptImageFile(null)
+            setSenderImages(collectedSenderPhotos)
+            setReceiptImageFiles([null, null, null])
             setReceivingItems(itemsToReceive)
             setIsDetailOpen(true)
         } catch (error) {
             console.error(error)
-            toast.error('Failed to load details')
+            toast.error('Gagal memuat rincian dokumen STO')
         }
     }
 
@@ -80,15 +102,15 @@ export default function StoGoodsReceiptPage() {
     const receiveMutation = useMutation({
         mutationFn: stoService.createReceipt.bind(stoService),
         onSuccess: () => {
-            toast.success('Goods Received Successfully')
+            toast.success('Penerimaan barang STO berhasil dicatat!')
             setIsDetailOpen(false)
             setSelectedSto(null)
-            setReceiptImageFile(null)
-            setSenderImageUrl(null)
+            setReceiptImageFiles([null, null, null])
+            setSenderImages([])
             queryClient.invalidateQueries({ queryKey: ['sto_orders'] })
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to receive goods')
+            toast.error(error.message || 'Gagal mencatat penerimaan barang STO')
         }
     })
 
@@ -98,21 +120,26 @@ export default function StoGoodsReceiptPage() {
         // Validation
         const errors = receivingItems.some(i => i.qty_received !== i.qty_shipped)
         if (errors) {
-            toast.error('Quantity Received MUST match Quantity Shipped (No Partials)')
+            toast.error('Kuantitas Diterima HARUS sama persis dengan Kuantitas Dikirim (tidak boleh parsial)')
             return
         }
 
-        let uploadedImageUrl: string | null = null
-        if (receiptImageFile) {
+        let uploadedUrls: (string | null)[] = [null, null, null]
+        const hasAnyFile = receiptImageFiles.some(Boolean)
+        if (hasAnyFile) {
             try {
                 setIsUploadingImage(true)
-                uploadedImageUrl = await uploadTransactionImage(
-                    receiptImageFile,
-                    'sto-receipts',
-                    user.kode_outlet || selectedSto.to_outlet
+                const outletCode = user.kode_outlet || selectedSto.to_outlet
+                uploadedUrls = await Promise.all(
+                    [0, 1, 2].map((slotIdx) => {
+                        const fileItem = receiptImageFiles[slotIdx]
+                        return fileItem
+                            ? uploadTransactionImage(fileItem, 'sto-receipts', outletCode)
+                            : Promise.resolve<string | null>(null)
+                    })
                 )
             } catch (err: any) {
-                toast.error(err.message || 'Gagal mengunggah foto penerimaan')
+                toast.error(err.message || 'Gagal mengunggah foto bukti penerimaan')
                 setIsUploadingImage(false)
                 return
             } finally {
@@ -124,7 +151,9 @@ export default function StoGoodsReceiptPage() {
             sto_id: selectedSto.id,
             items: receivingItems,
             received_by: user.id,
-            image_url: uploadedImageUrl
+            image_url: uploadedUrls[0],
+            image_url_2: uploadedUrls[1],
+            image_url_3: uploadedUrls[2],
         })
     }
 
@@ -146,18 +175,18 @@ export default function StoGoodsReceiptPage() {
         <DashboardLayout>
             <div className="p-6 space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">Goods Receipt (Recipient)</h1>
-                    <p className="text-muted-foreground">Receive incoming stock from other outlets</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">Penerimaan STO (Penerima)</h1>
+                    <p className="text-muted-foreground">Terima barang kiriman transfer stok dari outlet lain yang telah disetujui</p>
                 </div>
 
                 <div className="grid gap-4">
                     {isLoading ? (
-                        <div>Loading...</div>
+                        <div>Memuat daftar penerimaan...</div>
                     ) : stos?.data.length === 0 ? (
                         <Card className="bg-slate-50 border-dashed">
                             <CardContent className="h-40 flex flex-col items-center justify-center text-muted-foreground">
                                 <ClipboardCheck className="h-10 w-10 mb-2 opacity-20" />
-                                <p>No accepted shipments pending receipt</p>
+                                <p>Tidak ada kiriman STO yang menunggu diterima</p>
                             </CardContent>
                         </Card>
                     ) : (
@@ -170,13 +199,13 @@ export default function StoGoodsReceiptPage() {
                                             <Badge className="bg-green-600">ACCEPTED</Badge>
                                         </div>
                                         <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                            <span>From: <span className="font-medium text-foreground">{sto.from_master_outlet?.name_outlet}</span></span>
+                                            <span>Dari: <span className="font-medium text-foreground">{sto.from_master_outlet?.name_outlet}</span></span>
                                             <span>•</span>
-                                            <span>Created: {format(new Date(sto.created_at), 'dd MMM yyyy')}</span>
+                                            <span>Dibuat: {format(new Date(sto.created_at), 'dd MMM yyyy')}</span>
                                         </p>
                                     </div>
                                     <Button onClick={() => handleOpenReceive(sto)}>
-                                        <PackageCheck className="mr-2 h-4 w-4" /> Receive Goods
+                                        <PackageCheck className="mr-2 h-4 w-4" /> Terima Barang
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -188,9 +217,9 @@ export default function StoGoodsReceiptPage() {
                 <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
                     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Receive Shipment: {selectedSto?.document_number}</DialogTitle>
+                            <DialogTitle>Penerimaan Kiriman STO: {selectedSto?.document_number}</DialogTitle>
                             <DialogDescription>
-                                Verify physical counts. Quantities must match exactly.
+                                Verifikasi jumlah fisik barang yang diterima. Kuantitas harus sesuai dengan jumlah yang dikirim.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -198,50 +227,70 @@ export default function StoGoodsReceiptPage() {
                             <div className="bg-amber-50 p-3 rounded-md border border-amber-100 text-sm text-amber-700 flex items-start gap-2">
                                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                                 <p>
-                                    <strong>Strict Policy:</strong> You must receive exactly what was shipped.
-                                    If items are damaged or missing, receive full amount here and then perform
-                                    <strong> Inventory Shrinkage/Adjustment</strong> separately.
+                                    <strong>Kebijakan Ketat:</strong> Anda wajib menerima sesuai jumlah yang dikirim.
+                                    Jika terdapat barang rusak atau kurang, terima penuh terlebih dahulu lalu catat melalui menu
+                                    <strong> Penyusutan / Pemusnahan</strong> secara terpisah.
                                 </p>
                             </div>
 
-                            {/* Show Sender's Shipment Photo if available */}
-                            {senderImageUrl && (
-                                <div className="border border-blue-200 bg-blue-50/40 rounded-lg p-3 flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <img
-                                            src={senderImageUrl}
-                                            alt="Foto Pengiriman dari Pengirim"
-                                            onClick={() => setIsSenderImagePreviewOpen(true)}
-                                            className="h-14 w-14 rounded object-cover border border-blue-200 cursor-pointer"
-                                        />
+                            {/* Show Sender's Shipment Photos (1-3 photos) if available */}
+                            {senderImages.length > 0 && (
+                                <div className="border border-blue-200 bg-blue-50/40 rounded-lg p-3 space-y-2.5">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
                                         <div>
                                             <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
                                                 <ImageIcon className="h-4 w-4 text-blue-600" />
-                                                Foto Bukti Pengiriman (Dari Outlet Pengirim)
+                                                Foto Bukti Pengiriman (Dari Outlet Pengirim — {senderImages.length} Foto)
                                             </p>
                                             <p className="text-xs text-slate-500">
-                                                Klik tombol di samping untuk memeriksa foto kondisi barang saat dikirim oleh {selectedSto?.from_master_outlet?.name_outlet || selectedSto?.from_outlet}.
+                                                Periksa foto kondisi barang saat dikirim oleh {selectedSto?.from_master_outlet?.name_outlet || selectedSto?.from_outlet}.
                                             </p>
                                         </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSenderGalleryInitialIdx(0)
+                                                setIsSenderGalleryOpen(true)
+                                            }}
+                                        >
+                                            <Eye className="h-4 w-4 mr-1.5" />
+                                            Lihat Foto Pengirim ({senderImages.length})
+                                        </Button>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setIsSenderImagePreviewOpen(true)}
-                                    >
-                                        <Eye className="h-4 w-4 mr-1.5" />
-                                        Lihat Foto Pengirim
-                                    </Button>
+                                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                                        {senderImages.map((img, idx) => (
+                                            <button
+                                                key={`${img.url}-${idx}`}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSenderGalleryInitialIdx(idx)
+                                                    setIsSenderGalleryOpen(true)
+                                                }}
+                                                className="relative shrink-0 h-16 w-16 rounded-md overflow-hidden border border-blue-200 hover:ring-2 hover:ring-blue-400 transition-all"
+                                                title={`Lihat ${img.label || `Foto ${idx + 1}`}`}
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt={img.label || `Foto Pengirim ${idx + 1}`}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                                <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-medium px-1 text-center truncate">
+                                                    {img.label || `#${idx + 1}`}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Product</TableHead>
-                                        <TableHead className="text-right">Qty Shipped</TableHead>
-                                        <TableHead className="text-right w-32">Qty Received</TableHead>
+                                        <TableHead>Produk</TableHead>
+                                        <TableHead className="text-right">Qty Dikirim</TableHead>
+                                        <TableHead className="text-right w-32">Qty Diterima</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -258,6 +307,7 @@ export default function StoGoodsReceiptPage() {
                                                 <TableCell className="text-right">
                                                     <Input
                                                         type="number"
+                                                        step="any"
                                                         className={`text-right h-8 ${!isMatch ? 'border-red-300 ring-red-200' : ''}`}
                                                         value={item.qty_received}
                                                         onChange={(e) => updateQty(item.sto_item_id, Number(e.target.value))}
@@ -269,13 +319,19 @@ export default function StoGoodsReceiptPage() {
                                 </TableBody>
                             </Table>
 
-                            {/* Optional 1-Image Proof of Receipt (Camera or Device Storage) */}
-                            <div className="pt-2 border-t border-slate-100">
-                                <TransactionImageInput
-                                    label="Foto Bukti Penerimaan STO (Oleh Outlet Penerima)"
-                                    helperText="Ambil foto kondisi fisik barang / paket saat tiba di gerai menggunakan kamera atau unggah dari galeri perangkat."
-                                    file={receiptImageFile}
-                                    onChange={setReceiptImageFile}
+                            {/* Optional Multi-Image Proof of Receipt (Max 3 Images: Camera or Device Storage) */}
+                            <div className="pt-3 border-t border-slate-100">
+                                <TransactionMultiImageInput
+                                    label="Foto Bukti Penerimaan STO (Oleh Outlet Penerima — Maks. 3 Foto, Opsional)"
+                                    helperText="Ambil foto kondisi paket saat tiba, isi barang setelah dibuka, atau bukti tambahan menggunakan kamera maupun galeri perangkat."
+                                    files={receiptImageFiles}
+                                    onChange={setReceiptImageFiles}
+                                    maxImages={3}
+                                    slotLabels={[
+                                        'Foto 1 (Kondisi Paket Tiba)',
+                                        'Foto 2 (Isi Barang / Cek Fisik)',
+                                        'Foto 3 (Tambahan)',
+                                    ]}
                                     disabled={isProcessing}
                                 />
                             </div>
@@ -283,47 +339,27 @@ export default function StoGoodsReceiptPage() {
 
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsDetailOpen(false)} disabled={isProcessing}>
-                                Cancel
+                                Batal
                             </Button>
                             <Button onClick={handleSubmitReceipt} disabled={isProcessing}>
                                 {isUploadingImage
                                     ? 'Mengunggah Foto...'
                                     : receiveMutation.isPending
-                                        ? 'Processing...'
-                                        : 'Confirm Receipt'}
+                                        ? 'Memproses...'
+                                        : 'Konfirmasi Penerimaan'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                {/* Sender Photo Zoom Dialog */}
-                <Dialog open={isSenderImagePreviewOpen} onOpenChange={setIsSenderImagePreviewOpen}>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Foto Pengiriman STO ({selectedSto?.document_number})</DialogTitle>
-                        </DialogHeader>
-                        {senderImageUrl && (
-                            <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
-                                <img
-                                    src={senderImageUrl}
-                                    alt="Foto Pengiriman STO"
-                                    className="max-h-[65vh] w-auto object-contain rounded"
-                                />
-                            </div>
-                        )}
-                        <DialogFooter>
-                            {senderImageUrl && (
-                                <Button variant="outline" size="sm" onClick={() => window.open(senderImageUrl, '_blank')}>
-                                    <ExternalLink className="h-4 w-4 mr-1.5" />
-                                    Buka di Tab Baru
-                                </Button>
-                            )}
-                            <Button variant="secondary" size="sm" onClick={() => setIsSenderImagePreviewOpen(false)}>
-                                Tutup
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                {/* Sender Multi-Photo Gallery Dialog */}
+                <TransactionImageGalleryDialog
+                    open={isSenderGalleryOpen}
+                    onOpenChange={setIsSenderGalleryOpen}
+                    title={`Foto Pengiriman STO: ${selectedSto?.document_number || ''}`}
+                    images={senderImages}
+                    initialIndex={senderGalleryInitialIdx}
+                />
             </div>
         </DashboardLayout>
     )

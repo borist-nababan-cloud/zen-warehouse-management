@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Camera, Upload, Trash2, Eye, X, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { compressImageIfNeeded } from './TransactionImageInput'
 
@@ -331,6 +331,9 @@ export function TransactionMultiImageInput({
                         <DialogTitle>
                             Pratinjau {zoomSlotIndex !== null ? slotLabels[zoomSlotIndex] || `Foto ${zoomSlotIndex + 1}` : 'Bukti Foto'}
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Pratinjau ukuran penuh foto yang dipilih sebelum diunggah.
+                        </DialogDescription>
                     </DialogHeader>
                     {activeZoomUrl && (
                         <div className="flex items-center justify-center bg-slate-900/5 rounded-lg p-2 max-h-[70vh] overflow-auto">
@@ -351,6 +354,9 @@ export function TransactionMultiImageInput({
                         <DialogTitle>
                             Ambil Foto ({slotLabels[webcamSlotIndex] || `Foto ${webcamSlotIndex + 1}`})
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Pengambilan gambar langsung menggunakan kamera perangkat.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
                         <video

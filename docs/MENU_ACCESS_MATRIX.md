@@ -88,7 +88,7 @@ This document outlines the authoritative role-based access permissions for each 
 
 ---
 
-### 3.3. Penerimaan Barang / Procurement (GR)
+### 3.3. Pembelian (Supplier) / Procurement
 **Grup Akses Sidebar:** Finance (5), Outlet Admin (6), Warehouse Staff (7), SUPERUSER (8), Finance Outlet (10), Manager Cabang (14)
 | Submenu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
@@ -116,17 +116,18 @@ This document outlines the authoritative role-based access permissions for each 
 | Sub-Grup / Submenu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
 | **Penerimaan ▸ Request Kirim Barang** | `/sto/requests` | `ClipboardList` | **6, 10** | `[6, 8, 10]` | Pengajuan permintaan kirim barang dari cabang peminta ke cabang penyedia/gudang pusat tanpa menampilkan harga (`REQ-YYYYMMDD-XXXX`). |
-| **Penerimaan ▸ Kotak Persetujuan STO** | `/sto/approval` | `Users` | **6, 10** | `[6, 8, 10]` | Verifikasi dan otorisasi persetujuan dokumen pengiriman STO oleh admin outlet. |
-| **Penerimaan ▸ Penerimaan STO (Receipt)** | `/sto/receipt` | `Package` | **7** | `[7, 8]` | Penerimaan fisik barang di gudang tujuan (penambahan stok otomatis via trigger database dan perbandingan foto bukti). |
+| **Penerimaan ▸ Kotak Persetujuan STO** | `/sto/approval` | `Users` | **6, 10** | `[6, 8, 10]` | Verifikasi dan otorisasi persetujuan dokumen pengiriman STO oleh admin outlet lengkap dengan pratinjau galeri foto pengiriman dari outlet pengirim (maks. 3 foto). |
+| **Penerimaan ▸ Penerimaan STO (Receipt)** | `/sto/receipt` | `Package` | **7** | `[7, 8]` | Penerimaan fisik barang di gudang tujuan (penambahan stok otomatis via trigger database, galeri multi-foto pengirim, dan unggah **maksimal 3 foto** bukti penerimaan `image_url`, `image_url_2`, `image_url_3`). |
 | **Penerimaan ▸ Faktur STO** | `/sto/invoicing` | `DollarSign` | **6, 10** | `[6, 8, 10]` | Pembuatan dan penagihan invoice inter-branch antar cabang pengirim dan penerima. |
 | **Penerimaan ▸ Laporan Request Barang** | `/sto/report-requests` | `FileText` | **5, 6, 7, 8, 10** | `[5, 6, 7, 8, 10]` | Laporan perbandingan jumlah permintaan barang terhadap realisasi kirim dan terima STO. |
 | **Penerimaan ▸ Laporan Item Order STO** | `/sto/report-order-items/penerimaan` | `List` | **5, 6, 7, 8, 10, 14** | `[5, 6, 7, 8, 10, 14]` | Rincian detail item barang pesanan STO dari sisi outlet penerima (`to_outlet`; Role 14 terkunci pada `kode_outlet` sendiri). |
-| **Penerimaan ▸ Laporan Penerimaan STO** | `/sto/report-receipt` | `Wallet` | **5, 6, 8, 10, 14** | `[5, 6, 8, 10, 14]` | Rekapitulasi dokumen tanda terima pengiriman STO oleh cabang tujuan (Role 14 terkunci pada `kode_outlet` sendiri). |
+| **Penerimaan ▸ Laporan Penerimaan STO** | `/sto/report-receipt` | `Wallet` | **5, 6, 8, 10, 14** | `[5, 6, 8, 10, 14]` | Rekapitulasi dokumen tanda terima pengiriman STO oleh cabang tujuan (Role 14 terkunci pada `kode_outlet` sendiri) beserta dialog perbandingan multi-foto **Pengirim vs Penerima** (maks. 3 foto per sisi). |
 | **Penerimaan ▸ Daftar Item Penerimaan STO** | `/sto/report-receipt-items` | `PackageCheck` | **5, 6, 7, 8, 10, 14** | `[5, 6, 7, 8, 10, 14]` | Detail audit kuantitas penerimaan barang per item dari pengiriman STO (Role 14 terkunci pada `kode_outlet` sendiri). |
 | **Pengiriman ▸ Kirim Barang Ke Outlet (STO)**| `/sto` | `FileText` | **6, 10** | `[6, 8, 10]` | Inisiasi dokumen transfer stok barang antar-cabang dengan referensi opsional No. Request Barang. |
-| **Pengiriman ▸ Pengiriman STO (Issue)** | `/sto/issue` | `Truck` | **7** | `[7, 8]` | Eksekusi fisik pengeluaran barang oleh staf gudang pengirim (pemotongan stok otomatis via trigger database dan foto bukti). |
+| **Pengiriman ▸ Pengiriman STO (Issue)** | `/sto/issue` | `Truck` | **7** | `[7, 8]` | Eksekusi fisik pengeluaran barang oleh staf gudang pengirim (pemotongan stok otomatis via trigger database dan unggah **maksimal 3 foto** bukti pengiriman `image_url`, `image_url_2`, `image_url_3`). |
 | **Pengiriman ▸ Laporan Item Order STO** | `/sto/report-order-items/pengiriman` | `List` | **5, 6, 7, 8, 10, 14** | `[5, 6, 7, 8, 10, 14]` | Rincian detail item barang pesanan STO dari sisi outlet pengirim (`from_outlet`; Role 14 terkunci pada `kode_outlet` sendiri). |
-| **Ringkasan Laporan STO** | `/sto/report-summary` | `Activity` | **6, 10, 14** | `[6, 10, 14]` | Ringkasan statistik performa transfer stok, rute cabang, dan status pengiriman (langsung di bawah induk STO; Role 14 terkunci pada `kode_outlet` sendiri). |
+| **Ringkasan Laporan STO** | `/sto/report-summary` | `Activity` | **5, 6, 8, 10, 13, 14** *(Strict)* | `[5, 6, 8, 10, 13, 14]` (`strictRoles`) | Ringkasan statistik performa transfer stok per dokumen, rute cabang, status pengiriman, pratinjau perbandingan multi-foto **Pengirim vs Penerima**, cetak **A4** (`printReportA4`), dan ekspor CSV. **Role 18 diblokir ketat (`strictRoles`)**; **Role 5, 8, 13** dapat memilih semua outlet; **Role 6, 10, 14** terkunci pada `kode_outlet` sendiri. |
+| **Ringkasan Items STO** | `/sto/report-summary-items` | `List` | **5, 6, 8, 10, 13, 14** *(Strict)* | `[5, 6, 8, 10, 13, 14]` (`strictRoles`) | Rincian item barang (SKU, Qty, Harga Satuan, Subtotal) untuk seluruh transfer stok dengan filter tanggal, arah transfer (Semua/Masuk/Keluar), cetak **A4** (`printReportA4`), dan ekspor CSV (tanpa kolom aksi). **Role 18 diblokir ketat (`strictRoles`)**; **Role 5, 8, 13** dapat memilih semua outlet; **Role 6, 10, 14** terkunci pada `kode_outlet` sendiri. |
 | **Laporan STO Dalam Transit** | `/sto/report-transit` | `Truck` | **6, 7, 10** | `[5, 6, 7, 8, 10]` | Pemantauan stok barang yang sedang dalam perjalanan antar-cabang (`IN_TRANSIT`, langsung di bawah induk STO). |
 | **Laporan Order STO** | `/sto/report-order` | `FileText` | **5, 6, 8, 10** | `[5, 6, 8, 10]` | Rekapitulasi dokumen pesanan STO terdaftar dalam sistem (langsung di bawah induk STO). |
 

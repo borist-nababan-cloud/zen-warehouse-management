@@ -44,6 +44,8 @@ export interface ShipStoPayload {
   }[]
   shipped_by: string
   image_url?: string | null
+  image_url_2?: string | null
+  image_url_3?: string | null
 }
 
 export interface ReceiveStoPayload {
@@ -55,6 +57,8 @@ export interface ReceiveStoPayload {
   }[]
   received_by: string
   image_url?: string | null
+  image_url_2?: string | null
+  image_url_3?: string | null
 }
 
 export const stoService = {
@@ -337,7 +341,9 @@ export const stoService = {
         sto_id: payload.sto_id,
         document_number: doc_number,
         shipped_by: payload.shipped_by,
-        image_url: payload.image_url || null
+        image_url: payload.image_url || null,
+        image_url_2: payload.image_url_2 || null,
+        image_url_3: payload.image_url_3 || null
       })
       .select()
       .single()
@@ -375,7 +381,9 @@ export const stoService = {
         sto_id: payload.sto_id,
         document_number: doc_number,
         received_by: payload.received_by,
-        image_url: payload.image_url || null
+        image_url: payload.image_url || null,
+        image_url_2: payload.image_url_2 || null,
+        image_url_3: payload.image_url_3 || null
       })
       .select()
       .single()

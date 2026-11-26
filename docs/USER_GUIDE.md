@@ -305,7 +305,7 @@ Digunakan oleh tim promosi dan admin web untuk mengelola konten spanduk dan peng
 ## 4. Pengadaan Barang (Procurement)
 
 ### A. Membuat Pesanan Pembelian / Purchase Order (PO)
-1. Buka menu **Penerimaan Barang (GR) > Pesanan Pembelian (PO)**.
+1. Buka menu **Pembelian (Supplier) > Pesanan Pembelian (PO)**.
 2. Klik tombol **+ Tambah PO Baru**.
 3. Pilih **Pemasok (Supplier)**, **Tanggal Transaksi**, dan nomor referensi RO (jika ada).
 4. Klik **Tambah Item** untuk memilih produk, jumlah kuantitas (*Qty*), dan harga satuan (otomatis berformat pemisah ribuan).
@@ -314,7 +314,7 @@ Digunakan oleh tim promosi dan admin web untuk mengelola konten spanduk dan peng
 ---
 
 ### B. Penerimaan Barang Masuk (Goods Receipt)
-1. Buka menu **Penerimaan Barang (GR) > Penerimaan Supplier (GR)**.
+1. Buka menu **Pembelian (Supplier) > Penerimaan Supplier (GR)**.
 2. Klik tombol **Receive Goods / Terima Barang** di pojok kanan atas.
 3. Pilih nomor **Purchase Order (PO)** yang barangnya tiba di cabang.
 4. Masukkan nomor **Delivery Note / Ref No (Surat Jalan)** dari pemasok.
@@ -332,7 +332,7 @@ Digunakan oleh tim promosi dan admin web untuk mengelola konten spanduk dan peng
    - Dialog galeri mendukung navigasi **Sebelumnya / Berikutnya** (tombol atau panah keyboard), *thumbnail strip*, label nomor dokumen GR sumber foto, dan **Buka di Tab Baru**.
 
 ### C. Pembuatan Faktur Pembelian (PO) — Ongkos Kirim & Biaya Lain-lain
-1. Buka menu **Penerimaan Barang (GR) > Faktur Pembelian (PO)** (`/procurement/invoicing-po`).
+1. Buka menu **Pembelian (Supplier) > Faktur Pembelian (PO)** (`/procurement/invoicing-po`).
 2. Pilih PO berstatus **`COMPLETED`** lalu klik **Buat Faktur**.
 3. Isi **Nomor Faktur Pemasok** dan **Tanggal Jatuh Tempo Pembayaran**.
 4. Isi biaya tambahan (bila ada):
@@ -479,7 +479,7 @@ Modul **Kartu Stok** (`/inventory/stock-card`) menyajikan rincian kronologis set
 Modul ini memfasilitasi permintaan dan pengiriman logistik antar-cabang atau distribusi dari gudang pusat (*holding*) ke cabang-cabang Zen Family Spa. Untuk memudahkan operasional, menu **Transfer Stok (STO)** kini terstruktur menjadi 2 sub-grup utama plus ringkasan induk:
 - **Sub-grup `Penerimaan`**: `Request Kirim Barang`, `Kotak Persetujuan STO`, `Penerimaan STO (Receipt)`, `Faktur STO`, `Laporan Request Barang`, `Laporan Item Order STO` (sisi Penerimaan), `Laporan Penerimaan STO`, dan `Daftar Item Penerimaan STO`.
 - **Sub-grup `Pengiriman`**: `Kirim Barang Ke Outlet (STO)`, `Pengiriman STO (Issue)`, dan `Laporan Item Order STO` (sisi Pengiriman).
-- **Menu Induk `Transfer Stok (STO)`**: `Ringkasan Laporan STO`, `Laporan STO Dalam Transit`, dan `Laporan Order STO`.
+- **Menu Induk `Transfer Stok (STO)`**: `Ringkasan Laporan STO`, `Ringkasan Items STO`, `Laporan STO Dalam Transit`, dan `Laporan Order STO`.
 
 ### A. Request Kirim Barang (`Transfer Stok (STO) > Penerimaan > Request Kirim Barang`)
 Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purchase Order* namun untuk transaksi antar-outlet) di mana cabang yang membutuhkan stok mengajukan permintaan barang ke cabang pemasok:
@@ -514,27 +514,27 @@ Fitur ini berfungsi sebagai langkah awal (*Pre-STO Request*, serupa dengan *Purc
 
 ### C. Alur Pengiriman (Issue), Persetujuan (Approval), & Penerimaan STO (Receipt)
 1. **Pengiriman STO / Goods Issue (`Transfer Stok (STO) > Pengiriman > Pengiriman STO (Issue)`)**:
-   - Staf gudang pengirim membuka daftar STO berstatus `DRAFT` dan mengklik **Process Shipment**.
+   - Staf gudang pengirim membuka daftar STO berstatus `DRAFT` dan mengklik **Proses Pengiriman**.
    - Verifikasi kuantitas fisik barang yang siap dikirim dari gudang.
-   - **Penanganan Item Kosong di Gudang (Kuantitas 0 Diizinkan)**: Jika salah satu atau beberapa barang dalam daftar STO kebetulan kosong di rak gudang pengirim, staf dapat memasukkan angka **`0`** pada kolom *Shipped Qty* barang tersebut. Sistem menandai item tersebut dengan badge kuning **"Stok Kosong (0)"** dan **tetap mengizinkan proses pengiriman** selama minimal ada 1 barang lain yang kuantitasnya $> 0$. Hanya item dengan kuantitas $> 0$ yang stoknya akan dipotong di gudang pengirim.
-   - **Foto Bukti Pengiriman STO (Opsional - Maks. 1 Foto)**: Staf pengirim dapat mengambil foto kondisi barang/paket saat dikirim menggunakan **Kamera Perangkat (`Ambil Foto (Kamera)`)** atau mengunggah dari **Galeri / File (`Pilih File / Galeri`)**.
-   - Klik **Confirm Shipment**. Stok pada **Outlet Pengirim langsung dipotong** untuk item yang dikirim dan status pengirim berubah menjadi **`SHIPPED`** (barang berstatus *In-Transit* menuju outlet penerima).
+   - **Penanganan Item Kosong di Gudang (Kuantitas 0 Diizinkan)**: Jika salah satu atau beberapa barang dalam daftar STO kebetulan kosong di rak gudang pengirim, staf dapat memasukkan angka **`0`** pada kolom *Qty Dikirim* barang tersebut. Sistem menandai item tersebut dengan badge kuning **"Stok Kosong (0)"** dan **tetap mengizinkan proses pengiriman** selama minimal ada 1 barang lain yang kuantitasnya $> 0$. Hanya item dengan kuantitas $> 0$ yang stoknya akan dipotong di gudang pengirim.
+   - **Foto Bukti Pengiriman STO (Opsional - Maks. 3 Foto)**: Staf pengirim dapat mengunggah hingga **3 foto** pada slot **Foto 1 (Dokumen / Surat Jalan)**, **Foto 2 (Kondisi Paket / Barang)**, dan **Foto 3 (Tambahan)** menggunakan **Kamera Perangkat** atau **Galeri / File**.
+   - Klik **Konfirmasi Pengiriman**. Stok pada **Outlet Pengirim langsung dipotong** untuk item yang dikirim dan status pengirim berubah menjadi **`SHIPPED`** (barang berstatus *In-Transit* menuju outlet penerima).
 2. **Kotak Persetujuan STO (`Transfer Stok (STO) > Penerimaan > Kotak Persetujuan STO`)**:
    - Setelah gudang pengirim melakukan *Pengiriman STO (Issue)* (`SHIPPED`), dokumen STO otomatis muncul di **Kotak Persetujuan STO** milik **Outlet Penerima**.
-   - Admin/pihak berwenang di Outlet Penerima memeriksa rincian STO lalu memilih:
-     - **Accept Shipment (`ACCEPTED`)**: Menyetujui pengiriman agar dapat diterima oleh gudang penerima.
-     - **Reject (`REJECTED`)**: Menolak pengiriman STO. Jika ditolak, sistem secara otomatis **mengembalikan (*reversal*) stok barang yang sebelumnya terpotong kembali ke saldo gudang Outlet Pengirim** secara utuh dan akurat.
+   - Admin/pihak berwenang di Outlet Penerima memeriksa rincian STO serta **galeri foto bukti pengiriman (1–3 foto)** dari Outlet Pengirim lalu memilih:
+     - **Setujui Kiriman (`ACCEPTED`)**: Menyetujui pengiriman agar dapat diterima oleh gudang penerima.
+     - **Tolak Kiriman (`REJECTED`)**: Menolak pengiriman STO. Jika ditolak, sistem secara otomatis **mengembalikan (*reversal*) stok barang yang sebelumnya terpotong kembali ke saldo gudang Outlet Pengirim** secara utuh dan akurat.
 3. **Penerimaan STO / Goods Receipt (`Transfer Stok (STO) > Penerimaan > Penerimaan STO (Receipt)`)**:
-   - Staf gudang penerima membuka STO yang telah disetujui (`ACCEPTED`) dan mengklik **Receive Goods**.
-   - Jika Outlet Pengirim melampirkan foto saat pengiriman, staf penerima dapat mengklik tombol **Lihat Foto Pengirim** di dalam dialog untuk memeriksa kondisi awal barang saat dikirim.
+   - Staf gudang penerima membuka STO yang telah disetujui (`ACCEPTED`) dan mengklik **Terima Barang**.
+   - Jika Outlet Pengirim melampirkan foto saat pengiriman, staf penerima dapat mengklik thumbnail atau tombol **Lihat Foto Pengirim (N)** untuk membuka galeri seluruh foto kondisi awal barang saat dikirim.
    - Periksa kesesuaian kuantitas fisik barang yang tiba (*Strict Policy: kuantitas diterima wajib sama persis dengan kuantitas dikirim*).
-   - **Foto Bukti Penerimaan STO (Opsional - Maks. 1 Foto)**: Staf penerima dapat memotret kondisi barang saat tiba di gerai menggunakan **Kamera Perangkat** atau memilih dari **Galeri / File**.
-   - Klik **Confirm Receipt**. Stok pada **Outlet Penerima resmi bertambah** dan status STO menjadi **`COMPLETED`**.
-4. **Melihat 2 Foto Bukti STO (Pengirim & Penerima) pada Laporan Penerimaan STO**:
-   - Buka menu **Transfer Stok (STO) > Penerimaan > Laporan Penerimaan STO**. Tabel kini menampilkan nama cabang resmi (`name_outlet`) pada kolom pengirim dan penerima.
-   - Pada kolom **Actions** (tepat di sebelah ikon **Cetak / Print**), klik ikon **Foto (`Lihat Foto Bukti STO`)** untuk membuka dialog perbandingan visual berdampingan (*Side-by-Side*):
-     1. **Foto Pengiriman (Sender)** dari Outlet Pengirim.
-     2. **Foto Penerimaan (Receiver)** dari Outlet Penerima.
+   - **Foto Bukti Penerimaan STO (Opsional - Maks. 3 Foto)**: Staf penerima dapat mengunggah hingga **3 foto** pada slot **Foto 1 (Kondisi Paket Tiba)**, **Foto 2 (Isi Barang / Cek Fisik)**, dan **Foto 3 (Tambahan)** menggunakan **Kamera Perangkat** atau **Galeri / File**.
+   - Klik **Konfirmasi Penerimaan**. Stok pada **Outlet Penerima resmi bertambah** dan status STO menjadi **`COMPLETED`**.
+4. **Melihat Perbandingan Multi-Foto Bukti STO (Pengirim vs Penerima)**:
+   - Tersedia pada **Laporan Penerimaan STO**, **Ringkasan Laporan STO**, serta **Halaman Detail STO**.
+   - Klik tombol **Foto (N)** pada kolom **Aksi** untuk membuka dialog perbandingan visual berdampingan (*Side-by-Side*) yang mendukung navigasi panah dan *thumbnail strip* hingga **3 foto per sisi**:
+     1. **Foto Pengiriman (Pengirim)** dari Outlet Pengirim.
+     2. **Foto Penerimaan (Penerima)** dari Outlet Penerima.
 
 ---
 
@@ -1084,8 +1084,9 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
    - **Laporan Item Order STO 2 Sisi**:
      - `Penerimaan > Laporan Item Order STO`: Menampilkan rincian item order STO di mana cabang Anda bertindak sebagai **Outlet Penerima** (`to_outlet`).
      - `Pengiriman > Laporan Item Order STO`: Menampilkan rincian item order STO di mana cabang Anda bertindak sebagai **Outlet Pengirim** (`from_outlet`).
-   - **Laporan Order STO, Penerimaan STO, Daftar Item Penerimaan STO, & STO Dalam Transit**: Seluruhnya dilengkapi tombol **Cetak** pratinjau A4 resmi (`printReportA4`) dan **Ekspor CSV**.
-   - **Ringkasan Laporan STO (`Transfer Stok (STO) > Ringkasan Laporan STO`)**: Rekapitulasi volume dan nilai transfer antar-cabang.
+   - **Laporan Order STO, Penerimaan STO, Daftar Item Penerimaan STO, & STO Dalam Transit**: Seluruhnya dilengkapi tombol **Cetak** pratinjau A4 resmi (`printReportA4`) dan **Ekspor CSV**. Khusus **Laporan Order STO**, rentang tanggal bawaan saat halaman dibuka adalah **7 hari terakhir** beserta tombol filter instan **Minggu Ini**, **Bulan Ini**, dan **Tahun Ini**.
+   - **Ringkasan Laporan STO (`Transfer Stok (STO) > Ringkasan Laporan STO`)**: Rekapitulasi volume dan nilai transfer per dokumen antar-cabang dengan filter default **7 hari terakhir** + tombol cepat **Minggu Ini / Bulan Ini / Tahun Ini**, tombol **Foto (N)** perbandingan Pengirim vs Penerima, **Cetak (A4)**, dan **Ekspor CSV**. Role **5, 8, 13** dapat memfilter semua outlet; Role **6, 10, 14** terkunci pada cabang sendiri; **Role 18 diblokir ketat**.
+   - **Ringkasan Items STO (`Transfer Stok (STO) > Ringkasan Items STO`)**: Rincian detail per item barang (SKU, Qty, Harga Satuan, Subtotal) untuk seluruh transfer stok masuk & keluar dengan filter identik (default **7 hari terakhir** + **Minggu Ini / Bulan Ini / Tahun Ini**), **Cetak (A4)**, dan **Ekspor CSV** (tanpa kolom aksi). Hak akses sama persis dengan *Ringkasan Laporan STO* (Role **5, 6, 8, 10, 13, 14**; Role 18 diblokir ketat).
 8. **Laporan Pengadaan & Keuangan dengan Pratinjau Cetak A4 & Akses Role 14**:
    - **Pratinjau Cetak A4 Terpadu (`Cetak`)**: Tersedia pada **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier (GR)**, **Laporan PO Tertunda**, **Kinerja Pemasok**, **Laporan Faktur Pembelian** (kolom Outlet kini menampilkan `name_outlet`), dan **Laporan Umur Hutang (AP)**.
    - **Akses Role 14 (Manager Cabang)**: Role 14 dapat membuka 13 menu laporan lintas modul (**Kinerja Pemasok**, **Laporan Pesanan (PO)**, **Laporan Penerimaan Supplier**, **Laporan Item Order STO [Penerimaan & Pengiriman]**, **Laporan Penerimaan STO**, **Daftar Item Penerimaan STO**, **Ringkasan Laporan STO**, **Laporan Biaya & Hasil Produksi**, **Laporan Umur Hutang (AP)**, **Laporan Faktur Pembelian**, **Laporan Piutang STO**, dan **Laporan Arus Kas**) dengan data yang **selalu terkunci pada `kode_outlet` cabangnya sendiri**.

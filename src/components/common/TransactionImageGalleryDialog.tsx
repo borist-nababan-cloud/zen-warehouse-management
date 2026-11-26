@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -124,6 +125,9 @@ export function TransactionImageGalleryDialog({
                             </span>
                         )}
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Galeri foto bukti transaksi penerimaan barang.
+                    </DialogDescription>
                 </DialogHeader>
 
                 {current ? (

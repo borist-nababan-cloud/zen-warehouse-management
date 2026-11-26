@@ -1,19 +1,44 @@
-
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { stoService } from '@/services/stoService'
-import { StoOrder } from '@/types/database'
+import { StoOrder, StoReceipt, StoShipment } from '@/types/database'
 import { DashboardLayout } from '@/components/layout/Sidebar'
 import { Button } from '@/components/ui/button'
-import { Printer, ArrowLeft } from 'lucide-react'
+import { Printer, ArrowLeft, Image as ImageIcon, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { TransactionImageGalleryDialog, type GalleryImageItem } from '@/components/common/TransactionImageGalleryDialog'
+
+function collectStoImages(
+    docs: Array<Pick<StoShipment, 'document_number' | 'image_url' | 'image_url_2' | 'image_url_3'> & { shipped_at?: string; received_at?: string }>
+): GalleryImageItem[] {
+    const result: GalleryImageItem[] = []
+    docs.forEach((doc) => {
+        const slots: Array<{ slot: number; url?: string | null }> = [
+            { slot: 1, url: doc.image_url },
+            { slot: 2, url: doc.image_url_2 },
+            { slot: 3, url: doc.image_url_3 },
+        ]
+        slots.forEach((s) => {
+            if (s.url && s.url.trim()) {
+                result.push({
+                    url: s.url.trim(),
+                    label: `Foto ${s.slot}`,
+                    grDoc: doc.document_number,
+                    receivedAt: doc.received_at ?? doc.shipped_at ?? null,
+                })
+            }
+        })
+    })
+    return result
+}
 
 export function StoDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const [sto, setSto] = useState<StoOrder | null>(null)
     const [loading, setLoading] = useState(true)
+    const [galleryModal, setGalleryModal] = useState<{ title: string; images: GalleryImageItem[]; initialIndex: number } | null>(null)
 
     useEffect(() => {
         if (id) {
@@ -36,15 +61,18 @@ export function StoDetailPage() {
 
     if (loading) return (
         <DashboardLayout>
-            <div className="p-8 text-center">Loading STO Details...</div>
+            <div className="p-8 text-center">Memuat rincian STO...</div>
         </DashboardLayout>
     )
 
     if (!sto) return (
         <DashboardLayout>
-            <div className="p-8 text-center text-red-500">Stock Transfer Order not found</div>
+            <div className="p-8 text-center text-red-500">Dokumen Transfer Stok (STO) tidak ditemukan</div>
         </DashboardLayout>
     )
+
+    const senderImages = collectStoImages((sto.sto_shipments || []) as StoShipment[])
+    const receiverImages = collectStoImages((sto.sto_receipts || []) as StoReceipt[])
 
     return (
         <DashboardLayout>
@@ -55,7 +83,7 @@ export function StoDetailPage() {
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-gray-900">STO Details</h1>
+                            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Detail Transfer Stok (STO)</h1>
                             <div className="flex items-center gap-2">
                                 <p className="text-muted-foreground font-mono">{sto.document_number}</p>
                                 {sto.request_number && (
@@ -68,14 +96,14 @@ export function StoDetailPage() {
                     </div>
                     <Button onClick={() => window.open(`/sto/${sto.id}/print`, '_blank')}>
                         <Printer className="mr-2 h-4 w-4" />
-                        Print STO
+                        Cetak STO
                     </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-sm uppercase text-muted-foreground">Sender (From)</CardTitle>
+                            <CardTitle className="text-sm uppercase text-muted-foreground">Pengirim (Dari Outlet)</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="font-bold text-lg">{sto.from_master_outlet?.name_outlet}</p>
@@ -88,7 +116,7 @@ export function StoDetailPage() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-sm uppercase text-muted-foreground">Recipient (To)</CardTitle>
+                            <CardTitle className="text-sm uppercase text-muted-foreground">Penerima (Ke Outlet)</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="font-bold text-lg">{sto.to_master_outlet?.name_outlet}</p>
@@ -102,15 +130,15 @@ export function StoDetailPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Items</CardTitle>
+                        <CardTitle>Daftar Barang</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b">
-                                    <th className="text-left py-3">Item</th>
+                                    <th className="text-left py-3">Barang</th>
                                     <th className="text-center py-3">Qty</th>
-                                    <th className="text-right py-3">Price</th>
+                                    <th className="text-right py-3">Harga</th>
                                     <th className="text-right py-3">Total</th>
                                 </tr>
                             </thead>
@@ -140,17 +168,164 @@ export function StoDetailPage() {
                                     <span>{new Intl.NumberFormat('id-ID').format(sto.total_items_price)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span>Shipping</span>
+                                    <span>Ongkos Kirim</span>
                                     <span>{new Intl.NumberFormat('id-ID').format(sto.shipping_cost)}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-lg border-t pt-2">
-                                    <span>Grand Total</span>
+                                    <span>Total Keseluruhan</span>
                                     <span>Rp {new Intl.NumberFormat('id-ID').format(sto.grand_total)}</span>
                                 </div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Bukti Foto Pengiriman & Penerimaan STO */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <ImageIcon className="h-4 w-4 text-blue-600" />
+                            Bukti Foto Pengiriman &amp; Penerimaan STO
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Sender Photos */}
+                            <div className="rounded-lg border p-3 space-y-2.5 bg-slate-50/50">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            1. Foto Pengiriman ({senderImages.length})
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Oleh: {sto.from_master_outlet?.name_outlet || sto.from_outlet}
+                                        </p>
+                                    </div>
+                                    {senderImages.length > 0 && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-xs"
+                                            onClick={() =>
+                                                setGalleryModal({
+                                                    title: `Foto Pengiriman STO: ${sto.document_number}`,
+                                                    images: senderImages,
+                                                    initialIndex: 0,
+                                                })
+                                            }
+                                        >
+                                            <Eye className="h-3.5 w-3.5 mr-1" />
+                                            Lihat Semua
+                                        </Button>
+                                    )}
+                                </div>
+                                {senderImages.length > 0 ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {senderImages.map((img, idx) => (
+                                            <button
+                                                key={`${img.url}-${idx}`}
+                                                type="button"
+                                                onClick={() =>
+                                                    setGalleryModal({
+                                                        title: `Foto Pengiriman STO: ${sto.document_number}`,
+                                                        images: senderImages,
+                                                        initialIndex: idx,
+                                                    })
+                                                }
+                                                className="relative aspect-square rounded-md overflow-hidden border border-slate-200 bg-white hover:ring-2 hover:ring-blue-400 transition-all group"
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt={img.label || `Foto Pengiriman ${idx + 1}`}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                                <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] py-0.5 text-center truncate">
+                                                    {img.label || `Foto ${idx + 1}`}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-md">
+                                        Belum ada foto bukti pengiriman
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Receiver Photos */}
+                            <div className="rounded-lg border p-3 space-y-2.5 bg-slate-50/50">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            2. Foto Penerimaan ({receiverImages.length})
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Oleh: {sto.to_master_outlet?.name_outlet || sto.to_outlet}
+                                        </p>
+                                    </div>
+                                    {receiverImages.length > 0 && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-xs"
+                                            onClick={() =>
+                                                setGalleryModal({
+                                                    title: `Foto Penerimaan STO: ${sto.document_number}`,
+                                                    images: receiverImages,
+                                                    initialIndex: 0,
+                                                })
+                                            }
+                                        >
+                                            <Eye className="h-3.5 w-3.5 mr-1" />
+                                            Lihat Semua
+                                        </Button>
+                                    )}
+                                </div>
+                                {receiverImages.length > 0 ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {receiverImages.map((img, idx) => (
+                                            <button
+                                                key={`${img.url}-${idx}`}
+                                                type="button"
+                                                onClick={() =>
+                                                    setGalleryModal({
+                                                        title: `Foto Penerimaan STO: ${sto.document_number}`,
+                                                        images: receiverImages,
+                                                        initialIndex: idx,
+                                                    })
+                                                }
+                                                className="relative aspect-square rounded-md overflow-hidden border border-slate-200 bg-white hover:ring-2 hover:ring-blue-400 transition-all group"
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt={img.label || `Foto Penerimaan ${idx + 1}`}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                                <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] py-0.5 text-center truncate">
+                                                    {img.label || `Foto ${idx + 1}`}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-md">
+                                        Belum ada foto bukti penerimaan
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <TransactionImageGalleryDialog
+                    open={!!galleryModal}
+                    onOpenChange={(open) => !open && setGalleryModal(null)}
+                    title={galleryModal?.title || 'Bukti Foto STO'}
+                    images={galleryModal?.images || []}
+                    initialIndex={galleryModal?.initialIndex ?? 0}
+                />
             </div>
         </DashboardLayout>
     )

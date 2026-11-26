@@ -31,14 +31,137 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog'
-import { Wallet, Download, Loader2, Search, Printer, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { Wallet, Download, Loader2, Search, Printer, Image as ImageIcon, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
 import { printReportA4 } from '@/utils/reportPrintUtils'
+import { normalizeViewReceiptImages, type GalleryImageItem } from '@/components/common/TransactionImageGalleryDialog'
+
+interface DualPhotoPanelProps {
+    title: string
+    outletLabel: string
+    images: GalleryImageItem[]
+    emptyText: string
+}
+
+function DualPhotoPanel({ title, outletLabel, images, emptyText }: DualPhotoPanelProps) {
+    const [activeIdx, setActiveIdx] = useState(0)
+
+    useEffect(() => {
+        setActiveIdx(0)
+    }, [images])
+
+    const current = images[activeIdx]
+
+    return (
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-3">
+            <div className="flex items-start justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            {title}
+                        </p>
+                        {images.length > 0 && (
+                            <span className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800">
+                                {activeIdx + 1} / {images.length}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        {outletLabel}
+                    </p>
+                </div>
+                {current && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 h-7 text-xs"
+                        onClick={() => window.open(current.url, '_blank')}
+                    >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                        Tab Baru
+                    </Button>
+                )}
+            </div>
+
+            {current ? (
+                <div className="space-y-2">
+                    <div className="relative flex items-center justify-center bg-white dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-700 p-2 h-64 overflow-hidden">
+                        <img
+                            src={current.url}
+                            alt={current.label || title}
+                            className="max-h-full max-w-full object-contain rounded"
+                        />
+                        {images.length > 1 && (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="icon"
+                                    aria-label="Foto Sebelumnya"
+                                    onClick={() => setActiveIdx((prev) => (prev - 1 + images.length) % images.length)}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full shadow bg-white/90 hover:bg-white text-slate-800"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="icon"
+                                    aria-label="Foto Berikutnya"
+                                    onClick={() => setActiveIdx((prev) => (prev + 1) % images.length)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full shadow bg-white/90 hover:bg-white text-slate-800"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </>
+                        )}
+                    </div>
+
+                    {images.length > 1 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                            {images.map((img, idx) => {
+                                const isActive = idx === activeIdx
+                                return (
+                                    <button
+                                        key={`${img.url}-${idx}`}
+                                        type="button"
+                                        onClick={() => setActiveIdx(idx)}
+                                        className={`relative shrink-0 h-12 w-12 rounded overflow-hidden border-2 transition-all ${
+                                            isActive
+                                                ? 'border-blue-600 ring-1 ring-blue-300'
+                                                : 'border-slate-200 opacity-70 hover:opacity-100'
+                                        }`}
+                                        title={img.label || `Foto ${idx + 1}`}
+                                    >
+                                        <img
+                                            src={img.url}
+                                            alt={`Thumb ${idx + 1}`}
+                                            className="h-full w-full object-cover"
+                                        />
+                                        <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] text-center truncate px-0.5">
+                                            {img.label || `#${idx + 1}`}
+                                        </span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center bg-slate-100/70 dark:bg-slate-800/40 rounded border border-dashed border-slate-300 dark:border-slate-700 h-64 text-slate-400 text-xs">
+                    <ImageIcon className="h-8 w-8 mb-1 opacity-40" />
+                    <span>{emptyText}</span>
+                </div>
+            )}
+        </div>
+    )
+}
 
 export function ReportStoReceiptPage() {
     const { user } = useAuthUser()
@@ -78,7 +201,7 @@ export function ReportStoReceiptPage() {
         if (res.isSuccess && res.data) {
             setData(res.data)
         } else {
-            toast.error(res.error || 'Failed to load report')
+            toast.error(res.error || 'Gagal memuat laporan penerimaan STO')
         }
         setIsLoading(false)
     }
@@ -92,10 +215,10 @@ export function ReportStoReceiptPage() {
         new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
 
     const handleExport = () => {
-        if (data.length === 0) return toast.error('No data to export')
+        if (data.length === 0) return toast.error('Tidak ada data untuk diekspor')
 
         const csvContent = [
-            ['Received Date', 'Receipt Doc', 'Order Doc', 'From Outlet', 'To Outlet', 'Grand Total'],
+            ['Tanggal Terima', 'No. Penerimaan', 'No. Order STO', 'Dari Outlet', 'Ke Outlet', 'Total Nilai'],
             ...data.map(item => [
                 format(new Date(item.received_at), 'yyyy-MM-dd'),
                 item.document_number,
@@ -112,7 +235,7 @@ export function ReportStoReceiptPage() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `sto_receipts_report_${format(new Date(), 'yyyyMMdd')}.csv`);
+        link.setAttribute("download", `laporan_penerimaan_sto_${format(new Date(), 'yyyyMMdd')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -160,15 +283,22 @@ export function ReportStoReceiptPage() {
         })
     }
 
+    const previewSenderImages = previewItem
+        ? normalizeViewReceiptImages(previewItem.shipment_images, previewItem.shipment_image_url, previewItem.order_number)
+        : []
+    const previewReceiverImages = previewItem
+        ? normalizeViewReceiptImages(previewItem.receipt_images, previewItem.receipt_image_url, previewItem.document_number)
+        : []
+
     return (
         <DashboardLayout>
             <div className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">STO Receipts Report</h1>
+                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Laporan Penerimaan STO</h1>
                         <p className="text-muted-foreground flex items-center gap-2">
                             <Wallet className="h-4 w-4" />
-                            List of completed STO receipts.
+                            Rekapitulasi dokumen penerimaan transfer stok antar-outlet yang telah selesai.
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -195,12 +325,12 @@ export function ReportStoReceiptPage() {
 
                 <Card className="border-pastel-blue/20 shadow-sm">
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Filters</CardTitle>
+                        <CardTitle className="text-lg">Filter Laporan</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
-                                <Label>Start Date</Label>
+                                <Label>Tanggal Mulai</Label>
                                 <Input
                                     type="date"
                                     value={startDate}
@@ -208,7 +338,7 @@ export function ReportStoReceiptPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>End Date</Label>
+                                <Label>Tanggal Akhir</Label>
                                 <Input
                                     type="date"
                                     value={endDate}
@@ -218,13 +348,13 @@ export function ReportStoReceiptPage() {
 
                             {canFilterOutlet && (
                                 <div className="space-y-2">
-                                    <Label>Outlet Filter</Label>
+                                    <Label>Filter Outlet</Label>
                                     <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="All Outlets" />
+                                            <SelectValue placeholder="Semua Outlet" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ALL">All Outlets</SelectItem>
+                                            <SelectItem value="ALL">SEMUA OUTLET</SelectItem>
                                             {outletOptions.map(opt => (
                                                 <SelectItem key={opt.kode_outlet} value={opt.kode_outlet}>
                                                     {opt.name_outlet}
@@ -238,9 +368,9 @@ export function ReportStoReceiptPage() {
                             <div className="flex gap-2">
                                 <Button onClick={fetchReport} disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
                                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-                                    Filter
+                                    Tampilkan
                                 </Button>
-                                <Button variant="outline" onClick={handleExport} disabled={data.length === 0}>
+                                <Button variant="outline" onClick={handleExport} disabled={data.length === 0} title="Ekspor CSV">
                                     <Download className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -253,27 +383,39 @@ export function ReportStoReceiptPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/50">
-                                    <TableHead>Received Date</TableHead>
-                                    <TableHead>Receipt Doc</TableHead>
-                                    <TableHead>Order Doc</TableHead>
-                                    <TableHead>From Outlet</TableHead>
-                                    <TableHead>To Outlet</TableHead>
-                                    <TableHead className="text-right">Order Value</TableHead>
-                                    <TableHead className="text-center w-[120px]">Actions</TableHead>
+                                    <TableHead>Tgl Terima</TableHead>
+                                    <TableHead>No. Penerimaan</TableHead>
+                                    <TableHead>No. Order STO</TableHead>
+                                    <TableHead>Dari Outlet</TableHead>
+                                    <TableHead>Ke Outlet</TableHead>
+                                    <TableHead className="text-right">Nilai Order</TableHead>
+                                    <TableHead className="text-center w-[160px]">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Loading...</TableCell>
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Memuat data...</TableCell>
                                     </TableRow>
                                 ) : data.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No records found.</TableCell>
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Tidak ada data penerimaan STO ditemukan.</TableCell>
                                     </TableRow>
                                 ) : (
                                     data.map((item, idx) => {
-                                        const hasAnyPhoto = Boolean(item.shipment_image_url || item.receipt_image_url)
+                                        const senderImgs = normalizeViewReceiptImages(
+                                            item.shipment_images,
+                                            item.shipment_image_url,
+                                            item.order_number
+                                        )
+                                        const receiverImgs = normalizeViewReceiptImages(
+                                            item.receipt_images,
+                                            item.receipt_image_url,
+                                            item.document_number
+                                        )
+                                        const totalPhotoCount = senderImgs.length + receiverImgs.length
+                                        const hasAnyPhoto = totalPhotoCount > 0
+
                                         return (
                                             <TableRow key={item.id || idx} className="hover:bg-muted/50 transition-colors">
                                                 <TableCell>{format(new Date(item.received_at), 'dd/MM/yyyy')}</TableCell>
@@ -285,43 +427,52 @@ export function ReportStoReceiptPage() {
                                                     {formatCurrency(item.grand_total)}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="flex items-center justify-center gap-1.5">
+                                                    <div className="flex items-center justify-center gap-1">
                                                         {/* Print STO */}
-                                                        {item.sto_id ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                title="Print STO"
-                                                                className="h-8 w-8 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
-                                                                onClick={() => {
-                                                                    window.open(`/sto/${item.sto_id}/print`, '_blank')
-                                                                }}
-                                                            >
-                                                                <Printer className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : (
-                                                            <div className="h-8 w-8 flex items-center justify-center text-slate-300 select-none">-</div>
-                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={!item.sto_id}
+                                                            title={item.sto_id ? 'Cetak Dokumen STO' : 'Dokumen STO tidak tersedia'}
+                                                            className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                                item.sto_id
+                                                                    ? 'text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50'
+                                                                    : 'text-slate-300 dark:text-slate-600'
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (!item.sto_id) return
+                                                                window.open(`/sto/${item.sto_id}/print`, '_blank')
+                                                            }}
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                            <span className="text-[10px] leading-tight font-medium">Cetak</span>
+                                                        </Button>
 
-                                                        {/* View Uploaded STO Photos (Sender & Receiver) beside Print icon */}
-                                                        {hasAnyPhoto ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                title="Lihat Foto Bukti STO (Pengirim & Penerima)"
-                                                                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                                onClick={() => setPreviewItem(item)}
-                                                            >
-                                                                <ImageIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : (
-                                                            <div
-                                                                className="h-8 w-8 flex items-center justify-center text-slate-300 select-none"
-                                                                title="Tidak ada foto bukti STO"
-                                                            >
-                                                                -
-                                                            </div>
-                                                        )}
+                                                        {/* View Uploaded STO Photos (Sender & Receiver, up to 3 each) */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={!hasAnyPhoto}
+                                                            title={
+                                                                hasAnyPhoto
+                                                                    ? `Lihat ${totalPhotoCount} Foto Bukti STO (Pengirim: ${senderImgs.length}, Penerima: ${receiverImgs.length})`
+                                                                    : 'Tidak ada foto bukti STO'
+                                                            }
+                                                            className={`flex flex-col h-auto py-1 px-2 gap-0.5 ${
+                                                                hasAnyPhoto
+                                                                    ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50'
+                                                                    : 'text-slate-300 dark:text-slate-600'
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (!hasAnyPhoto) return
+                                                                setPreviewItem(item)
+                                                            }}
+                                                        >
+                                                            <ImageIcon className="h-4 w-4" />
+                                                            <span className="text-[10px] leading-tight font-medium">
+                                                                {hasAnyPhoto ? `Foto (${totalPhotoCount})` : 'Foto'}
+                                                            </span>
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -334,91 +485,31 @@ export function ReportStoReceiptPage() {
                 </Card>
             </div>
 
-            {/* Dual STO Photo Preview Dialog (Sender vs Receiver) */}
+            {/* Dual STO Multi-Photo Comparison Dialog (Sender vs Receiver, up to 3 photos each) */}
             <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
-                            Bukti Foto STO: {previewItem?.order_number} (Receipt: {previewItem?.document_number})
+                            Bukti Foto STO: {previewItem?.order_number} (Terima: {previewItem?.document_number})
                         </DialogTitle>
+                        <DialogDescription>
+                            Perbandingan bukti foto pengiriman dari outlet pengirim dan bukti foto penerimaan dari outlet penerima (masing-masing hingga 3 foto).
+                        </DialogDescription>
                     </DialogHeader>
                     {previewItem && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-                            {/* 1. Sender Photo */}
-                            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col justify-between space-y-3">
-                                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">
-                                            1. Foto Pengiriman (Sender)
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                            Outlet Pengirim: {previewItem.from_outlet_name || previewItem.from_outlet}
-                                        </p>
-                                    </div>
-                                    {previewItem.shipment_image_url && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => window.open(previewItem.shipment_image_url!, '_blank')}
-                                        >
-                                            <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                                            Tab Baru
-                                        </Button>
-                                    )}
-                                </div>
-                                {previewItem.shipment_image_url ? (
-                                    <div className="flex items-center justify-center bg-white rounded border border-slate-200 p-2 h-64 overflow-hidden">
-                                        <img
-                                            src={previewItem.shipment_image_url}
-                                            alt="Foto Pengiriman STO"
-                                            className="max-h-full max-w-full object-contain rounded"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center bg-slate-100/70 rounded border border-dashed border-slate-300 h-64 text-slate-400 text-xs">
-                                        <ImageIcon className="h-8 w-8 mb-1 opacity-40" />
-                                        <span>Tidak ada foto dari pengirim</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 2. Receiver Photo */}
-                            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col justify-between space-y-3">
-                                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">
-                                            2. Foto Penerimaan (Receiver)
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                            Outlet Penerima: {previewItem.to_outlet_name || previewItem.to_outlet}
-                                        </p>
-                                    </div>
-                                    {previewItem.receipt_image_url && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => window.open(previewItem.receipt_image_url!, '_blank')}
-                                        >
-                                            <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                                            Tab Baru
-                                        </Button>
-                                    )}
-                                </div>
-                                {previewItem.receipt_image_url ? (
-                                    <div className="flex items-center justify-center bg-white rounded border border-slate-200 p-2 h-64 overflow-hidden">
-                                        <img
-                                            src={previewItem.receipt_image_url}
-                                            alt="Foto Penerimaan STO"
-                                            className="max-h-full max-w-full object-contain rounded"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center bg-slate-100/70 rounded border border-dashed border-slate-300 h-64 text-slate-400 text-xs">
-                                        <ImageIcon className="h-8 w-8 mb-1 opacity-40" />
-                                        <span>Tidak ada foto dari penerima</span>
-                                    </div>
-                                )}
-                            </div>
+                            <DualPhotoPanel
+                                title="1. Foto Pengiriman (Pengirim)"
+                                outletLabel={`Outlet Pengirim: ${previewItem.from_outlet_name || previewItem.from_outlet}`}
+                                images={previewSenderImages}
+                                emptyText="Tidak ada foto dari pengirim"
+                            />
+                            <DualPhotoPanel
+                                title="2. Foto Penerimaan (Penerima)"
+                                outletLabel={`Outlet Penerima: ${previewItem.to_outlet_name || previewItem.to_outlet}`}
+                                images={previewReceiverImages}
+                                emptyText="Tidak ada foto dari penerima"
+                            />
                         </div>
                     )}
                     <DialogFooter>

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -46,7 +47,7 @@ function round4(n: number): number {
 function formatQty(val: number): string {
   return new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 3,
   }).format(val)
 }
 
@@ -378,6 +379,9 @@ export function PurchaseReturnModal({
             <RotateCcw className="h-5 w-5 text-rose-600" />
             <span>Pembatalan / Retur Pesanan Pembelian (Batal PO)</span>
           </DialogTitle>
+          <DialogDescription className="text-xs text-zen-muted">
+            Pratinjau dan proses pembatalan PO, retur barang pasca-penerimaan (GR), pemotongan stok gudang, serta penerbitan Nota Debet.
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
