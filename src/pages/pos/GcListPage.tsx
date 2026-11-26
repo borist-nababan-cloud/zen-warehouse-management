@@ -215,8 +215,9 @@ export function GcListPage() {
   const userOutletLabel = useMemo(() => {
     const code = user?.kode_outlet || ''
     const found = outlets.find((o) => o.kode_outlet === code)
-    return found ? `[${found.kode_outlet}] ${found.name_outlet}` : code ? `[${code}]` : '-'
-  }, [outlets, user?.kode_outlet])
+    const name = found?.name_outlet || user?.outlet?.name_outlet || ''
+    return code ? (name ? `[${code}] ${name}` : `[${code}]`) : '-'
+  }, [outlets, user?.kode_outlet, user?.outlet?.name_outlet])
 
   const isDateRangeInvalid = Boolean(
     !debouncedSearch && startDate && endDate && startDate > endDate

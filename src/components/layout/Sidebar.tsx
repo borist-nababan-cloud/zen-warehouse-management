@@ -68,7 +68,8 @@ import {
   ShieldAlert,
   AlertCircle,
   FileWarning,
-  Gift
+  Gift,
+  ArrowUpDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -146,7 +147,7 @@ const navItems: NavItem[] = [
     title: 'POS',
     path: '#',
     icon: Store,
-    roleIds: [5, 6, 8, 13, 14, 19, 20],
+    roleIds: [5, 6, 8, 11, 13, 14, 15, 16, 19, 20],
     strictRoles: true,
     children: [
       {
@@ -154,6 +155,13 @@ const navItems: NavItem[] = [
         path: '/pos/gc-list',
         icon: Gift,
         roleIds: [5, 6, 8, 13, 14, 19, 20],
+        strictRoles: true,
+      },
+      {
+        title: 'Therapist Flow',
+        path: '/pos/therapist-flow',
+        icon: ArrowUpDown,
+        roleIds: [5, 6, 8, 11, 13, 14, 15, 16, 19, 20],
         strictRoles: true,
       },
     ],

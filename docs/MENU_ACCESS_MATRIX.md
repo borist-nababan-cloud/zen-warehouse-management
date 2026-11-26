@@ -20,12 +20,12 @@ This document outlines the authoritative role-based access permissions for each 
 | **8** | `SUPERUSER` | Superuser | ✅ Active | Full System Super Administrator (Unrestricted access to all modules, settings, and branches) |
 | **9** | `UNASSIGNED` | Belum Ditugaskan | ❌ Blocked | Unapproved or unassigned user account (Login blocked from WHM) |
 | **10** | `finance_outlet` | Finance Cabang | ✅ Active | Outlet Finance Officer (Branch procurement, STO invoicing/settlement, local cash transactions, CRM holding) |
-| **11** | `therapist` | Terapis | ❌ Blocked | Spa / Reflexology Therapist (Internal App PWA only, blocked from WHM) |
-| **12** | `operational_staff` | Staf Operasional | ❌ Blocked | General Operational Staff (Internal App PWA only, blocked from WHM) |
-| **13** | `role_13` | Supervisor / Direksi | ✅ Active | Executive Supervisor / Board of Directors (Multi-outlet report viewing, Web Data & CMS administration) |
-| **14** | `role_14` | Auditor Internal | ✅ Active | Multi-Outlet Auditor (All-outlet report access, read-only analytics) |
-| **15** | `role_15` | Reserved | ❌ Blocked | Reserved for future organizational roles |
-| **16** | `role_16` | HR / Evaluator TR | ✅ Active | HR & Evaluator Terapis (Akses Kategori, Variabel, dan Pembuatan Evaluasi TR) |
+| **11** | `therapist` | Terapis | ✅ Terbatas | Spa / Reflexology Therapist (Akses WHMS terbatas hanya pada menu POS > Therapist Flow pada `kode_outlet` sendiri) |
+| **12** | `operational_staff` | Staf Operasional | ❌ Blocked | General Operational Staff (Internal App PWA only, tidak memiliki akses menu WHM) |
+| **13** | `role_13` | Supervisor / Direksi | ✅ Active | Executive Supervisor / Board of Directors (Multi-outlet report viewing, Web Data & CMS administration, POS GC List & Therapist Flow) |
+| **14** | `role_14` | Auditor Internal | ✅ Active | Multi-Outlet Auditor (All-outlet report access, read-only analytics, POS GC List & Therapist Flow cabang sendiri) |
+| **15** | `role_15` | Evaluator Cabang (ASTRA) | ✅ Active | Branch Evaluator (HRD Info Karyawan, Buat Evaluasi TR, TR Faults, Lap. Evaluasi, POS > Therapist Flow cabang sendiri) |
+| **16** | `role_16` | Trainer / HR Evaluator TR | ✅ Active | HR & Evaluator Terapis (Akses Kategori, Variabel, Pembuatan Evaluasi TR, TR Faults, POS > Therapist Flow pilih 1 outlet) |
 | **17** | `member` | Pelanggan / Tamu | ❌ Blocked | Public Web Member (Public static website only, strictly blocked from WHM) |
 | **18** | `web_admin` | Web Admin | ✅ Active | Digital Media & Content Administrator (Full access to Web Data CMS, CRM chats, and WHM modules) |
 | **19** | `reception` | Resepsionis Cabang | ✅ Active | Branch Receptionist / Front Office (CRM Inbox Outlet, live reservation chats for assigned branch, POS GC List cabang) |
@@ -35,10 +35,10 @@ This document outlines the authoritative role-based access permissions for each 
 
 ## 2. Multi-Outlet Scoping & Branch Selector Rules
 
-1. **Multi-Outlet Privileged Roles (`[5, 8, 13, 14]` / `[5, 8, 13, 20]` pada POS GC List):**
-   * Report and analysis pages display the **Outlet Dropdown Selector** allowing users to switch between `"ALL" / "SEMUA OUTLET"` or a specific branch (`kode_outlet` from `master_outlet` where `can_sto = true`, atau seluruh outlet aktif/POS pada modul POS GC List).
+1. **Multi-Outlet Privileged Roles (`[5, 8, 13, 14]` / `[5, 8, 13, 20]` pada POS GC List / `[5, 8, 13, 16, 20]` Single-Outlet pada POS Therapist Flow):**
+   * Report and analysis pages display the **Outlet Dropdown Selector** allowing users to switch between `"ALL" / "SEMUA OUTLET"` or a specific branch (`kode_outlet` from `master_outlet` where `can_sto = true`, atau seluruh outlet aktif `master_outlet.active = true` pada modul POS GC List & Therapist Flow). Khusus **POS > Therapist Flow**, hanya diizinkan memilih **1 outlet spesifik** (default `101`, tanpa opsi `ALL`).
    * A4 Printouts (`printReportA4`) automatically format the header with `"ALL OUTLET"` or the specific branch details (address, phone, email) based on the selection.
-2. **Single-Outlet Scoped Roles (`[6, 7, 10, 19]` & Role `14` pada modul tertentu):**
+2. **Single-Outlet Scoped Roles (`[6, 7, 10, 11, 15, 19]` & Role `14` pada modul tertentu):**
    * Navigation, data queries, and mutations are **strictly locked** to the user's assigned branch (`user.kode_outlet`).
    * No branch dropdown selector is shown; data filtering is enforced automatically at the application and query level.
 3. **Superuser & Web Admin Auto-Bypass (`[8, 18]`):**
@@ -62,10 +62,11 @@ This document outlines the authoritative role-based access permissions for each 
 ---
 
 ### 3.1A. POS (Point of Sale)
-**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), SUPERUSER (8), Supervisor / Direksi (13), Auditor / Manager Cabang (14), Resepsionis Cabang (19), IT Support (20) — *Strict Roles*
+**Grup Akses Sidebar:** Finance (5), Outlet Admin (6), SUPERUSER (8), Terapis (11), Supervisor / Direksi (13), Auditor / Manager Cabang (14), Evaluator Cabang (15), Trainer / HR (16), Resepsionis Cabang (19), IT Support (20) — *Strict Roles*
 | Submenu | Path / Route | Icon | Sidebar Allowed Roles | Route Guard (`App.tsx`) | Deskripsi & Batasan Akses |
 |:---|:---|:---:|:---:|:---:|:---|
-| **GC List** | `/pos/gc-list` | `Gift` | **5, 6, 8, 13, 14, 19, 20** *(Strict)* | `[5, 6, 8, 13, 14, 19, 20]` (`strictRoles`) | Pemantauan & pelaporan daftar transaksi Gift Certificate (`ot_pos_gc_transaction`, mode baca-saja dengan modal rincian, paginasi server-side 50 baris/halaman, 4 kartu ringkasan jumlah & nilai Rp, preset tanggal cepat WIB, status pemakaian/kadaluarsa/aktif, filter lintas outlet, pencarian global `gc_number`/`gc_barcode`/`qrcode` lintas semua tanggal, cetak **A4** `printReportA4`, dan ekspor CSV). **Role 6, 14, 19** terkunci ketat di server (`public.get_pos_gc_list`) pada `kode_outlet_buy = outlet OR kode_outlet_used = outlet`; **Role 5, 8, 13, 20** dapat memfilter seluruh Outlet Beli dan Outlet Pakai. |
+| **GC List** | `/pos/gc-list` | `Gift` | **5, 6, 8, 13, 14, 19, 20** *(Strict)* | `[5, 6, 8, 13, 14, 19, 20]` (`strictRoles`) | Pemantauan & pelaporan daftar transaksi Gift Certificate (`ot_pos_gc_transaction`, mode baca-saja dengan modal rincian, paginasi server-side 50 baris/halaman, 4 kartu ringkasan jumlah & nilai Rp, preset tanggal cepat WIB, status pemakaian/kadaluarsa/aktif, filter lintas outlet dengan dropdown outlet aktif `master_outlet.active = true`, pencarian global `gc_number`/`gc_barcode`/`qrcode` lintas semua tanggal, cetak **A4** `printReportA4`, dan ekspor CSV). **Role 6, 14, 19** terkunci ketat di server (`public.get_pos_gc_list`) pada `kode_outlet_buy = outlet OR kode_outlet_used = outlet`; **Role 5, 8, 13, 20** dapat memfilter seluruh Outlet Beli dan Outlet Pakai aktif. |
+| **Therapist Flow** | `/pos/therapist-flow` | `ArrowUpDown` | **5, 6, 8, 11, 13, 14, 15, 16, 19, 20** *(Strict)* | `[5, 6, 8, 11, 13, 14, 15, 16, 19, 20]` (`strictRoles`) | Pemantauan urutan giliran & pembagian tamu terapis (`ot_pos_tr_flow_detail`, `ot_pos_tr_flow_master`, `ot_hrd_absen_harian`, `ot_pos_trans_master`) melalui RPC `public.get_pos_therapist_flow` (tanpa nominal `subtotal` demi privasi). Memiliki 3 tab: **Hari Ini (Per Tamu)** (auto-refresh 60 detik + manual), **Flow Kemarin**, dan **Hari Ini (Per Jam)** (placeholder tahap berikutnya). Masing-masing tab memuat 2 card (`Flow BM` `TB` & `Flow RF` `TR`) dengan kolom Terapis (`namakaryawan` + `idkaryawan` & `kodekaryawan` + badge kehadiran `ot_hrd_absen_harian`), `Group` (`ngroup` ASC), `Slot` (`noslot` ASC bila `status_slot = 0` ATAS, DESC bila `status_slot = 1` BAWAH), `Guest 1`–`Guest 5` (urutan `start_time ASC`, semua `status_trans`, klik buka modal rincian), dan `Total` (`+N lagi` jika > 5 tamu). **Role 6, 11, 14, 15, 19** terkunci ketat di server pada `kode_outlet` sendiri; **Role 5, 8, 13, 16, 20** memilih **1 outlet aktif saja** (`master_outlet.active = true`, default `101`, tanpa opsi Semua Outlet). |
 
 ---
 
@@ -267,38 +268,39 @@ This document outlines the authoritative role-based access permissions for each 
 
 ## 4. Matriks Ringkas Akses Menu per Role
 
-| Modul / Menu Grup | 1 Admin Holding | 2 Master HRD | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 13 Supervisor | 14 Auditor | 18 Web Admin | 19 Resepsionis | 20 IT Support |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Dashboard Utama** | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — | ✅ |
-| **POS > GC List** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | ✅*(All)* | ✅*(Own)* | — | ✅*(Own)* | ✅*(All)* |
-| **Manajemen Pengguna** | — | ✅*(All)* | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | ✅ | — | — |
-| **Inventaris & Opname** | — | — | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — | — |
-| **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty & Kartu Stok)* | ✅ | ✅ | ✅*(Kartu Stok)* | ✅*(Nilai, Selisih, Kartu Stok)* | ✅ | — | — |
-| **Pemakaian/Retur Internal**| — | — | — | — | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | — | — |
-| **Pengadaan PO & Faktur** | ✅ | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Penerimaan GR Supplier** | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — | ✅ | — | — |
-| **Laporan Procurement** | ✅ | — | — | — | ✅ | ✅ | ✅*(GR)* | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
-| **Transfer Stok (STO)** | — | — | — | — | — | ✅ | ✅*(Issue/Rec)*| ✅ | ✅ | — | — | ✅ | — | — |
-| **Laporan STO** | — | — | — | — | ✅ | ✅ | ✅*(Items)*| ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
-| **Produksi & Resep** | — | — | — | — | — | ✅*(Resep)*| ✅*(Run)*| ✅ | ✅*(Resep)*| — | — | ✅ | — | — |
-| **Laporan Produksi** | ✅ | — | — | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
-| **Kas & Bank Cabang** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Kategori Transaksi** | — | — | — | — | ✅ | — | — | ✅ | — | — | — | ✅ | — | — |
-| **Laporan Keuangan & AP** | ✅ | — | ✅ | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
-| **Pelunasan Hutang & STO**| — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Info Outlet** | — | — | — | — | — | ✅*(Own)* | — | ✅*(All)*| — | — | — | ✅ | — | — |
-| **Master Kategori Gudang**| — | — | — | — | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Master Produk & Harga** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Pemasok (Supplier)** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Customer (B2B)** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | ✅*(All)* | — | — | — | — |
-| **Jual Customer (SO, Faktur, AR)** | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — | — |
-| **Jual Customer (Issue Barang)** | — | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — |
-| **Lap. Jual & Kirim Customer** | — | — | — | — | ✅*(All)* | ✅*(Own)* | ✅*(Own)* | ✅*(All)* | — | ✅*(All)* | — | — | — | — |
-| **CRM Inbox Outlet** | — | — | — | — | ✅ | ✅ | — | ✅ | — | ✅ | — | — | ✅ | — |
-| **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | ✅ | — | — |
-| **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | ✅ | — | — |
-| **POS Dashboard (Live, Periodic, Master Target)** | — | — | — | — | ✅ | — | — | ✅ | — | ✅ | — | — | — | — |
-| **HRD Evaluasi & Faults TR / KPI** | — | ✅*(All kecuali Buat Evaluasi & TR Faults)* | — | — | ✅*(All)* | ✅*(Laporan Cabang & Input/Laporan KPI Admin Cabang)* | — | ✅*(All)* | — | ✅*(Laporan & Master KPI)* | ✅*(Input, Laporan Cabang & Master/Transaksi KPI)* | — | ✅*(Laporan Cabang)* | — |
+| Modul / Menu Grup | 1 Admin Holding | 2 Master HRD | 3 Laundry Admin | 4 Laundry Staff | 5 Finance | 6 Outlet Admin | 7 Warehouse Staff | 8 Superuser | 10 Finance Outlet | 11 Terapis | 13 Supervisor | 14 Auditor | 15 Evaluator | 16 Trainer/HR | 18 Web Admin | 19 Resepsionis | 20 IT Support |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Dashboard Utama** | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | ✅ | — | ✅ |
+| **POS > GC List** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | — | ✅*(All)* | ✅*(Own)* | — | — | — | ✅*(Own)* | ✅*(All)* |
+| **POS > Therapist Flow** | — | — | — | — | ✅*(1 Outlet)* | ✅*(Own)* | — | ✅*(1 Outlet)* | — | ✅*(Own)* | ✅*(1 Outlet)* | ✅*(Own)* | ✅*(Own)* | ✅*(1 Outlet)* | — | ✅*(Own)* | ✅*(1 Outlet)* |
+| **Manajemen Pengguna** | — | ✅*(All)* | — | — | — | ✅*(Cabang)* | — | ✅*(All)* | — | — | — | — | — | — | ✅ | — | — |
+| **Inventaris & Opname** | — | — | — | — | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | ✅ | — | — |
+| **Laporan Stok** | ✅ | — | — | — | ✅ | ✅ | ✅*(Qty & Kartu Stok)* | ✅ | ✅ | — | ✅*(Kartu Stok)* | ✅*(Nilai, Selisih, Kartu Stok)* | — | — | ✅ | — | — |
+| **Pemakaian/Retur Internal**| — | — | — | — | — | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Pengadaan PO & Faktur** | ✅ | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Penerimaan GR Supplier** | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | ✅ | — | — |
+| **Laporan Procurement** | ✅ | — | — | — | ✅ | ✅ | ✅*(GR)* | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Transfer Stok (STO)** | — | — | — | — | — | ✅ | ✅*(Issue/Rec)*| ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Laporan STO** | — | — | — | — | ✅ | ✅ | ✅*(Items)*| ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Produksi & Resep** | — | — | — | — | — | ✅*(Resep)*| ✅*(Run)*| ✅ | ✅*(Resep)*| — | — | — | — | — | ✅ | — | — |
+| **Laporan Produksi** | ✅ | — | — | — | ✅ | ✅ | — | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Kas & Bank Cabang** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Kategori Transaksi** | — | — | — | — | ✅ | — | — | ✅ | — | — | — | — | — | — | ✅ | — | — |
+| **Laporan Keuangan & AP** | ✅ | — | ✅ | — | ✅ | ✅ | — | ✅ | ✅ | — | ✅ | ✅ | — | — | ✅ | — | — |
+| **Pelunasan Hutang & STO**| — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Info Outlet** | — | — | — | — | — | ✅*(Own)* | — | ✅*(All)*| — | — | — | — | — | — | ✅ | — | — |
+| **Master Kategori Gudang**| — | — | — | — | ✅ | ✅ | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Master Produk & Harga** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Pemasok (Supplier)** | — | — | — | — | — | ✅ | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Customer (B2B)** | — | — | — | — | ✅*(All)* | ✅*(Own)* | — | ✅*(All)* | — | — | ✅*(All)* | — | — | — | — | — | — |
+| **Jual Customer (SO, Faktur, AR)** | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — | — | — | — | — |
+| **Jual Customer (Issue Barang)** | — | — | — | — | — | — | ✅*(Strict)* | — | — | — | — | — | — | — | — | — | — |
+| **Lap. Jual & Kirim Customer** | — | — | — | — | ✅*(All)* | ✅*(Own)* | ✅*(Own)* | ✅*(All)* | — | — | ✅*(All)* | — | — | — | — | — | — |
+| **CRM Inbox Outlet** | — | — | — | — | ✅ | ✅ | — | ✅ | — | — | ✅ | — | — | — | — | ✅ | — |
+| **CRM Inbox Holding** | — | — | — | — | — | — | — | ✅ | ✅ | — | — | — | — | — | ✅ | — | — |
+| **Web Data CMS (Semua)** | — | — | — | — | ✅ | — | — | ✅ | — | — | ✅ | — | — | — | ✅ | — | — |
+| **POS Dashboard (Live, Periodic, Master Target)** | — | — | — | — | ✅ | — | — | ✅ | — | — | ✅ | — | — | — | — | — | — |
+| **HRD Evaluasi & Faults TR / KPI** | — | ✅*(All kecuali Buat Evaluasi & TR Faults)* | — | — | ✅*(All)* | ✅*(Laporan Cabang & Input/Laporan KPI Admin Cabang)* | — | ✅*(All)* | — | — | ✅*(Laporan & Master KPI)* | ✅*(Input, Laporan Cabang & Master/Transaksi KPI)* | ✅*(TR Evaluasi/Faults Cabang)* | ✅*(TR Master/Evaluasi/Faults)* | — | ✅*(Laporan Cabang)* | — |
 
 ---
 

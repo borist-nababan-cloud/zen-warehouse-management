@@ -110,13 +110,14 @@ export const gcListService = {
   },
 
   /**
-   * Memuat seluruh outlet POS dari master_outlet (tanpa filter can_sto)
+   * Memuat seluruh outlet POS yang aktif (master_outlet.active = true)
    * untuk filter Outlet Beli & Outlet Pakai.
    */
   async getAllPosOutlets(): Promise<MasterOutlet[]> {
     const { data, error } = await supabase
       .from('master_outlet')
       .select('kode_outlet, name_outlet, alamat, city, no_telp, email, active')
+      .eq('active', true)
       .order('kode_outlet', { ascending: true })
 
     if (error) {

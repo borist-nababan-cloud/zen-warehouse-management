@@ -26,6 +26,7 @@ import { PosLiveDashboardPage } from './pages/posdashboard/PosLiveDashboardPage'
 import { PosPeriodicDashboardPage } from './pages/posdashboard/PosPeriodicDashboardPage'
 import { MasterTargetPage } from './pages/posdashboard/MasterTargetPage'
 import { GcListPage } from './pages/pos/GcListPage'
+import { TherapistFlowPage } from './pages/pos/TherapistFlowPage'
 import { OutletInfoPage } from './pages/master/OutletInfoPage'
 import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
 import { ShrinkageCategoriesPage } from './pages/master/ShrinkageCategoriesPage'
@@ -280,6 +281,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 19, 20]} strictRoles>
                 <GcListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* POS - Therapist Flow */}
+          <Route
+            path="/pos/therapist-flow"
+            element={
+              <ProtectedRoute allowedRoles={[5, 6, 8, 11, 13, 14, 15, 16, 19, 20]} strictRoles>
+                <TherapistFlowPage />
               </ProtectedRoute>
             }
           />

@@ -843,12 +843,12 @@ export const ROLE_MENU_PERMISSIONS: Record<RoleId, string[]> = {
   8: ['*'],                                                                   // SUPERUSER - all access
   9: [],                                                                      // UNASSIGNED - blocked from login
   10: ['dashboard', 'finance', 'inventory', 'purchase-orders', 'sto', 'production', 'product', 'price-unit', 'supplier'], // Finance Outlet
-  11: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  11: ['pos'],                                                                // THERAPIST (POS > Therapist Flow)
   12: [],                                                                     // Pending ROLE_MENU_PERMISSION
   13: ['pos', 'inventory', 'hrd', 'customer', 'customer-sales'],              // Supervisor / Direksi (POS, Inventory, HRD & Report)
   14: ['dashboard', 'pos', 'inventory', 'hrd'],                               // MANAGER (POS, Persetujuan Opname & HRD)
-  15: [],                                                                     // Pending ROLE_MENU_PERMISSION
-  16: [],                                                                     // Pending ROLE_MENU_PERMISSION
+  15: ['pos', 'hrd'],                                                         // ASTRA / Evaluator (POS > Therapist Flow & HRD)
+  16: ['pos', 'hrd'],                                                         // TRAINER / HR Evaluator (POS > Therapist Flow & HRD)
   17: [],                                                                     // MEMBER - blocked from login
   18: [],                                                                     // WEB_ADMIN - pending ROLE_MENU_PERMISSION
   19: ['pos', 'crm'],                                                         // Resepsionis Cabang

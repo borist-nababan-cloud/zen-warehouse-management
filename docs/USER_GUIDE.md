@@ -956,13 +956,15 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
 
 ---
 
-## 9B. Modul POS — Daftar Gift Certificate (`POS > GC List`)
+## 9B. Modul POS (`POS > GC List` & `POS > Therapist Flow`)
+
+### A. Daftar Gift Certificate (`POS > GC List`)
 > [!NOTE]
 > Modul **GC List** (`/pos/gc-list`) dapat diakses khusus oleh **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager / Auditor)**, **Role 19 (Resepsionis Cabang)**, dan **Role 20 (IT Support)**. Saat ini modul beroperasi dalam mode **baca-saja (*read-only*)** untuk pemantauan dan pelaporan.
 
 1. **Aturan Cakupan Outlet (Server-Side RBAC):**
    - **Role 6, 14, & 19:** Otomatis terkunci pada cabang tugas masing-masing (menampilkan voucher yang dibeli **atau** dipakai di cabang tersebut), dilengkapi sub-filter: *Semua Terkait Outlet Saya*, *Dibeli di Outlet Saya*, atau *Dipakai di Outlet Saya*.
-   - **Role 5, 8, 13, & 20:** Memiliki akses multi-outlet penuh dengan dropdown terpisah untuk **Outlet Beli** dan **Outlet Pakai**.
+   - **Role 5, 8, 13, & 20:** Memiliki akses multi-outlet penuh dengan dropdown terpisah untuk **Outlet Beli** dan **Outlet Pakai** (hanya menampilkan cabang berstatus aktif `master_outlet.active = true`).
 2. **4 Kartu Ringkasan Atas (Jumlah Lembar & Total Nominal Rp):**
    - **Total GC (Sesuai Filter)**, **Belum Dipakai (Berlaku)**, **Sudah Dipakai (Redeemed)**, dan **Kadaluarsa (Expired)** — dihitung langsung dari seluruh data hasil filter di server (bukan hanya halaman yang sedang dibuka).
 3. **Filter Cepat & Pencarian Kode GC Lintas Periode:**
@@ -973,6 +975,30 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
 4. **Rincian Voucher, Cetak A4 & Ekspor CSV:**
    - Klik tombol **Detail** pada setiap baris untuk melihat informasi lengkap voucher (UID, barcode, QR Code digital, nomor pembayaran beli/pakai, outlet beli/pakai, dan masa berlaku).
    - Gunakan tombol **Cetak (A4)** untuk pratinjau cetak berstandar A4 atau **Ekspor CSV** untuk analisis di Microsoft Excel.
+
+---
+
+### B. Alur Terapis (`POS > Therapist Flow`)
+> [!NOTE]
+> Modul **Therapist Flow** (`/pos/therapist-flow`) dapat diakses khusus oleh **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 11 (Terapis)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager / Auditor)**, **Role 15 (Evaluator Cabang / ASTRA)**, **Role 16 (Trainer / HR Evaluator)**, **Role 19 (Resepsionis Cabang)**, dan **Role 20 (IT Support)**. Demi privasi operasional, halaman ini tidak menampilkan nominal rupiah (`subtotal`).
+
+1. **Aturan Cakupan Outlet (Server-Side RBAC):**
+   - **Role 6, 11, 14, 15, & 19:** Terkunci ketat di server maupun antarmuka hanya pada **cabang tugas masing-masing (`kode_outlet`)**.
+   - **Role 5, 8, 13, 16, & 20:** Dapat memilih **1 cabang aktif** pada dropdown (`master_outlet.active = true`, default **Outlet `101` — ZEN SUKAJADI**; tanpa opsi *Semua Outlet*).
+2. **3 Tab Utama & Sub-Tab Departemen (*Tab di Dalam Tab*):**
+   - **Tab 1 — `Hari Ini (Per Tamu)`:** Menampilkan alur pembagian tamu hari berjalan (WIB) lengkap dengan saklar **Auto-Refresh (60 dtk)** (otomatis jeda saat tab browser tidak aktif) dan tombol **Segarkan** manual.
+   - **Tab 2 — `Flow Kemarin`:** Menampilkan alur pembagian tamu hari kemarin (WIB) dengan struktur identik untuk evaluasi rotasi giliran.
+   - **Tab 3 — `Hari Ini (Per Jam)`:** Disiapkan sebagai linimasa per jam untuk tahap pengembangan berikutnya.
+   - Di dalam Tab 1 & Tab 2, tersedia **Sub-Tab `Flow BM (TB)`** (*Body Massage*) dan **`Flow RF (TR)`** (*Foot Reflexology*) lengkap dengan ringkasan jumlah terapis, jumlah hadir, dan total tamu masing-masing agar pengguna tidak perlu menggulir jauh ke bawah.
+3. **Urutan Giliran (`Group` & `Slot`), Warna Pastel & Indikator Kehadiran:**
+   - Daftar terapis diurutkan berdasarkan **`Group` (ASC)**, dan di dalam setiap grup nomor **`Slot`** otomatis mengikuti **`status_slot`** harian dari `ot_pos_tr_flow_master`:
+     - **`ATAS (1 → N)`** (`status_slot = 0`): Slot diurutkan naik dari kecil ke besar.
+     - **`BAWAH (N → 1)`** (`status_slot = 1`): Slot diurutkan turun dari besar ke kecil.
+   - Setiap nomor **`Group`** dibedakan dengan **warna pastel** yang ramah mata pada Mode Terang maupun Mode Gelap (*Zen Dark Mode*), dengan ukuran angka **`Group`** dan **`Slot`** yang diperbesar agar cepat dipindai.
+   - Kolom **`Absen`** menampilkan status kehadiran biometrik harian (`Hadir HH:mm`, `Plg HH:mm`, atau `OFF`).
+4. **Pemantauan `Guest 1` – `Guest 5` & Daftar Lengkap Tamu:**
+   - Transaksi dari `ot_pos_trans_master` (seluruh status: **Berlangsung / `STARTED`**, **Selesai / `PAID`**, dll.) diisi berurutan dari **`start_time` paling awal** ke kolom **`Guest 1` s/d `Guest 5`**, menampilkan jam layanan, nama tamu, ruangan (`Rm`), status, serta lencana **`REQ`** jika merupakan permintaan tamu (`byrequest = 'Y'`).
+   - Kolom **`Total`** menampilkan jumlah tamu harian terapis. Jika seorang terapis melayani **lebih dari 5 tamu**, muncul tombol **`+N lagi`** yang dapat diklik (sama seperti mengklik kotak tamu mana pun) untuk membuka **Modal Daftar Lengkap Tamu Terapis**.
 
 ---
 
