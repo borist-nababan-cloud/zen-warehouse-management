@@ -69,7 +69,8 @@ import {
   AlertCircle,
   FileWarning,
   Gift,
-  ArrowUpDown
+  ArrowUpDown,
+  TicketPlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ROLE_LABELS, type RoleId } from '@/types/database'
@@ -90,6 +91,7 @@ interface NavItem {
   icon: React.ElementType
   roleIds: RoleId[]  // Changed from 'roles' to 'roleIds'
   strictRoles?: boolean // When true, Role 8/18 do not auto-bypass roleIds check
+  roleOutletRestriction?: Partial<Record<RoleId, string[]>> // Optional outlet whitelist per RoleId
   badge?: string
   children?: NavItem[]  // For nested menu items
   defaultOpen?: boolean // For accordion groups
@@ -156,6 +158,14 @@ const navItems: NavItem[] = [
         icon: Gift,
         roleIds: [5, 6, 8, 13, 14, 19, 20],
         strictRoles: true,
+      },
+      {
+        title: 'Generate GC Compliment',
+        path: '/pos/gc-compliment',
+        icon: TicketPlus,
+        roleIds: [5, 6, 8],
+        strictRoles: true,
+        roleOutletRestriction: { 6: ['111'] },
       },
       {
         title: 'Therapist Flow',
@@ -639,8 +649,17 @@ export function Sidebar({ className, onNavigate, isMobile = false }: SidebarProp
 
   const canAccessNavItem = (navItem: NavItem): boolean => {
     if (!user) return false
-    if (!navItem.strictRoles && (user.user_role === 8 || user.user_role === 18)) return true
-    return navItem.roleIds.includes(user.user_role)
+    const roleAllowed =
+      (!navItem.strictRoles && (user.user_role === 8 || user.user_role === 18)) ||
+      navItem.roleIds.includes(user.user_role)
+    if (!roleAllowed) return false
+    if (navItem.roleOutletRestriction) {
+      const allowedOutlets = navItem.roleOutletRestriction[user.user_role]
+      if (allowedOutlets) {
+        return Boolean(user.kode_outlet && allowedOutlets.includes(user.kode_outlet.trim()))
+      }
+    }
+    return true
   }
 
   const toggleGroup = (title: string) => {

@@ -25,6 +25,8 @@ interface ProtectedRouteProps {
   allowedRoles?: RoleId[]
   /** When true, strictly enforces allowedRoles without SUPERUSER/WEB_ADMIN auto-bypass */
   strictRoles?: boolean
+  /** Optional outlet whitelist restricted to specific Role IDs (e.g., { 6: ['111'] }) */
+  roleOutletRestriction?: Partial<Record<RoleId, string[]>>
   /** Redirect path for unauthorized users. Defaults to '/login' */
   redirectTo?: string
 }
@@ -58,6 +60,7 @@ export function ProtectedRoute({
   children,
   allowedRoles,
   strictRoles = false,
+  roleOutletRestriction,
   redirectTo = '/login',
 }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuthUser()
@@ -90,6 +93,14 @@ export function ProtectedRoute({
     if (!allowedRoles.includes(user.user_role)) {
       // User is authenticated but doesn't have the required role
       // Redirect to unauthorized page
+      return <Navigate to="/unauthorized" replace />
+    }
+  }
+
+  // Check per-role outlet restriction (e.g., Role 6 must have kode_outlet = '111')
+  if (roleOutletRestriction && user) {
+    const allowedOutlets = roleOutletRestriction[user.user_role]
+    if (allowedOutlets && (!user.kode_outlet || !allowedOutlets.includes(user.kode_outlet.trim()))) {
       return <Navigate to="/unauthorized" replace />
     }
   }

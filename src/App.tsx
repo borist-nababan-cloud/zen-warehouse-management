@@ -26,6 +26,7 @@ import { PosLiveDashboardPage } from './pages/posdashboard/PosLiveDashboardPage'
 import { PosPeriodicDashboardPage } from './pages/posdashboard/PosPeriodicDashboardPage'
 import { MasterTargetPage } from './pages/posdashboard/MasterTargetPage'
 import { GcListPage } from './pages/pos/GcListPage'
+import { GcComplimentPage } from './pages/pos/GcComplimentPage'
 import { TherapistFlowPage } from './pages/pos/TherapistFlowPage'
 import { OutletInfoPage } from './pages/master/OutletInfoPage'
 import { IssueCategoriesPage } from './pages/master/IssueCategoriesPage'
@@ -282,6 +283,20 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[5, 6, 8, 13, 14, 19, 20]} strictRoles>
                 <GcListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* POS - Generate GC Compliment */}
+          <Route
+            path="/pos/gc-compliment"
+            element={
+              <ProtectedRoute
+                allowedRoles={[5, 6, 8]}
+                strictRoles
+                roleOutletRestriction={{ 6: ['111'] }}
+              >
+                <GcComplimentPage />
               </ProtectedRoute>
             }
           />

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { format, startOfWeek, parseISO } from 'date-fns'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { addDays, format, parseISO, startOfWeek, subDays } from 'date-fns'
 import {
   AlertTriangle,
   ArrowLeftRight,
   Calendar,
+  CalendarPlus,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -13,10 +14,12 @@ import {
   Eye,
   FilterX,
   Gift,
+  History,
   Lock,
   Printer,
   RefreshCw,
   Search,
+  ShieldAlert,
   Store,
   Ticket,
   X,
@@ -50,12 +53,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuthUser } from '@/hooks/useAuth'
 import {
   gcListService,
   type GcCrossOutletFilter,
   type GcDateField,
   type GcExpiredFilter,
+  type GcExtensionDays,
   type GcOutletScope,
   type GcTransactionRow,
   type GcTriState,
@@ -67,6 +72,57 @@ type DatePreset = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR' | 'CUSTOM'
 
 const PAGE_SIZE = 50
 const EXPORT_MAX_ROWS = 2000
+const EXTENSION_ALLOWANCE_DAYS = 1
+const MIN_EXTENSION_NOTES_LENGTH = 10
+
+const EXTENSION_OPTIONS: { days: GcExtensionDays; label: string; sublabel: string }[] = [
+  { days: 1, label: '1 Hari', sublabel: '1 hr + 1 hr toleransi (+2 hr)' },
+  { days: 7, label: '1 Minggu', sublabel: '7 hr + 1 hr toleransi (+8 hr)' },
+  { days: 14, label: '2 Minggu', sublabel: '14 hr + 1 hr toleransi (+15 hr)' },
+]
+
+function getExtensionDurationLabel(days: number): string {
+  if (days === 1) return '1 Hari'
+  if (days === 7) return '1 Minggu (7 Hari)'
+  if (days === 14) return '2 Minggu (14 Hari)'
+  return `${days} Hari`
+}
+
+function getWibDateStrFromTimestamp(ts?: string | null): string | null {
+  if (!ts) return null
+  try {
+    const d = new Date(ts)
+    if (isNaN(d.getTime())) return null
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d)
+  } catch {
+    return null
+  }
+}
+
+function computeExpiryExtensionPreview(row: GcTransactionRow, extensionDays: GcExtensionDays) {
+  const todayWibStr = getWibTodayStr()
+  let oldExpStr = row.expired_date ? row.expired_date.slice(0, 10) : null
+  if (!oldExpStr) {
+    const buyDateWib = getWibDateStrFromTimestamp(row.buy_at)
+    oldExpStr = buyDateWib ? format(addDays(parseISO(buyDateWib), 120), 'yyyy-MM-dd') : todayWibStr
+  }
+  const baseDateStr = oldExpStr > todayWibStr ? oldExpStr : todayWibStr
+  const totalAddedDays = extensionDays + EXTENSION_ALLOWANCE_DAYS
+  const newExpiredDate = addDays(parseISO(baseDateStr), totalAddedDays)
+  const newBuyAtDate = subDays(newExpiredDate, 120)
+
+  return {
+    baseDateStr,
+    totalAddedDays,
+    newExpiredDateStr: format(newExpiredDate, 'yyyy-MM-dd'),
+    newBuyAtDateStr: format(newBuyAtDate, 'yyyy-MM-dd'),
+  }
+}
 
 function getWibTodayStr(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -169,9 +225,11 @@ function getGcStatusText(row: GcTransactionRow): string {
 
 export function GcListPage() {
   const { user } = useAuthUser()
+  const queryClient = useQueryClient()
   const roleId = Number(user?.user_role || 0)
   const isMultiOutlet = [5, 8, 13, 20].includes(roleId)
   const isOutletLocked = [6, 14, 19].includes(roleId)
+  const canExtendExpiry = [5, 8, 13].includes(roleId)
 
   const initialRange = useMemo(() => getDateRangeForPreset('THIS_MONTH'), [])
 
@@ -191,10 +249,86 @@ export function GcListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState<string>('')
   const [page, setPage] = useState<number>(1)
 
-  // Modal & Export State
+  // Modal, Extension & Export State
   const [detailRow, setDetailRow] = useState<GcTransactionRow | null>(null)
+  const [showExtendForm, setShowExtendForm] = useState<boolean>(false)
+  const [selectedExtensionDays, setSelectedExtensionDays] = useState<GcExtensionDays>(7)
+  const [extensionNotes, setExtensionNotes] = useState<string>('')
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [isPrinting, setIsPrinting] = useState<boolean>(false)
+
+  const isGlobalSearchActive = Boolean(debouncedSearch)
+
+  const handleOpenDetail = (row: GcTransactionRow) => {
+    setDetailRow(row)
+    setShowExtendForm(false)
+    setSelectedExtensionDays(7)
+    setExtensionNotes('')
+  }
+
+  const handleCloseDetail = () => {
+    setDetailRow(null)
+    setShowExtendForm(false)
+    setSelectedExtensionDays(7)
+    setExtensionNotes('')
+  }
+
+  const extendMutation = useMutation({
+    mutationFn: async ({
+      gcUid,
+      extensionDays,
+      notes,
+    }: {
+      gcUid: string
+      extensionDays: GcExtensionDays
+      notes: string
+    }) => gcListService.extendPosGcExpiry(gcUid, extensionDays, notes),
+    onSuccess: (updated) => {
+      setDetailRow((prev) =>
+        prev && prev.uid === updated.uid
+          ? {
+              ...prev,
+              buy_at: updated.buy_at,
+              original_buy_at: updated.original_buy_at,
+              expired_date: updated.expired_date,
+              is_expired: updated.is_expired,
+              has_been_extended: updated.has_been_extended,
+              extension_log: updated.extension_log,
+            }
+          : prev
+      )
+      setShowExtendForm(false)
+      setExtensionNotes('')
+      queryClient.invalidateQueries({ queryKey: ['pos-gc-list'] })
+      toast.success(
+        `Masa kadaluarsa GC ${updated.gc_number || ''} berhasil diperpanjang s/d ${formatDateOnly(updated.expired_date)}.`
+      )
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Gagal memperpanjang masa kadaluarsa GC.')
+    },
+  })
+
+  const extensionPreview = useMemo(() => {
+    if (!detailRow) return null
+    return computeExpiryExtensionPreview(detailRow, selectedExtensionDays)
+  }, [detailRow, selectedExtensionDays])
+
+  const trimmedNotesLen = extensionNotes.trim().length
+  const isNotesValid = trimmedNotesLen >= MIN_EXTENSION_NOTES_LENGTH
+
+  const handleSubmitExtension = () => {
+    if (!detailRow) return
+    if (!isNotesValid) {
+      toast.error(`Catatan / keterangan wajib diisi minimal ${MIN_EXTENSION_NOTES_LENGTH} karakter.`)
+      return
+    }
+    extendMutation.mutate({
+      gcUid: detailRow.uid,
+      extensionDays: selectedExtensionDays,
+      notes: extensionNotes.trim(),
+    })
+  }
 
   // Debounce search input (350ms) and reset page to 1
   useEffect(() => {
@@ -371,43 +505,43 @@ export function GcListPage() {
         '',
       ]
 
-      const extraFilters: { label: string; value: string }[] = [
-        {
-          label: 'Basis Tanggal',
-          value: dateField === 'USED_AT' ? 'Tanggal Pakai (used_at)' : 'Tanggal Beli (buy_at)',
-        },
-      ]
+      const extraFilters: { label: string; value: string }[] = []
 
       if (debouncedSearch) {
         extraFilters.push({
-          label: 'Pencarian (Semua Periode)',
+          label: 'Pencarian Global (Semua Filter Diabaikan)',
           value: debouncedSearch,
         })
-      }
+      } else {
+        extraFilters.push({
+          label: 'Basis Tanggal',
+          value: dateField === 'USED_AT' ? 'Tanggal Pakai (used_at)' : 'Tanggal Beli (buy_at)',
+        })
 
-      if (isMultiOutlet) {
-        if (outletBuy !== 'ALL') {
-          const ob = outlets.find((o) => o.kode_outlet === outletBuy)
-          extraFilters.push({
-            label: 'Outlet Beli',
-            value: ob ? `[${ob.kode_outlet}] ${ob.name_outlet}` : outletBuy,
-          })
+        if (isMultiOutlet) {
+          if (outletBuy !== 'ALL') {
+            const ob = outlets.find((o) => o.kode_outlet === outletBuy)
+            extraFilters.push({
+              label: 'Outlet Beli',
+              value: ob ? `[${ob.kode_outlet}] ${ob.name_outlet}` : outletBuy,
+            })
+          }
+          if (outletUsed !== 'ALL') {
+            const ou = outlets.find((o) => o.kode_outlet === outletUsed)
+            extraFilters.push({
+              label: 'Outlet Pakai',
+              value: ou ? `[${ou.kode_outlet}] ${ou.name_outlet}` : outletUsed,
+            })
+          }
+        } else if (isOutletLocked) {
+          const scopeLabel =
+            outletScope === 'BUY_OWN'
+              ? 'Dibeli di Outlet Saya'
+              : outletScope === 'USED_OWN'
+              ? 'Dipakai di Outlet Saya'
+              : 'Beli atau Pakai di Outlet Saya'
+          extraFilters.push({ label: 'Cakupan Outlet', value: scopeLabel })
         }
-        if (outletUsed !== 'ALL') {
-          const ou = outlets.find((o) => o.kode_outlet === outletUsed)
-          extraFilters.push({
-            label: 'Outlet Pakai',
-            value: ou ? `[${ou.kode_outlet}] ${ou.name_outlet}` : outletUsed,
-          })
-        }
-      } else if (isOutletLocked) {
-        const scopeLabel =
-          outletScope === 'BUY_OWN'
-            ? 'Dibeli di Outlet Saya'
-            : outletScope === 'USED_OWN'
-            ? 'Dipakai di Outlet Saya'
-            : 'Beli atau Pakai di Outlet Saya'
-        extraFilters.push({ label: 'Cakupan Outlet', value: scopeLabel })
       }
 
       const headerSelectedOutlet = isMultiOutlet
@@ -746,10 +880,10 @@ export function GcListPage() {
                     </button>
                   )}
                 </div>
-                {debouncedSearch && (
+                {isGlobalSearchActive && (
                   <p className="text-[11px] font-medium text-zen-moss flex items-center gap-1">
-                    <Search className="h-3 w-3" />
-                    Mencari di seluruh periode tanggal (filter tanggal diabaikan sementara)
+                    <Search className="h-3 w-3 shrink-0" />
+                    Mode Pencarian Global: mencari di seluruh tabel ot_pos_gc_transaction (semua filter tanggal, outlet, dan status diabaikan sementara)
                   </p>
                 )}
               </div>
@@ -760,6 +894,7 @@ export function GcListPage() {
                 </Label>
                 <Select
                   value={dateField}
+                  disabled={isGlobalSearchActive}
                   onValueChange={(val) => {
                     setDateField(val as GcDateField)
                     setPage(1)
@@ -849,6 +984,7 @@ export function GcListPage() {
                     <Label className="text-xs font-semibold text-zen-charcoal">Outlet Beli</Label>
                     <Select
                       value={outletBuy}
+                      disabled={isGlobalSearchActive}
                       onValueChange={(val) => {
                         setOutletBuy(val)
                         setPage(1)
@@ -875,6 +1011,7 @@ export function GcListPage() {
                     <Label className="text-xs font-semibold text-zen-charcoal">Outlet Pakai</Label>
                     <Select
                       value={outletUsed}
+                      disabled={isGlobalSearchActive}
                       onValueChange={(val) => {
                         setOutletUsed(val)
                         setPage(1)
@@ -915,6 +1052,7 @@ export function GcListPage() {
                     </Label>
                     <Select
                       value={outletScope}
+                      disabled={isGlobalSearchActive}
                       onValueChange={(val) => {
                         setOutletScope(val as GcOutletScope)
                         setPage(1)
@@ -940,6 +1078,7 @@ export function GcListPage() {
                 <Label className="text-xs font-semibold text-zen-charcoal">Status Pemakaian</Label>
                 <Select
                   value={hasUsed}
+                  disabled={isGlobalSearchActive}
                   onValueChange={(val) => {
                     setHasUsed(val as GcTriState)
                     setPage(1)
@@ -960,6 +1099,7 @@ export function GcListPage() {
                 <Label className="text-xs font-semibold text-zen-charcoal">Masa Berlaku (Expired)</Label>
                 <Select
                   value={expiredFilter}
+                  disabled={isGlobalSearchActive}
                   onValueChange={(val) => {
                     setExpiredFilter(val as GcExpiredFilter)
                     setPage(1)
@@ -981,6 +1121,7 @@ export function GcListPage() {
                 <Label className="text-xs font-semibold text-zen-charcoal">Status Aktif Voucher</Label>
                 <Select
                   value={isActive}
+                  disabled={isGlobalSearchActive}
                   onValueChange={(val) => {
                     setIsActive(val as GcTriState)
                     setPage(1)
@@ -1001,6 +1142,7 @@ export function GcListPage() {
                 <Label className="text-xs font-semibold text-zen-charcoal">Rekonsiliasi Lintas Outlet</Label>
                 <Select
                   value={crossOutlet}
+                  disabled={isGlobalSearchActive}
                   onValueChange={(val) => {
                     setCrossOutlet(val as GcCrossOutletFilter)
                     setPage(1)
@@ -1173,6 +1315,12 @@ export function GcListPage() {
                                 Lintas Outlet
                               </Badge>
                             )}
+
+                            {row.has_been_extended && (
+                              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-[10px]">
+                                Diperpanjang 1x
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
 
@@ -1181,7 +1329,7 @@ export function GcListPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setDetailRow(row)}
+                            onClick={() => handleOpenDetail(row)}
                             className="h-7 px-2.5 text-xs gap-1 border-zen-border hover:bg-zen-matcha/10 hover:text-zen-moss"
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -1232,8 +1380,8 @@ export function GcListPage() {
         </Card>
       </div>
 
-      {/* Read-Only Detail Modal */}
-      <Dialog open={Boolean(detailRow)} onOpenChange={(open) => !open && setDetailRow(null)}>
+      {/* Detail & One-Time Expiry Extension Modal */}
+      <Dialog open={Boolean(detailRow)} onOpenChange={(open) => !open && handleCloseDetail()}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-serif text-lg">
@@ -1241,7 +1389,9 @@ export function GcListPage() {
               Rincian Gift Certificate
             </DialogTitle>
             <DialogDescription>
-              Informasi lengkap status pembelian, pemakaian, dan masa berlaku Gift Certificate (Baca Saja).
+              {canExtendExpiry
+                ? 'Informasi lengkap pembelian, pemakaian, dan masa berlaku Gift Certificate. Role 5, 8, dan 13 dapat memperpanjang masa kadaluarsa maksimal 1 kali.'
+                : 'Informasi lengkap status pembelian, pemakaian, dan masa berlaku Gift Certificate (Baca Saja).'}
             </DialogDescription>
           </DialogHeader>
 
@@ -1282,7 +1432,11 @@ export function GcListPage() {
                 </div>
                 <div>
                   <span className="block text-[11px] text-zen-charcoal/60">Masa Berlaku (Expired)</span>
-                  <span className="font-semibold text-zen-charcoal">
+                  <span
+                    className={`font-semibold ${
+                      detailRow.is_expired ? 'text-red-600 dark:text-red-400' : 'text-zen-charcoal'
+                    }`}
+                  >
                     {formatDateOnly(detailRow.expired_date)}
                   </span>
                 </div>
@@ -1301,10 +1455,29 @@ export function GcListPage() {
                         : '-'}
                     </span>
                   </div>
-                  <div>
-                    <span className="block text-[11px] text-zen-charcoal/60">Waktu Beli (WIB)</span>
-                    <span className="text-zen-charcoal">{formatDateTimeWib(detailRow.buy_at)}</span>
-                  </div>
+                  {detailRow.original_buy_at ? (
+                    <>
+                      <div>
+                        <span className="block text-[11px] text-zen-charcoal/60">Waktu Beli Asli (WIB)</span>
+                        <span className="text-zen-charcoal font-medium">
+                          {formatDateTimeWib(detailRow.original_buy_at)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-zen-charcoal/60">
+                          Waktu Beli Sistem / Sync 120 Hari (WIB)
+                        </span>
+                        <span className="text-indigo-700 dark:text-indigo-300 font-medium">
+                          {formatDateTimeWib(detailRow.buy_at)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <span className="block text-[11px] text-zen-charcoal/60">Waktu Beli (WIB)</span>
+                      <span className="text-zen-charcoal">{formatDateTimeWib(detailRow.buy_at)}</span>
+                    </div>
+                  )}
                   <div>
                     <span className="block text-[11px] text-zen-charcoal/60">No. Pembayaran Beli</span>
                     <span className="font-mono text-zen-charcoal">{detailRow.id_payment_buy || '-'}</span>
@@ -1333,6 +1506,228 @@ export function GcListPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Section Perpanjangan Masa Kadaluarsa (Hanya Role 5, 8, 13 & Maks. 1x) */}
+              {detailRow.has_been_extended && detailRow.extension_log ? (
+                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/60 dark:bg-indigo-950/25 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2 border-b border-indigo-200/70 dark:border-indigo-800/70 pb-1.5">
+                    <span className="font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                      <History className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                      Riwayat Perpanjangan Masa Kadaluarsa
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-100 text-indigo-800 border-indigo-300 text-[10px]"
+                    >
+                      Sudah Diperpanjang (Maks. 1x)
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
+                    <div>
+                      <span className="block text-indigo-900/65 dark:text-indigo-300/70">Durasi Pilihan</span>
+                      <span className="font-semibold text-indigo-950 dark:text-indigo-100">
+                        {getExtensionDurationLabel(detailRow.extension_log.extension_days)} +{' '}
+                        {detailRow.extension_log.allowance_days} hari toleransi (+
+                        {detailRow.extension_log.total_added_days} hari)
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-indigo-900/65 dark:text-indigo-300/70">
+                        Perubahan Berlaku s/d
+                      </span>
+                      <span className="font-semibold text-indigo-950 dark:text-indigo-100">
+                        {formatDateOnly(detailRow.extension_log.old_expired_date)} →{' '}
+                        {formatDateOnly(detailRow.extension_log.new_expired_date)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-indigo-900/65 dark:text-indigo-300/70">Petugas</span>
+                      <span className="font-semibold text-indigo-950 dark:text-indigo-100">
+                        {detailRow.extension_log.extended_by_name || '-'} (Role{' '}
+                        {detailRow.extension_log.extended_by_role})
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-indigo-900/65 dark:text-indigo-300/70">
+                        Waktu Perpanjangan (WIB)
+                      </span>
+                      <span className="text-indigo-950 dark:text-indigo-100">
+                        {formatDateTimeWib(detailRow.extension_log.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="pt-1 border-t border-indigo-200/60 dark:border-indigo-800/60">
+                    <span className="block text-[11px] text-indigo-900/65 dark:text-indigo-300/70">
+                      Catatan / Keterangan
+                    </span>
+                    <p className="text-xs text-indigo-950 dark:text-indigo-100 whitespace-pre-wrap mt-0.5">
+                      {detailRow.extension_log.notes}
+                    </p>
+                  </div>
+                </div>
+              ) : canExtendExpiry ? (
+                !detailRow.has_used && detailRow.is_active ? (
+                  <div className="rounded-xl border border-zen-matcha/40 bg-zen-matcha/5 dark:bg-zen-matcha/10 p-3.5 space-y-3">
+                    {!showExtendForm ? (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-zen-charcoal flex items-center gap-1.5">
+                            <CalendarPlus className="h-4 w-4 text-zen-moss" />
+                            Perpanjangan Masa Kadaluarsa (Maksimal 1 Kali)
+                          </div>
+                          <p className="text-[11px] text-zen-charcoal/70">
+                            Menyesuaikan masa berlaku (+1 hari toleransi) dan tanggal beli sistem (120 hari ZenSystem Desktop).
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setShowExtendForm(true)}
+                          className="gap-1.5 bg-zen-matcha hover:bg-zen-moss text-white shrink-0"
+                        >
+                          <CalendarPlus className="h-4 w-4" />
+                          Tambah Masa Kadaluarsa
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 border-b border-zen-border/60 pb-2">
+                          <span className="font-bold text-zen-charcoal flex items-center gap-1.5">
+                            <CalendarPlus className="h-4 w-4 text-zen-moss" />
+                            Tambah Masa Kadaluarsa GC
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-50 text-amber-800 border-amber-300 text-[10px]"
+                          >
+                            Hanya 1x Perpanjangan
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-zen-charcoal">
+                            Pilih Durasi Tambahan (+1 Hari Toleransi Pembatalan Tamu)
+                          </Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {EXTENSION_OPTIONS.map((opt) => {
+                              const isSelected = selectedExtensionDays === opt.days
+                              return (
+                                <button
+                                  key={opt.days}
+                                  type="button"
+                                  onClick={() => setSelectedExtensionDays(opt.days)}
+                                  className={`rounded-lg border p-2.5 text-left transition-colors ${
+                                    isSelected
+                                      ? 'border-zen-moss bg-zen-matcha/15 text-zen-charcoal ring-1 ring-zen-moss'
+                                      : 'border-zen-border bg-white dark:bg-zen-stone hover:bg-zen-linen/60 text-zen-charcoal/80'
+                                  }`}
+                                >
+                                  <div className="font-bold text-xs">{opt.label}</div>
+                                  <div className="text-[10px] text-zen-charcoal/65 mt-0.5">{opt.sublabel}</div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {extensionPreview && (
+                          <div className="rounded-lg border border-zen-border/80 bg-white dark:bg-zen-stone p-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="block text-zen-charcoal/60">Berlaku s/d Baru</span>
+                              <span className="font-bold text-zen-moss text-xs">
+                                {formatDateOnly(extensionPreview.newExpiredDateStr)}
+                              </span>
+                              <span className="block text-[10px] text-zen-charcoal/60">
+                                (+{extensionPreview.totalAddedDays} hari dari{' '}
+                                {formatDateOnly(extensionPreview.baseDateStr)})
+                              </span>
+                            </div>
+                            <div>
+                              <span className="block text-zen-charcoal/60">
+                                Tanggal Beli Sistem Baru (Sync Desktop 120 Hari)
+                              </span>
+                              <span className="font-semibold text-zen-charcoal text-xs">
+                                {formatDateOnly(extensionPreview.newBuyAtDateStr)} 12:00 WIB
+                              </span>
+                              <span className="block text-[10px] text-zen-charcoal/60">
+                                Tanggal beli asli tetap tersimpan di audit
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label
+                              htmlFor="gc-extension-notes"
+                              className="text-xs font-semibold text-zen-charcoal"
+                            >
+                              Catatan / Keterangan <span className="text-red-600">*</span>
+                            </Label>
+                            <span
+                              className={`text-[11px] font-medium ${
+                                isNotesValid ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                              }`}
+                            >
+                              {trimmedNotesLen} / {MIN_EXTENSION_NOTES_LENGTH} karakter minimal
+                            </span>
+                          </div>
+                          <Textarea
+                            id="gc-extension-notes"
+                            rows={3}
+                            value={extensionNotes}
+                            onChange={(e) => setExtensionNotes(e.target.value)}
+                            placeholder="Tuliskan alasan perpanjangan masa berlaku GC (minimal 10 karakter), misalnya nama tamu, persetujuan manajemen, atau alasan jadwal ulang..."
+                            className="bg-white dark:bg-zen-stone border-zen-border text-xs"
+                          />
+                        </div>
+
+                        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900 p-2.5 text-[11px] text-amber-900 dark:text-amber-200">
+                          <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" />
+                          <span>
+                            <strong>Perhatian:</strong> Perpanjangan masa kadaluarsa hanya dapat dilakukan{' '}
+                            <strong>1 (satu) kali</strong> per Gift Certificate dan tidak dapat diulang kembali.
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={extendMutation.isPending}
+                            onClick={() => {
+                              setShowExtendForm(false)
+                              setExtensionNotes('')
+                            }}
+                            className="border-zen-border"
+                          >
+                            Batal
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!isNotesValid || extendMutation.isPending}
+                            onClick={handleSubmitExtension}
+                            className="gap-1.5 bg-zen-matcha hover:bg-zen-moss text-white"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                            {extendMutation.isPending ? 'Menyimpan...' : 'Simpan Perpanjangan'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-zen-border/70 bg-zen-linen/40 dark:bg-black/15 p-3 text-[11px] text-zen-charcoal/70 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>
+                      Perpanjangan masa kadaluarsa tidak tersedia karena GC ini{' '}
+                      <strong>{!detailRow.is_active ? 'berstatus Non-Aktif' : 'sudah dipakai (Redeemed)'}</strong>.
+                    </span>
+                  </div>
+                )
+              ) : null}
 
               <div className="rounded-xl border border-zen-border/70 bg-zen-linen/30 dark:bg-black/15 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-zen-charcoal/70">
                 <div>

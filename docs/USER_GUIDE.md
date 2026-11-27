@@ -35,7 +35,7 @@ Aplikasi WHMS dapat diakses langsung melalui peramban web (*Google Chrome*, *Mic
 ---
 
 ### C. Antarmuka Utama & Zen Dark Mode
-* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dashboard Utama*, *POS*, *Inventaris & Stok*, *Penerimaan Barang (GR)*, *Pengeluaran Barang (GI)*, *Jual Customer*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
+* **Bilah Navigasi Samping (Sidebar)**: Mengelompokkan modul kerja terpadu: *POS Dashboard*, *Dashboard Utama*, *POS*, *Inventaris & Stok*, *Pembelian (Supplier)*, *Pengeluaran Barang (GI)*, *Jual Customer*, *Transfer Stok (STO)*, *Produksi*, *Keuangan & Akuntansi*, *Master Data*, *Web Data*, *CRM*, dan *HRD*.
 * **Ganti Mode Gelap (Zen Dark Mode)**:
   - Klik tombol **Ganti Mode Gelap** di bagian bawah sidebar untuk mengaktifkan tema malam (*River Stone Palette*) yang nyaman di mata untuk shift malam.
   - Klik kembali untuk beralih ke mode terang (*Zen Linen*). Pilihan tema tersimpan otomatis di perangkat Anda.
@@ -956,29 +956,57 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
 
 ---
 
-## 9B. Modul POS (`POS > GC List` & `POS > Therapist Flow`)
+## 9B. Modul POS (`POS > GC List`, `POS > Generate GC Compliment`, & `POS > Therapist Flow`)
 
 ### A. Daftar Gift Certificate (`POS > GC List`)
 > [!NOTE]
-> Modul **GC List** (`/pos/gc-list`) dapat diakses khusus oleh **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager / Auditor)**, **Role 19 (Resepsionis Cabang)**, dan **Role 20 (IT Support)**. Saat ini modul beroperasi dalam mode **baca-saja (*read-only*)** untuk pemantauan dan pelaporan.
+> Modul **GC List** (`/pos/gc-list`) dapat diakses oleh **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager / Auditor)**, **Role 19 (Resepsionis Cabang)**, dan **Role 20 (IT Support)**. Tampilan utama bersifat baca-saja (*read-only*) untuk pemantauan, sedangkan hak akses aksi **Tambah Masa Kadaluarsa** diberikan **eksklusif kepada Role 5, 8, dan 13**.
 
 1. **Aturan Cakupan Outlet (Server-Side RBAC):**
-   - **Role 6, 14, & 19:** Otomatis terkunci pada cabang tugas masing-masing (menampilkan voucher yang dibeli **atau** dipakai di cabang tersebut), dilengkapi sub-filter: *Semua Terkait Outlet Saya*, *Dibeli di Outlet Saya*, atau *Dipakai di Outlet Saya*.
+   - **Role 6, 14, & 19:** Saat menjelajah biasa, data otomatis terkunci pada cabang tugas masing-masing (menampilkan voucher yang dibeli **atau** dipakai di cabang tersebut), dilengkapi sub-filter: *Semua Terkait Outlet Saya*, *Dibeli di Outlet Saya*, atau *Dipakai di Outlet Saya*.
    - **Role 5, 8, 13, & 20:** Memiliki akses multi-outlet penuh dengan dropdown terpisah untuk **Outlet Beli** dan **Outlet Pakai** (hanya menampilkan cabang berstatus aktif `master_outlet.active = true`).
 2. **4 Kartu Ringkasan Atas (Jumlah Lembar & Total Nominal Rp):**
    - **Total GC (Sesuai Filter)**, **Belum Dipakai (Berlaku)**, **Sudah Dipakai (Redeemed)**, dan **Kadaluarsa (Expired)** — dihitung langsung dari seluruh data hasil filter di server (bukan hanya halaman yang sedang dibuka).
-3. **Filter Cepat & Pencarian Kode GC Lintas Periode:**
-   - **Default First Load:** Menampilkan basis **Tanggal Beli (`buy_at`)** periode **Bulan Ini (WIB)** agar pemuatan >14.500 data tetap cepat dan ringan.
+3. **Pencarian Global Tanpa Filter & Filter Tanggal:**
+   - **Default First Load:** Menampilkan basis **Tanggal Beli (`buy_at`)** periode **Bulan Ini (WIB)** agar pemuatan data tetap cepat dan ringan.
    - **Basis & Preset Tanggal:** Pilih `Tanggal Beli (buy_at)` atau `Tanggal Pakai (used_at)` beserta tombol cepat **Hari Ini**, **Minggu Ini**, **Bulan Ini**, **Tahun Ini**, atau rentang tanggal kustom.
-   - **Pencarian Auto-Filter:** Ketik sebagian atau penuh **`gc_number`**, **`gc_barcode`**, atau **`qrcode`** pada kotak pencarian — sistem otomatis mencari **lintas seluruh periode tanggal** agar voucher lama langsung ditemukan.
+   - **Mode Pencarian Global:** Ketika Anda mengetik sebagian atau penuh **`gc_number`**, **`gc_barcode`**, atau **`qrcode`** pada kotak **Cari Kode GC**, sistem mencari ke **seluruh tabel `ot_pos_gc_transaction`** dengan **mengabaikan sementara seluruh filter lainnya** (tanggal, outlet beli/pakai, kunci outlet cabang, status pemakaian, kadaluarsa, status aktif, dan lintas outlet). Menghapus kata pencarian akan langsung mengembalikan seluruh filter semula.
    - **Filter Tambahan:** Status Pemakaian (*Belum Dipakai* / *Sudah Dipakai*), Masa Berlaku (*Masih Berlaku* / *Akan Expired ≤ 30 Hari* / *Sudah Kadaluarsa*), Status Aktif (*Aktif* / *Non-Aktif*), serta **Rekonsiliasi Lintas Outlet** (*Beli ≠ Pakai*).
 4. **Rincian Voucher, Cetak A4 & Ekspor CSV:**
-   - Klik tombol **Detail** pada setiap baris untuk melihat informasi lengkap voucher (UID, barcode, QR Code digital, nomor pembayaran beli/pakai, outlet beli/pakai, dan masa berlaku).
+   - Klik tombol **Detail** pada setiap baris untuk melihat informasi lengkap voucher (UID, barcode, QR Code digital, waktu beli asli vs waktu beli sistem, nomor pembayaran beli/pakai, outlet beli/pakai, masa berlaku, dan riwayat perpanjangan bila ada).
    - Gunakan tombol **Cetak (A4)** untuk pratinjau cetak berstandar A4 atau **Ekspor CSV** untuk analisis di Microsoft Excel.
+5. **Tambah Masa Kadaluarsa (Khusus Role 5, 8, & 13 — Maksimal 1 Kali per GC):**
+   - Di dalam modal **Detail** pada GC yang masih berstatus **Aktif** dan **Belum Dipakai** (dan belum pernah diperpanjang), tombol **Tambah Masa Kadaluarsa** akan muncul khusus bagi **Role 5, 8, dan 13**.
+   - **3 Pilihan Durasi (+1 Hari Toleransi Pembatalan Tamu):** **1 Hari** (+2 hari efektif), **1 Minggu** (+8 hari efektif), atau **2 Minggu** (+15 hari efektif). Untuk GC yang sudah kadaluarsa, perpanjangan dihitung dari **Hari Ini (WIB)**; untuk GC yang masih aktif, ditambahkan dari `expired_date` berjalan.
+   - **Sinkronisasi Otomatis ZenSystem Desktop (120 Hari):** Sistem memperbarui `expired_date` sekaligus menyelaraskan `buy_at` menjadi `new_expired_date - 120 hari` (pukul 12:00 WIB) agar validasi 120 hari pada kasir ZenSystem Desktop tetap lolos, sambil melestarikan timestamp pembelian awal di kolom `original_buy_at`.
+   - **Catatan Wajib & Jejak Audit (`1x Only`):** Wajib mengisi **Catatan / Keterangan minimal 10 karakter**. Setiap perpanjangan dicatat di tabel audit `ot_pos_gc_expiry_logs` (`UNIQUE gc_uid`) dan sistem memblokir permanen perpanjangan kedua untuk GC yang sama maupun GC berstatus Non-Aktif / Sudah Dipakai.
 
 ---
 
-### B. Alur Terapis (`POS > Therapist Flow`)
+### B. Generate GC Compliment (`POS > Generate GC Compliment`)
+> [!NOTE]
+> Menu **Generate GC Compliment** (`/pos/gc-compliment`) hanya dapat diakses secara ketat oleh **Role 5 (Finance)**, **Role 8 (Superuser)**, dan **Role 6 (Outlet Admin) khusus `kode_outlet = '111'` (ZEN HEAD OFFICE)**. Seluruh nomor GC otomatis menggunakan prefix tetap **`111.`**.
+
+1. **Pembuatan Batch Voucher Compliment (`ot_pos_gc_compliment`):**
+   - **Pilih Layanan (`web_services`):** Pilih treatment aktif dari katalog; sistem otomatis menggabungkan `duration_minutes` dan `name` ke kolom **`Nama GC`** (tetap dapat diedit/ditambah teks sesuai kebutuhan) serta menggunakan `image_url` layanan tersebut sebagai latar belakang gambar e-voucher.
+   - **Input Harga Manual:** Masukkan **`Harga Jasa (Rp)`** (menjadi nilai nominal `value` saat GC ditebus tamu di POS) dan **`Harga Jual (Rp)`** (bawaan `0` untuk voucher compliment).
+   - **Penomoran, Barcode 1D, QR Code & Gambar Otomatis:** Isi **Prefix** setelah `111.`, **No. Awal**, dan **Jumlah GC (1–100)**, serta catatan opsional. Saat diproses, sistem membuat:
+     - **`gc_number`**: berformat `111.<PREFIX>.0001` dst. (dicek anti-bentrok terhadap `ot_pos_gc_compliment` dan `ot_pos_gc_transaction`).
+     - **`gc_barcode`**: angka saja hasil pembersihan huruf/simbol untuk **1D Linear Barcode (Code 128)** di pojok kiri bawah gambar.
+     - **`qrcode`**: kode acak 24 karakter unik berstandar *ZenSystem Desktop* untuk **2D QR Code** di pojok kanan bawah gambar.
+     - **Gambar E-Voucher JPEG (`1350 × 600 px`)**: diunggah otomatis ke bucket `gc-compliment-images` dengan posisi **1D Barcode di pojok kiri bawah** dan **2D QR Code di pojok kanan bawah** (terpisah agar mudah dipindai scanner resepsionis).
+     - Status awal seluruh GC baru adalah **Draft (`is_active = false`, `is_sold = false`, `has_used = false`, `pack_number = kosong`)**.
+2. **Aktivasi GC ke POS (`ot_pos_gc_transaction`):**
+   - Centang kotak pilihan (*checkbox*) pada satu atau beberapa baris GC berstatus **Draft**, lalu klik tombol **Aktifkan GC Terpilih (N)**.
+   - Isi atau ubah **`Pack Number`** (otomatis terisi `gc_number` apabila 1 GC dipilih, atau saran format batch `111.PKT.<YYYYMMDD>.<HHMM>` apabila > 1 GC dipilih).
+   - Saat dikonfirmasi, sistem secara atomik mengirim seluruh GC terpilih ke **`ot_pos_gc_transaction`** dengan `kode_outlet_buy = '111'`, `id_payment_buy = WHMAPP.111.<YYYYMMDDHHMMSS>.<4HEX>`, `buy_at` sesuai waktu lokal pengguna, `expired_date = +120 hari`, `value = harga_jasa`, dan `has_used = false`, lalu otomatis **merender ulang gambar** untuk menyematkan tanggal `Valid Through` pada kotak kanan atas voucher.
+3. **Pemantauan Status, Filter, Pratinjau Gambar & Ekspor CSV:**
+   - Tabel dilengkapi 4 kartu KPI, status pakai *live* dari `ot_pos_gc_transaction` (termasuk kode cabang & tanggal pemakaian), pencarian bebas, filter status aktivasi/pakai/layanan, serta rentang tanggal pembuatan (bawaan 7 hari terakhir + preset **Minggu Ini**, **Bulan Ini**, **Tahun Ini**, **Semua**).
+   - Klik **Gambar** untuk melihat pratinjau penuh, menyalin kode/URL, menjalankan **Render Ulang Gambar**, atau klik **Unduh (.jpg)** dan **Ekspor CSV** untuk laporan.
+
+---
+
+### C. Alur Terapis (`POS > Therapist Flow`)
 > [!NOTE]
 > Modul **Therapist Flow** (`/pos/therapist-flow`) dapat diakses khusus oleh **Role 5 (Finance)**, **Role 6 (Outlet Admin)**, **Role 8 (Superuser)**, **Role 11 (Terapis)**, **Role 13 (Supervisor / Direksi)**, **Role 14 (Manager / Auditor)**, **Role 15 (Evaluator Cabang / ASTRA)**, **Role 16 (Trainer / HR Evaluator)**, **Role 19 (Resepsionis Cabang)**, dan **Role 20 (IT Support)**. Demi privasi operasional, halaman ini tidak menampilkan nominal rupiah (`subtotal`).
 

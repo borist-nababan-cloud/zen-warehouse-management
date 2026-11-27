@@ -6,6 +6,23 @@ export type GcOutletScope = 'ALL_OWN' | 'BUY_OWN' | 'USED_OWN'
 export type GcTriState = 'ALL' | 'TRUE' | 'FALSE'
 export type GcExpiredFilter = 'ALL' | 'EXPIRED' | 'VALID' | 'EXPIRING_SOON'
 export type GcCrossOutletFilter = 'ALL' | 'CROSS_ONLY'
+export type GcExtensionDays = 1 | 7 | 14
+
+export interface GcExpiryExtensionLog {
+  id: string
+  extension_days: GcExtensionDays
+  allowance_days: number
+  total_added_days: number
+  old_buy_at: string | null
+  new_buy_at: string
+  old_expired_date: string | null
+  new_expired_date: string
+  notes: string
+  extended_by: string
+  extended_by_name: string | null
+  extended_by_role: number
+  created_at: string
+}
 
 export interface GcTransactionRow {
   uid: string
@@ -16,6 +33,7 @@ export interface GcTransactionRow {
   nama_gc: string | null
   value: number
   buy_at: string | null
+  original_buy_at: string | null
   used_at: string | null
   has_used: boolean
   id_payment_buy: string | null
@@ -29,6 +47,19 @@ export interface GcTransactionRow {
   qrcode: string | null
   created_at: string | null
   is_expired: boolean
+  has_been_extended: boolean
+  extension_log: GcExpiryExtensionLog | null
+}
+
+export interface ExtendGcExpiryResult {
+  uid: string
+  gc_number: string | null
+  buy_at: string
+  original_buy_at: string | null
+  expired_date: string
+  is_expired: boolean
+  has_been_extended: boolean
+  extension_log: GcExpiryExtensionLog
 }
 
 export interface GcListSummary {
@@ -55,6 +86,7 @@ export interface GcListResponse {
   summary: GcListSummary
   pagination: GcListPagination
   search_bypassed_date: boolean
+  search_bypassed_all_filters?: boolean
   is_outlet_locked: boolean
   locked_outlet: string | null
   rows: GcTransactionRow[]
@@ -107,6 +139,33 @@ export const gcListService = {
     }
 
     return data as GcListResponse
+  },
+
+  /**
+   * Memperpanjang masa kadaluarsa GC (1x seumur hidup, khusus Role 5, 8, 13).
+   * Otomatis menambahkan +1 hari toleransi dan menyelaraskan buy_at (-120 hari)
+   * agar terdeteksi valid oleh ZenSystem Desktop.
+   */
+  async extendPosGcExpiry(
+    gcUid: string,
+    extensionDays: GcExtensionDays,
+    notes: string
+  ): Promise<ExtendGcExpiryResult> {
+    const { data, error } = await supabase.rpc('extend_pos_gc_expiry', {
+      p_gc_uid: gcUid,
+      p_extension_days: extensionDays,
+      p_notes: notes.trim(),
+    })
+
+    if (error) {
+      throw new Error(error.message || 'Gagal memperpanjang masa kadaluarsa Gift Certificate.')
+    }
+
+    if (!data) {
+      throw new Error('Respons perpanjangan masa kadaluarsa tidak valid.')
+    }
+
+    return data as ExtendGcExpiryResult
   },
 
   /**
