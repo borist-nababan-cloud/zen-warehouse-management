@@ -1,4 +1,3 @@
-import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import {
   renderGcVoucherBlob,
@@ -6,6 +5,7 @@ import {
 } from '@/utils/gcVoucherImageGenerator'
 
 export type GcComplimentTriState = 'ALL' | 'TRUE' | 'FALSE'
+export type GcComplimentValidityMonths = 1 | 2 | 3 | 4
 
 export interface WebServiceOption {
   id: string
@@ -39,6 +39,7 @@ export interface GcComplimentRow {
   kode_outlet_used: string | null
   outlet_used_name: string | null
   expired_date: string | null
+  validity_months: number | null
   id_payment_buy: string | null
   activated_at: string | null
   activated_by: string | null
@@ -109,6 +110,7 @@ export interface ActivatedGcImageTarget {
   duration_minutes: number | null
   background_image_url: string | null
   expired_date: string | null
+  validity_months: number | null
   id_payment_buy: string | null
   activated_at: string | null
 }
@@ -117,6 +119,10 @@ export interface ActivateGcComplimentResult {
   id_payment_buy: string
   pack_number: string
   buy_at: string
+  original_buy_at: string | null
+  activated_at: string
+  validity_months: GcComplimentValidityMonths
+  validity_days: number
   expired_date: string
   activated_count: number
   rows: ActivatedGcImageTarget[]
@@ -133,15 +139,6 @@ export type VoucherImageTarget = Pick<
   | 'background_image_url'
   | 'expired_date'
 >
-
-function getLocalIsoWithOffset(date: Date): string {
-  const offsetMinutes = -date.getTimezoneOffset()
-  const sign = offsetMinutes >= 0 ? '+' : '-'
-  const absOffset = Math.abs(offsetMinutes)
-  const hh = String(Math.floor(absOffset / 60)).padStart(2, '0')
-  const mm = String(absOffset % 60).padStart(2, '0')
-  return `${format(date, "yyyy-MM-dd'T'HH:mm:ss")}${sign}${hh}:${mm}`
-}
 
 export const gcComplimentService = {
   async getActiveWebServices(): Promise<WebServiceOption[]> {
@@ -267,14 +264,18 @@ export const gcComplimentService = {
 
   async activateBatch(
     gcUids: string[],
-    packNumber: string
+    packNumber: string,
+    validityMonths: GcComplimentValidityMonths = 1,
+    timezone?: string
   ): Promise<ActivateGcComplimentResult> {
-    const now = new Date()
+    const resolvedTimezone =
+      timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta'
+
     const { data, error } = await supabase.rpc('activate_pos_gc_compliments', {
       p_gc_uids: gcUids,
       p_pack_number: packNumber.trim(),
-      p_buy_at: getLocalIsoWithOffset(now),
-      p_local_date: format(now, 'yyyy-MM-dd'),
+      p_validity_months: validityMonths,
+      p_timezone: resolvedTimezone,
     })
 
     if (error) {

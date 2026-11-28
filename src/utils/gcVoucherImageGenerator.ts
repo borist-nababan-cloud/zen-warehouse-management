@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase'
 export const GC_COMPLIMENT_BUCKET = 'gc-compliment-images'
 const CANVAS_WIDTH = 1350
 const CANVAS_HEIGHT = 600
+const ZEN_VOUCHER_BRAND_LOGO_URL = '/assets/icon/zen-logo-bw-02.png'
+
+let brandLogoPromise: Promise<HTMLImageElement | null> | null = null
 
 export interface GcVoucherRenderInput {
   gcNumber: string
@@ -26,7 +29,7 @@ function getJsBarcodeFn() {
 }
 
 function formatValidThroughLabel(expiredDate?: string | null): string {
-  if (!expiredDate) return '120 Hari sejak Aktivasi'
+  if (!expiredDate) return 'Menunggu Aktivasi'
   const clean = expiredDate.slice(0, 10)
   const parsed = new Date(`${clean}T12:00:00`)
   if (isNaN(parsed.getTime())) return clean
@@ -35,6 +38,21 @@ function formatValidThroughLabel(expiredDate?: string | null): string {
     month: 'short',
     year: 'numeric',
   }).format(parsed)
+}
+
+async function loadBrandLogoImage(): Promise<HTMLImageElement | null> {
+  if (!brandLogoPromise) {
+    brandLogoPromise = new Promise<HTMLImageElement | null>((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => {
+        brandLogoPromise = null
+        resolve(null)
+      }
+      img.src = ZEN_VOUCHER_BRAND_LOGO_URL
+    })
+  }
+  return brandLogoPromise
 }
 
 async function loadImageFromBlobUrl(url: string): Promise<HTMLImageElement> {
@@ -257,27 +275,40 @@ export async function renderGcVoucherBlob(input: GcVoucherRenderInput): Promise<
     throw new Error('Konteks 2D HTML5 Canvas tidak tersedia.')
   }
 
-  const [bgImg, qrCanvas] = await Promise.all([
+  const [bgImg, qrCanvas, brandLogoImg] = await Promise.all([
     loadBackgroundImage(input.backgroundImageUrl),
     renderQrCanvas(input.qrcode),
+    loadBrandLogoImage(),
   ])
   const barcodeCanvas = renderBarcodeCanvas(input.gcBarcode)
 
   // 1. Background + dark scrim
   drawCoverBackground(ctx, bgImg)
 
-  // 2. Top Center Branding: ZEN + family spa & reflexology
+  // 2. Top Center Branding: Official Zen White Transparent Logo (with safe text fallback)
   ctx.save()
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'top'
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.65)'
   ctx.shadowBlur = 10
-  ctx.fillStyle = '#ffffff'
-  ctx.font = '900 44px "Arial Black", "Montserrat", sans-serif'
-  ctx.fillText('ZEN', CANVAS_WIDTH / 2, 26)
-  ctx.font = '600 13px "Arial", sans-serif'
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)'
-  ctx.fillText('family spa & reflexology', CANVAS_WIDTH / 2, 72)
+  if (brandLogoImg && brandLogoImg.width > 0 && brandLogoImg.height > 0) {
+    const targetH = 82
+    const ratio = brandLogoImg.width / brandLogoImg.height
+    const drawW = Math.min(260, Math.round(targetH * ratio))
+    const drawH = Math.round(drawW / ratio)
+    const drawX = Math.round((CANVAS_WIDTH - drawW) / 2)
+    const drawY = 24
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(brandLogoImg, drawX, drawY, drawW, drawH)
+  } else {
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'top'
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '900 44px "Arial Black", "Montserrat", sans-serif'
+    ctx.fillText('ZEN', CANVAS_WIDTH / 2, 26)
+    ctx.font = '600 13px "Arial", sans-serif'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)'
+    ctx.fillText('family spa & reflexology', CANVAS_WIDTH / 2, 72)
+  }
   ctx.restore()
 
   // 3. Top Right Frosted Pills: "No" & "Valid Through"

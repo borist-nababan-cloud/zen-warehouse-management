@@ -63,6 +63,7 @@ import {
   gcComplimentService,
   type GcComplimentRow,
   type GcComplimentTriState,
+  type GcComplimentValidityMonths,
   type WebServiceOption,
 } from '@/services/gcComplimentService'
 
@@ -70,6 +71,38 @@ type DatePreset = 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR' | 'ALL' | 'CUSTOM'
 
 const PAGE_SIZE = 50
 const EXPORT_MAX_ROWS = 2000
+
+const VALIDITY_MONTH_OPTIONS: {
+  months: GcComplimentValidityMonths
+  label: string
+  days: number
+}[] = [
+  { months: 1, label: '1 Bulan', days: 30 },
+  { months: 2, label: '2 Bulan', days: 60 },
+  { months: 3, label: '3 Bulan', days: 90 },
+  { months: 4, label: '4 Bulan', days: 120 },
+]
+
+function getUserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta'
+  } catch {
+    return 'Asia/Jakarta'
+  }
+}
+
+function getUserTodayStr(timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  } catch {
+    return getWibTodayStr()
+  }
+}
 
 function getWibTodayStr(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -198,9 +231,11 @@ export function GcComplimentPage() {
   const [page, setPage] = useState<number>(1)
 
   // Selection, Activation & Preview Modal State
+  const userTimeZone = useMemo(() => getUserTimeZone(), [])
   const [selectedRowMap, setSelectedRowMap] = useState<Record<string, GcComplimentRow>>({})
   const [showActivateModal, setShowActivateModal] = useState<boolean>(false)
   const [packNumberInput, setPackNumberInput] = useState<string>('')
+  const [validityMonths, setValidityMonths] = useState<GcComplimentValidityMonths>(1)
   const [detailRow, setDetailRow] = useState<GcComplimentRow | null>(null)
   const [isRerenderingSingle, setIsRerenderingSingle] = useState<boolean>(false)
   const [isExporting, setIsExporting] = useState<boolean>(false)
@@ -431,7 +466,7 @@ export function GcComplimentPage() {
     generateMutation.mutate()
   }
 
-  // Open Activation Modal with smart Pack Number prefill
+  // Open Activation Modal with smart Pack Number prefill & default 1 Bulan validity
   const handleOpenActivateModal = () => {
     if (selectedRows.length === 0) return
     if (selectedRows.length === 1) {
@@ -439,6 +474,7 @@ export function GcComplimentPage() {
     } else {
       setPackNumberInput(`111.PKT.${format(new Date(), 'yyyyMMdd.HHmm')}`)
     }
+    setValidityMonths(1)
     setShowActivateModal(true)
   }
 
@@ -447,11 +483,15 @@ export function GcComplimentPage() {
     mutationFn: async () => {
       const activated = await gcComplimentService.activateBatch(
         selectedUids,
-        packNumberInput.trim()
+        packNumberInput.trim(),
+        validityMonths,
+        userTimeZone
       )
 
+      const progressLabel = `Memperbarui stempel Valid Through (${activated.validity_months} Bulan / ${activated.validity_days} Hari) pada gambar GC...`
+
       setImageProgress({
-        label: 'Memperbarui stempel Valid Through (+120 Hari) pada gambar GC...',
+        label: progressLabel,
         done: 0,
         total: activated.rows.length,
       })
@@ -460,7 +500,7 @@ export function GcComplimentPage() {
         activated.rows,
         (done, total) => {
           setImageProgress({
-            label: 'Memperbarui stempel Valid Through (+120 Hari) pada gambar GC...',
+            label: progressLabel,
             done,
             total,
           })
@@ -610,6 +650,7 @@ export function GcComplimentPage() {
         'Aktif',
         'Sudah Dipakai',
         'Berlaku s/d',
+        'Masa Berlaku (Bulan)',
         'ID Payment Buy',
         'Waktu Aktivasi (WIB)',
         'Outlet Pakai',
@@ -638,6 +679,7 @@ export function GcComplimentPage() {
             r.is_active ? 'YA' : 'TIDAK',
             r.has_used ? 'YA' : 'TIDAK',
             r.expired_date || '',
+            r.validity_months ? `${r.validity_months} Bulan` : '',
             r.id_payment_buy || '',
             r.activated_at ? formatDateTimeWib(r.activated_at) : '',
             r.kode_outlet_used
@@ -677,7 +719,12 @@ export function GcComplimentPage() {
   const startIndex =
     pagination.total_count === 0 ? 0 : (pagination.page - 1) * pagination.page_size + 1
   const endIndex = Math.min(pagination.page * pagination.page_size, pagination.total_count)
-  const expectedExpiryOnActivate = format(addDays(new Date(), 120), 'dd/MMM/yyyy')
+  const userTodayStr = getUserTodayStr(userTimeZone)
+  const selectedValidityDays = validityMonths * 30
+  const expectedExpiryDate = addDays(parseISO(userTodayStr), selectedValidityDays)
+  const expectedPosBuyAtDate = subDays(expectedExpiryDate, 120)
+  const expectedExpiryOnActivate = format(expectedExpiryDate, 'dd/MMM/yyyy')
+  const expectedPosBuyAtOnActivate = format(expectedPosBuyAtDate, 'dd/MMM/yyyy')
   const isBusy = generateMutation.isPending || activateMutation.isPending
 
   return (
@@ -1562,14 +1609,51 @@ export function GcComplimentPage() {
               </p>
             </div>
 
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zen-charcoal">
+                Masa Berlaku <span className="text-red-600">*</span>
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {VALIDITY_MONTH_OPTIONS.map((opt) => {
+                  const isSelected = validityMonths === opt.months
+                  return (
+                    <button
+                      key={opt.months}
+                      type="button"
+                      disabled={activateMutation.isPending}
+                      onClick={() => setValidityMonths(opt.months)}
+                      className={`rounded-lg border px-2 py-2.5 text-center font-bold text-xs transition-colors ${
+                        isSelected
+                          ? 'border-zen-moss bg-zen-matcha/15 text-zen-charcoal ring-1 ring-zen-moss'
+                          : 'border-zen-border bg-white dark:bg-zen-stone hover:bg-zen-linen/60 text-zen-charcoal/80'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <div className="rounded-xl border border-zen-border bg-zen-linen/50 dark:bg-black/20 p-3 space-y-1.5 text-[11px]">
               <div className="font-bold text-zen-charcoal">Ringkasan Data yang Dikirim ke POS:</div>
               <div>• Outlet Beli (`kode_outlet_buy`): <strong className="font-mono">111 (ZEN HEAD OFFICE)</strong></div>
               <div>• ID Pembayaran (`id_payment_buy`): <strong className="font-mono">WHMAPP.111.&lt;YYYYMMDDHHMMSS&gt;.&lt;4HEX&gt;</strong></div>
-              <div>• Waktu Beli (`buy_at`): <strong>Waktu lokal Anda saat ini</strong></div>
-              <div>• Masa Berlaku (`expired_date`): <strong>{expectedExpiryOnActivate} (+120 hari)</strong></div>
+              <div>
+                • Masa Berlaku (`expired_date`):{' '}
+                <strong className="text-zen-moss">
+                  {expectedExpiryOnActivate} ({validityMonths} Bulan / +{selectedValidityDays} hari dari hari ini)
+                </strong>
+              </div>
+              <div>
+                • Waktu Beli Sistem POS (`buy_at`, Sync 120 Hari):{' '}
+                <strong>{expectedPosBuyAtOnActivate} 12:00 WIB</strong>
+                {validityMonths < 4 && (
+                  <span className="text-zen-charcoal/65"> (waktu aktivasi asli tersimpan di `original_buy_at`)</span>
+                )}
+              </div>
               <div>• Nominal POS (`value`): <strong>Menggunakan `harga_jasa` masing-masing GC</strong></div>
-              <div>• Pembaruan Gambar: <strong>Stempel tanggal `Valid Through` otomatis diperbarui</strong></div>
+              <div>• Pembaruan Gambar: <strong>Stempel `Valid Through` otomatis diperbarui ke {expectedExpiryOnActivate}</strong></div>
             </div>
 
             <div className="space-y-1.5">
@@ -1756,7 +1840,11 @@ export function GcComplimentPage() {
                 <div>
                   <span className="block text-[11px] text-zen-charcoal/60">Berlaku s/d (Valid Through)</span>
                   <span className="font-semibold text-zen-charcoal">
-                    {detailRow.expired_date ? formatDateOnly(detailRow.expired_date) : 'Menunggu aktivasi (+120 hari)'}
+                    {detailRow.expired_date
+                      ? `${formatDateOnly(detailRow.expired_date)}${
+                          detailRow.validity_months ? ` (${detailRow.validity_months} Bulan)` : ''
+                        }`
+                      : 'Menunggu aktivasi'}
                   </span>
                 </div>
                 <div>

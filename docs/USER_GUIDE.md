@@ -976,8 +976,8 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
    - Klik tombol **Detail** pada setiap baris untuk melihat informasi lengkap voucher (UID, barcode, QR Code digital, waktu beli asli vs waktu beli sistem, nomor pembayaran beli/pakai, outlet beli/pakai, masa berlaku, dan riwayat perpanjangan bila ada).
    - Gunakan tombol **Cetak (A4)** untuk pratinjau cetak berstandar A4 atau **Ekspor CSV** untuk analisis di Microsoft Excel.
 5. **Tambah Masa Kadaluarsa (Khusus Role 5, 8, & 13 — Maksimal 1 Kali per GC):**
-   - Di dalam modal **Detail** pada GC yang masih berstatus **Aktif** dan **Belum Dipakai** (dan belum pernah diperpanjang), tombol **Tambah Masa Kadaluarsa** akan muncul khusus bagi **Role 5, 8, dan 13**.
-   - **3 Pilihan Durasi (+1 Hari Toleransi Pembatalan Tamu):** **1 Hari** (+2 hari efektif), **1 Minggu** (+8 hari efektif), atau **2 Minggu** (+15 hari efektif). Untuk GC yang sudah kadaluarsa, perpanjangan dihitung dari **Hari Ini (WIB)**; untuk GC yang masih aktif, ditambahkan dari `expired_date` berjalan.
+   - Di dalam modal **Detail** pada GC yang masih berstatus **Aktif** dan **Belum Dipakai** (dan belum pernah diperpanjang), tombol **Tambah Masa Kadaluarsa** hanya muncul apabila GC **sudah kadaluarsa 1 hingga 30 hari** berdasarkan perhitungan **`buy_at` + 120 hari** terhadap tanggal hari ini di timezone perangkat pengguna. GC yang masih aktif/belum kadaluarsa maupun yang sudah lewat lebih dari 30 hari tidak diizinkan diperpanjang.
+   - **5 Pilihan Durasi (dihitung dari Hari Ini pada timezone pengguna):** **1 Hari** (+2 hari efektif), **1 Minggu** (+7 hari efektif), **2 Minggu** (+14 hari efektif), **3 Minggu** (+21 hari efektif), atau **4 Minggu** (+28 hari efektif).
    - **Sinkronisasi Otomatis ZenSystem Desktop (120 Hari):** Sistem memperbarui `expired_date` sekaligus menyelaraskan `buy_at` menjadi `new_expired_date - 120 hari` (pukul 12:00 WIB) agar validasi 120 hari pada kasir ZenSystem Desktop tetap lolos, sambil melestarikan timestamp pembelian awal di kolom `original_buy_at`.
    - **Catatan Wajib & Jejak Audit (`1x Only`):** Wajib mengisi **Catatan / Keterangan minimal 10 karakter**. Setiap perpanjangan dicatat di tabel audit `ot_pos_gc_expiry_logs` (`UNIQUE gc_uid`) dan sistem memblokir permanen perpanjangan kedua untuk GC yang sama maupun GC berstatus Non-Aktif / Sudah Dipakai.
 
@@ -994,12 +994,13 @@ Digunakan untuk mengeksekusi peracikan produk di cabang berdasarkan formula rese
      - **`gc_number`**: berformat `111.<PREFIX>.0001` dst. (dicek anti-bentrok terhadap `ot_pos_gc_compliment` dan `ot_pos_gc_transaction`).
      - **`gc_barcode`**: angka saja hasil pembersihan huruf/simbol untuk **1D Linear Barcode (Code 128)** di pojok kiri bawah gambar.
      - **`qrcode`**: kode acak 24 karakter unik berstandar *ZenSystem Desktop* untuk **2D QR Code** di pojok kanan bawah gambar.
-     - **Gambar E-Voucher JPEG (`1350 × 600 px`)**: diunggah otomatis ke bucket `gc-compliment-images` dengan posisi **1D Barcode di pojok kiri bawah** dan **2D QR Code di pojok kanan bawah** (terpisah agar mudah dipindai scanner resepsionis).
+     - **Gambar E-Voucher JPEG (`1350 × 600 px`)**: diunggah otomatis ke bucket `gc-compliment-images` menggunakan logo resmi **Zen Family Spa & Reflexology** (`zen-logo-bw-02.png`) di bagian tengah atas, dengan posisi **1D Barcode di pojok kiri bawah** dan **2D QR Code di pojok kanan bawah** (terpisah agar mudah dipindai scanner resepsionis).
      - Status awal seluruh GC baru adalah **Draft (`is_active = false`, `is_sold = false`, `has_used = false`, `pack_number = kosong`)**.
 2. **Aktivasi GC ke POS (`ot_pos_gc_transaction`):**
    - Centang kotak pilihan (*checkbox*) pada satu atau beberapa baris GC berstatus **Draft**, lalu klik tombol **Aktifkan GC Terpilih (N)**.
    - Isi atau ubah **`Pack Number`** (otomatis terisi `gc_number` apabila 1 GC dipilih, atau saran format batch `111.PKT.<YYYYMMDD>.<HHMM>` apabila > 1 GC dipilih).
-   - Saat dikonfirmasi, sistem secara atomik mengirim seluruh GC terpilih ke **`ot_pos_gc_transaction`** dengan `kode_outlet_buy = '111'`, `id_payment_buy = WHMAPP.111.<YYYYMMDDHHMMSS>.<4HEX>`, `buy_at` sesuai waktu lokal pengguna, `expired_date = +120 hari`, `value = harga_jasa`, dan `has_used = false`, lalu otomatis **merender ulang gambar** untuk menyematkan tanggal `Valid Through` pada kotak kanan atas voucher.
+   - Pilih **Masa Berlaku** tepat di bawah `Pack Number` (bawaan **1 Bulan**): **1 Bulan** (+30 hari), **2 Bulan** (+60 hari), **3 Bulan** (+90 hari), atau **4 Bulan** (+120 hari) terhitung dari tanggal hari ini di timezone perangkat pengguna.
+   - Saat dikonfirmasi, sistem secara atomik mengirim seluruh GC terpilih ke **`ot_pos_gc_transaction`** dengan `kode_outlet_buy = '111'`, `id_payment_buy = WHMAPP.111.<YYYYMMDDHHMMSS>.<4HEX>`, `expired_date` sesuai pilihan bulan, `buy_at = expired_date - 120 hari` (pukul 12:00 WIB) agar validasi 120 hari di kasir ZenSystem Desktop selalu sinkron, melestarikan waktu aktivasi asli pada `original_buy_at` (untuk pilihan `< 4 Bulan`) serta `ot_pos_gc_compliment.activated_at` + `validity_months`, `value = harga_jasa`, dan `has_used = false`, lalu otomatis **merender ulang gambar** untuk menyematkan tanggal `Valid Through` pada kotak kanan atas voucher.
 3. **Pemantauan Status, Filter, Pratinjau Gambar & Ekspor CSV:**
    - Tabel dilengkapi 4 kartu KPI, status pakai *live* dari `ot_pos_gc_transaction` (termasuk kode cabang & tanggal pemakaian), pencarian bebas, filter status aktivasi/pakai/layanan, serta rentang tanggal pembuatan (bawaan 7 hari terakhir + preset **Minggu Ini**, **Bulan Ini**, **Tahun Ini**, **Semua**).
    - Klik **Gambar** untuk melihat pratinjau penuh, menyalin kode/URL, menjalankan **Render Ulang Gambar**, atau klik **Unduh (.jpg)** dan **Ekspor CSV** untuk laporan.
@@ -1156,6 +1157,10 @@ Seluruh laporan dilengkapi filter fleksibel rentang tanggal, pemilihan cabang, m
 
 **8. Kartu Stok menampilkan peringatan "Terdeteksi Anomali Selisih"**
 - Peringatan ini berarti total kalkulasi maju seluruh mutasi (GR, STO, Produksi, Pemakaian, Retur, Penyusutan, Penjualan Customer, dan Stock Opname) berbeda dari angka `qty_on_hand` di sistem. Periksa baris yang ditandai lencana merah **`Anomali Opname`** pada tabel Kartu Stok atau laporkan hasil **Ekspor CSV** tersebut ke tim Finance / IT Holding untuk pemeriksaan lebih lanjut.
+
+**9. Tombol "Tambah Masa Kadaluarsa" tidak muncul atau GC Compliment (1–3 Bulan) tidak terlihat di tampilan awal `POS > GC List`**
+- **Tombol Tambah Masa Kadaluarsa:** Hanya muncul bagi **Role 5, 8, dan 13** pada GC yang masih **Aktif**, **Belum Dipakai**, **belum pernah diperpanjang** (`1x Only`), dan **sudah kadaluarsa 1 hingga 30 hari** berdasarkan `buy_at + 120 hari` terhadap tanggal hari ini di timezone perangkat pengguna. GC yang masih berlaku maupun yang sudah melewati masa kadaluarsa lebih dari 30 hari otomatis diblokir oleh sistem.
+- **GC Compliment Masa Berlaku 1–3 Bulan:** Karena kasir *ZenSystem Desktop* memvalidasi batas 120 hari dari `buy_at`, sistem menyelaraskan `buy_at` menjadi `expired_date - 120 hari` (mundur 30–90 hari dari tanggal aktivasi) sambil menyimpan tanggal aktivasi asli di `original_buy_at`. Oleh sebab itu, gunakan kotak **Cari Kode GC** (*Pencarian Global*) pada `POS > GC List` untuk mencarinya, atau pantau langsung di daftar `POS > Generate GC Compliment` (yang diurutkan berdasarkan waktu pembuatan).
 
 ---
 

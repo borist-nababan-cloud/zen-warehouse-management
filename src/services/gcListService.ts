@@ -6,7 +6,7 @@ export type GcOutletScope = 'ALL_OWN' | 'BUY_OWN' | 'USED_OWN'
 export type GcTriState = 'ALL' | 'TRUE' | 'FALSE'
 export type GcExpiredFilter = 'ALL' | 'EXPIRED' | 'VALID' | 'EXPIRING_SOON'
 export type GcCrossOutletFilter = 'ALL' | 'CROSS_ONLY'
-export type GcExtensionDays = 1 | 7 | 14
+export type GcExtensionDays = 1 | 7 | 14 | 21 | 28
 
 export interface GcExpiryExtensionLog {
   id: string
@@ -142,19 +142,25 @@ export const gcListService = {
   },
 
   /**
-   * Memperpanjang masa kadaluarsa GC (1x seumur hidup, khusus Role 5, 8, 13).
-   * Otomatis menambahkan +1 hari toleransi dan menyelaraskan buy_at (-120 hari)
-   * agar terdeteksi valid oleh ZenSystem Desktop.
+   * Memperpanjang masa kadaluarsa GC (1x seumur hidup, khusus Role 5, 8, 13)
+   * untuk GC yang sudah kadaluarsa 1–30 hari berdasarkan (buy_at + 120 hari)
+   * terhadap tanggal hari ini di timezone pengguna.
+   * Menyelaraskan buy_at (-120 hari) agar terdeteksi valid oleh ZenSystem Desktop.
    */
   async extendPosGcExpiry(
     gcUid: string,
     extensionDays: GcExtensionDays,
-    notes: string
+    notes: string,
+    timezone?: string
   ): Promise<ExtendGcExpiryResult> {
+    const resolvedTimezone =
+      timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta'
+
     const { data, error } = await supabase.rpc('extend_pos_gc_expiry', {
       p_gc_uid: gcUid,
       p_extension_days: extensionDays,
       p_notes: notes.trim(),
+      p_timezone: resolvedTimezone,
     })
 
     if (error) {
